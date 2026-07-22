@@ -29,7 +29,7 @@ const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 
 async function callOpenRouter(messages, tools) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: model || 'z-ai/glm-5.2',
+        model: model || 'qwen/qwen-2.5-72b-instruct',
         messages,
         tools: tools || undefined,
         temperature: 0.7,
