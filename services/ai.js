@@ -29,7 +29,7 @@ const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 
 async function callOpenRouter(messages, tools) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'openai/o3-mini',
+        model: model || 'z-ai/glm-5.2',
         messages,
         tools: tools || undefined,
         temperature: 0.7,
@@ -44,7 +44,7 @@ async function callOpenRouter(messages, tools) {
     return response.data;
 }
 
-async function chat(messages) {
+async function chat(messages, model) {
     // Tool loop - max 10 iterations to prevent infinite loops
     for (let i = 0; i < 10; i++) {
         const data = await callOpenRouter(messages, toolDefinitions);

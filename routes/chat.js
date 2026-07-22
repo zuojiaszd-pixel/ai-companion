@@ -8,7 +8,7 @@ const { searchMemories, storeMemory } = require('../services/memory');
 // 主聊天接口
 router.post('/chat', async (req, res) => {
     try {
-        const { message, sessionId = 'default' } = req.body;
+        const { message, sessionId = 'default', model } = req.body;
         if (!message) return res.status(400).json({ error: '消息不能为空' });
 
         // 1. 存用户消息
@@ -43,7 +43,7 @@ router.post('/chat', async (req, res) => {
         }
 
         // 6. 调用 AI
-        const result = await chat(messages);
+        const result = await chat(messages, model);
 
         // 7. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });

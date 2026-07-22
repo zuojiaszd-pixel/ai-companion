@@ -162,7 +162,7 @@ async function send() {
         var res = await fetch(BACKEND + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({ message: text, model: document.getElementById('model-select').value })
         });
         if (!res.ok) throw new Error(await res.text());
         var data = await res.json();
