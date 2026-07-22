@@ -12,7 +12,16 @@
     --text: #f0e6ea; --text2: #c4aeb6; --text3: #8a6e7a;
     --border: rgba(232,130,158,0.15); --shadow: 0 8px 32px rgba(0,0,0,0.3);
 }html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden}body{display:flex;flex-direction:column}header{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.85);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);z-index:10;flex-shrink:0;min-height:56px}header .logo{display:flex;align-items:center;gap:10px}header .logo .icon{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#7c5cff,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0}header .logo span{font-size:16px;font-weight:600}.header-actions{display:flex;align-items:center;gap:8px}.header-actions select{padding:6px 28px 6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239c97b0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}.header-actions select:focus{border-color:var(--accent)}.header-actions .btn-icon{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s}.header-actions .btn-icon:hover{background:var(--surface2);color:var(--text);border-color:var(--accent)}#chat{flex:1;overflow-y:auto;padding:20px 16px 12px;display:flex;flex-direction:column;gap:20px;scroll-behavior:smooth}#chat::-webkit-scrollbar{width:4px}#chat::-webkit-scrollbar-track{background:transparent}#chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}.welcome{text-align:center;color:var(--text3);font-size:13px;line-height:1.8;padding:60px 20px}.welcome .title{font-size:22px;color:var(--text2);margin-bottom:8px}.welcome .features{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px}.welcome .features span{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-size:12px;color:var(--text2)}.msg-row{display:flex;gap:10px;animation:fadeIn .25s ease-out}@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.msg-row.user{flex-direction:row-reverse}.msg-row .avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}.msg-row.user .avatar{background:var(--accent);color:#fff}.msg-row.assistant .avatar{background:var(--accent);border:none;color:#fff}.msg-bubble{max-width:75%;padding:10px 16px;border-radius:var(--radius);font-size:14px;line-height:1.65;word-wrap:break-word}.msg-row.user .msg-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px}.msg-row.assistant .msg-bubble{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px}.msg-bubble .time{display:block;font-size:9px;color:inherit;opacity:.45;margin-top:4px}.msg-row.user .msg-bubble .time{text-align:right}.msg-bubble code{font-size:13px;background:rgba(0,0,0,.15);padding:1px 6px;border-radius:4px;font-family:'SF Mono',Menlo,Consolas,monospace}.msg-bubble pre{margin:8px 0;padding:12px;border-radius:var(--radius-sm);background:#0a0a14;overflow-x:auto;font-size:13px;line-height:1.5;font-family:'SF Mono',Menlo,Consolas,monospace}.think-row{display:flex;gap:10px}.think-row .indent{width:42px;flex-shrink:0}.think-bubble{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--accent);overflow:hidden}.think-bubble summary{padding:8px 14px;cursor:pointer;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;user-select:none;list-style:none}.think-bubble summary::-webkit-details-marker{display:none}.think-bubble .think-content{padding:8px 14px 12px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;border-top:1px solid var(--border)}.typing{display:flex;gap:4px;padding:4px 0}.typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);display:inline-block;animation:bounce 1.2s infinite}.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}#input-area{padding:12px 16px;border-top:1px solid var(--border);background:var(--bg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);flex-shrink:0}.input-wrap{display:flex;gap:8px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px 4px 4px 16px;transition:border-color .15s}.input-wrap:focus-within{border-color:var(--accent)}.input-wrap textarea{flex:1;padding:8px 0;border:none;background:transparent;color:var(--text);font-size:14px;resize:none;outline:none;font-family:var(--font);line-height:1.5;max-height:100px;min-height:24px}.input-wrap textarea::placeholder{color:var(--text3)}
-[data-theme="dark"] header{background:rgba(26,20,23,.85)}[data-theme="dark"] #input-area{background:rgba(26,20,23,.85)}.input-wrap button{width:40px;height:40px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}.input-wrap button:hover{opacity:.85;transform:scale(1.05)}.input-wrap button:active{transform:scale(.95)}.input-wrap button:disabled{opacity:.3;cursor:not-allowed;transform:none}.panel{display:none;position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);z-index:100;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.4)}.panel.open{display:flex;animation:slideIn .2s ease-out}@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}.panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.panel-header h3{font-size:14px;font-weight:600}.panel-header .close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px}.panel-body{flex:1;overflow-y:auto;padding:12px 16px}.panel-body .item{padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:8px;font-size:13px;line-height:1.5}.panel-body .item .label{font-size:11px;color:var(--text3);margin-bottom:4px}.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:99}.overlay.open{display:block}@media(max-width:600px){.msg-bubble{max-width:85%;font-size:14px}.panel{width:100%}header{padding:8px 12px}#chat{padding:12px;gap:14px}#input-area{padding:8px 12px}}</style></head><body><header><div class="logo"><div class="icon">AI</div><span>Companion</span></div><div class="header-actions"><select id="model-select"><option value="z-ai/glm-5.2" selected>GLM-5.2 (推荐)</option><option value="z-ai/glm-4.7">GLM-4.7 (智谱)</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option><option value="deepseek/deepseek-r1">DeepSeek R1 (深度推理)</option></select><button class="btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme">&#9788;</button><button class="btn-icon" onclick="togglePanel('memories')" title="Memories">&#128214;</button></div></header><div id="chat"><div class="welcome"><div class="title">&#x1F9D0; AI Companion</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span><span>&#x1F4DA; &#x8BB0;&#x5FC6;</span></div></div></div><div id="input-area"><div class="input-wrap"><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div><div class="panel" id="memories-panel"><div class="panel-header"><h3>&#x8BB0;&#x5FC6;</h3><div><button onclick="clearMemories()" style="background:none;border:none;color:#e74c3c;font-size:12px;cursor:pointer;margin-right:8px">&#x6E05;&#x9664;</button><button class="close" onclick="closePanel()">&#10005;</button></div></div><div class="panel-body" id="memories-list"></div></div><script>
+[data-theme="dark"] header{background:rgba(26,20,23,.85)}[data-theme="dark"] #input-area{background:rgba(26,20,23,.85)}.input-wrap button{width:40px;height:40px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}.input-wrap button:hover{opacity:.85;transform:scale(1.05)}.input-wrap button:active{transform:scale(.95)}.input-wrap button:disabled{opacity:.3;cursor:not-allowed;transform:none}.panel{display:none;position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);z-index:100;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.4)}.panel.open{display:flex;animation:slideIn .2s ease-out}@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}.panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.panel-header h3{font-size:14px;font-weight:600}.panel-header .close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px}.panel-body{flex:1;overflow-y:auto;padding:12px 16px}.panel-body .item{padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:8px;font-size:13px;line-height:1.5}.panel-body .item .label{font-size:11px;color:var(--text3);margin-bottom:4px}.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:99}.overlay.open{display:block}@media(max-width:600px){.msg-bubble{max-width:85%;font-size:14px}.panel{width:100%}header{padding:8px 12px}#chat{padding:12px;gap:14px}#input-area{padding:8px 12px}}
+/* Token display */
+#token-bar{position:fixed;bottom:0;right:0;padding:4px 12px;font-size:10px;color:var(--text3);z-index:50;pointer-events:none;user-select:none}
+/* Settings panel */
+#settings-panel .setting-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:13px}
+#settings-panel .setting-item:last-child{border-bottom:none}
+#settings-panel .setting-item select{padding:4px 24px 4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
+#settings-panel .btn-danger{padding:6px 16px;border:none;border-radius:6px;background:#e74c3c;color:#fff;font-size:12px;cursor:pointer}
+#settings-panel .btn-danger:hover{opacity:.85}
+</style></head><body><header><div class="logo"><div class="icon">AI</div><span>Companion</span></div><div class="header-actions"><select id="model-select"><option value="z-ai/glm-5.2" selected>GLM-5.2 (推荐)</option><option value="z-ai/glm-4.7">GLM-4.7 (智谱)</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option><option value="deepseek/deepseek-r1">DeepSeek R1 (深度推理)</option></select><button class="btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme">&#9788;</button><button class="btn-icon" onclick="toggleSettings()" id="settings-btn" title="Settings">&#9881;</button><button class="btn-icon" onclick="togglePanel('memories')" title="Memories">&#128214;</button></div></header><div id="chat"><div class="welcome"><div class="title">&#x1F9D0; AI Companion</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span><span>&#x1F4DA; &#x8BB0;&#x5FC6;</span></div></div></div><div id="input-area"><div class="input-wrap"><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div><div class="panel" id="settings-panel"><div class="panel-header"><h3>设置</h3><button class="close" onclick="closePanel()">&#10005;</button></div><div class="panel-body"><div class="setting-item"><span>主题模式</span><select id="theme-select" onchange="themeSelectChange(this.value)"><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="setting-item"><span>默认模型</span><select id="settings-model-select" onchange="modelSelectChange(this.value)"></select></div><div class="setting-item"><span>思考链显示</span><select id="think-mode" onchange="thinkModeChange(this.value)"><option value="auto">自动折叠</option><option value="show">始终展开</option><option value="hide">始终隐藏</option></select></div><div class="setting-item"><span>清空数据</span><button class="btn-danger" onclick="clearAllData()">清空记忆和对话</button></div></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div><div class="panel" id="memories-panel"><div class="panel-header"><h3>&#x8BB0;&#x5FC6;</h3><div><button onclick="clearMemories()" style="background:none;border:none;color:#e74c3c;font-size:12px;cursor:pointer;margin-right:8px">&#x6E05;&#x9664;</button><button class="close" onclick="closePanel()">&#10005;</button></div></div><div class="panel-body" id="memories-list"></div></div><script>
 var BACKEND = '';
 var loading = false;
 
@@ -36,15 +45,11 @@ async function send() {
         var data = await res.json();
         removeTyping();
         var reply = data.reply || '';
-        var idx = reply.indexOf('【回答】');
-        if (idx > -1) {
-            var thinkText = reply.substring(0, idx).replace('【思考】', '').trim();
-            var answerText = reply.substring(idx + 4).replace('【回答】', '').trim();
-            if (thinkText) addThink(thinkText);
-            if (answerText) addMsg('assistant', answerText);
-        } else {
-            addMsg('assistant', reply);
-        }
+        var thinkText = data.thinking || '';
+        var usage = data.usage || null;
+        if (thinkText) addThink(thinkText, true);
+        if (reply) addMsg('assistant', reply);
+        if (usage) updateTokenBar(usage);
     } catch (err) {
         removeTyping();
         addMsg('assistant', 'Error: ' + err.message);
@@ -93,7 +98,7 @@ function addMsg(role, content) {
     removeWelcome();
 }
 
-function addThink(text) {
+function addThink(text, autoFold) {
     var chat = document.getElementById('chat');
     var row = document.createElement('div');
     row.className = 'think-row';
@@ -125,7 +130,7 @@ function togglePanel(name) {
     p.classList.toggle('open'); o.classList.toggle('open');
     if (!isOpen && name === 'memories') loadMemories();
 }
-function toggleTheme(){var t=document.documentElement.getAttribute("data-theme");var n=t==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("theme-btn").textContent=n==="dark"?"\u2602":"\u2600"}function closePanel() { document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('open');}); document.getElementById('overlay').classList.remove('open'); }
+function toggleTheme(){var t=document.documentElement.getAttribute("data-theme");var n=t==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("theme-btn").textContent=n==="dark"?"\u2602":"\u2600";var sel=document.getElementById("theme-select");if(sel)sel.value=n}function closePanel() { document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('open');}); document.getElementById('overlay').classList.remove('open'); }
 
 async function loadMemories() {
     try {
@@ -146,8 +151,58 @@ async function clearMemories() {
     } catch(e) { alert('Failed to clear'); }
 }
 
+
+function updateTokenBar(usage) {
+    var bar = document.getElementById('token-bar');
+    if (bar && usage) {
+        var p = usage.prompt_tokens || 0;
+        var c = usage.completion_tokens || 0;
+        var t = usage.total_tokens || (p + c);
+        bar.innerHTML = p + ' in / ' + c + ' out / ' + t + ' total';
+    }
+}
+async function loadHistory() {
+    try {
+        var res = await fetch(BACKEND + '/api/chat/history');
+        if (!res.ok) return;
+        var history = await res.json();
+        if (!history || !history.length) return;
+        for (var i = 0; i < history.length; i++) {
+            var msg = history[i];
+            if (msg.role === 'user') addMsg('user', msg.content);
+            else if (msg.role === 'assistant') addMsg('assistant', msg.content);
+        }
+    } catch(e) {}
+}
+function toggleSettings() {
+    togglePanel('settings');
+    if (document.getElementById('settings-panel').classList.contains('open')) {
+        var curTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        document.getElementById('theme-select').value = curTheme;
+        var mainSelect = document.getElementById('model-select');
+        var settingsSelect = document.getElementById('settings-model-select');
+        settingsSelect.innerHTML = mainSelect.innerHTML;
+        settingsSelect.value = mainSelect.value;
+    }
+}
+function themeSelectChange(val) {
+    document.documentElement.setAttribute('data-theme', val);
+    localStorage.setItem('theme', val);
+    document.getElementById('theme-btn').textContent = val === 'dark' ? '\u2602' : '\u2600';
+}
+function modelSelectChange(val) { document.getElementById('model-select').value = val; }
+function thinkModeChange(val) { localStorage.setItem('thinkMode', val); }
+function clearAllData() {
+    if (!confirm('\u786e\u5b9a\u6e05\u7a7a\u6240\u6709\u8bb0\u5fc6\u548c\u5bf9\u8bdd\uff1f')) return;
+    fetch(BACKEND + '/api/memories', { method: 'DELETE' }).then(function() {
+        document.getElementById('chat').innerHTML = '<div class="welcome"><div class="title">\u5df2\u6e05\u9664</div></div>';
+        document.getElementById('memories-list').innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Cleared</div>';
+    }).catch(function(e) { alert('Failed: ' + e.message); });
+}
 document.getElementById('input').addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 100) + 'px';
 });
-</script></body></html>
+// Load history on page load
+loadHistory();
+</script><div id="token-bar"></div></body></html>

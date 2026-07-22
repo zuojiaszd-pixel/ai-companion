@@ -54,11 +54,11 @@ router.post('/chat', async (req, res) => {
             storeMemory(sessionId, message, 'fact');
         }
 
-        // 9. 返回
+        // 9. 返回（含思考和token用量）
         res.json({
-            reply: result.reasoning
-                ? `【思考】\n${result.reasoning}\n\n【回答】\n${result.content}`
-                : result.content
+            reply: result.content,
+            thinking: result.reasoning || "",
+            usage: result.usage || null
         });
 
     } catch (err) {
@@ -83,6 +83,16 @@ router.delete('/memories', async (req, res) => {
         await Memory.deleteMany({});
         await Chat.deleteMany({});
         res.json({ message: '记忆和对话已清除' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 获取聊天历史
+router.get('/history', async (req, res) => {
+    try {
+        const { sessionId = 'default' } = req.query;
+        const history = await Chat.find({ sessionId })
+            .sort({ timestamp: -1 }).limit(50).lean();
+        res.json(history.reverse());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

@@ -46,8 +46,10 @@ async function callOpenRouter(messages, tools, model) {
 
 async function chat(messages, model) {
     // Tool loop - max 10 iterations to prevent infinite loops
+    let lastUsage = null;
     for (let i = 0; i < 10; i++) {
         const data = await callOpenRouter(messages, toolDefinitions, model);
+        lastUsage = data.usage;
         const choice = data.choices?.[0];
         if (!choice) throw new Error('API 返回为空');
 
@@ -75,7 +77,7 @@ async function chat(messages, model) {
         }
         
         // No tool calls - this is the final response
-        return { content: msg.content || '', reasoning: msg.reasoning || msg.reasoning_content || '' };
+        return { content: msg.content || '', reasoning: msg.reasoning || msg.reasoning_content || '', usage: lastUsage };
     }
     throw new Error('工具调用次数过多，已终止');
 }
