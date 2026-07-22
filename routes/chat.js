@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const Chat = require('../models/Chat');
 const Memory = require('../models/Memory');
-const { chat, SYSTEM_PROMPT } = require('../services/ai');
+const { chat, SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
 const { searchMemories, storeMemory } = require('../services/memory');
 
 // 主聊天接口
 router.post('/chat', async (req, res) => {
     try {
-        const { message, sessionId = 'default', model } = req.body;
+        const { message, sessionId = 'default', model, temperature, topP, maxTokens } = req.body;
         if (!message) return res.status(400).json({ error: '消息不能为空' });
 
         // 1. 存用户消息
@@ -43,7 +43,8 @@ router.post('/chat', async (req, res) => {
         }
 
         // 6. 调用 AI
-        const result = await chat(messages, model);
+        const opts = { temperature, topP, maxTokens };
+        const result = await chat(messages, model, opts);
 
         // 7. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
@@ -93,6 +94,27 @@ router.get('/history', async (req, res) => {
         const history = await Chat.find({ sessionId })
             .sort({ timestamp: -1 }).limit(50).lean();
         res.json(history.reverse());
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 获取设置
+router.get('/settings', async (req, res) => {
+    try {
+        const settings = loadSettings();
+        // If systemPrompt is null/empty, return the default
+        if (!settings.systemPrompt) {
+            settings.systemPrompt = '';
+        }
+        res.json(settings);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 更新设置
+router.post('/settings', async (req, res) => {
+    try {
+        const settings = req.body;
+        const ok = saveSettings(settings);
+        res.json({ success: ok });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

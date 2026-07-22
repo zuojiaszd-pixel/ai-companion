@@ -1,5 +1,29 @@
 const axios = require('axios');
 const { toolDefinitions, executeTool } = require('./tools');
+const fs = require('fs');
+const path = require('path');
+
+const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
+
+function loadSettings() {
+    try {
+        const data = fs.readFileSync(SETTINGS_FILE, "utf-8");
+        return JSON.parse(data);
+    } catch (e) {
+        return { temperature: 0.7, topP: 0.9, maxTokens: 16000, systemPrompt: null };
+    }
+}
+
+function saveSettings(data) {
+    try {
+        const settings = loadSettings();
+        Object.assign(settings, data);
+        const dir = path.dirname(SETTINGS_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf-8");
+        return true;
+    } catch (e) { return false; }
+}
 
 const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 
@@ -22,13 +46,13 @@ const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 - 需要参考历史信息时先用 recall_memories
 - 保持回答自然、有帮助`;
 
-async function callOpenRouter(messages, tools, model) {
+async function callOpenRouter(messages, tools, model, opts) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: model || 'qwen/qwen-2.5-72b-instruct',
         messages,
         tools: tools || undefined,
-        temperature: 0.7,
-        max_tokens: 16000
+        temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
+        max_tokens: opts && opts.maxTokens ? opts.maxTokens : 16000
     }, {
         headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -39,11 +63,11 @@ async function callOpenRouter(messages, tools, model) {
     return response.data;
 }
 
-async function chat(messages, model) {
+async function chat(messages, model, opts) {
     // Tool loop - max 10 iterations to prevent infinite loops
     let lastUsage = null;
     for (let i = 0; i < 10; i++) {
-        const data = await callOpenRouter(messages, toolDefinitions, model);
+        const data = await callOpenRouter(messages, toolDefinitions, model, opts);
         lastUsage = data.usage;
         const choice = data.choices?.[0];
         if (!choice) throw new Error('API 返回为空');
@@ -77,4 +101,4 @@ async function chat(messages, model) {
     throw new Error('工具调用次数过多，已终止');
 }
 
-module.exports = { chat, SYSTEM_PROMPT };
+module.exports = { chat, SYSTEM_PROMPT, loadSettings, saveSettings };
