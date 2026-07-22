@@ -178,6 +178,11 @@ function updateSliderValue(el) {
     var val = el.value;
     var label = document.getElementById('val-' + el.id.replace('slider-', ''));
     if (label) label.textContent = val;
+    // Auto-save
+    var t = document.getElementById('slider-temperature').value;
+    var p = document.getElementById('slider-topp').value;
+    var m = document.getElementById('slider-maxtokens').value;
+    fetch(BACKEND + '/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ temperature: parseFloat(t), topP: parseFloat(p), maxTokens: parseInt(m) }) }).catch(function(){});
 }
 async function saveSystemPrompt() {
     var text = document.getElementById('system-prompt-editor').value;
