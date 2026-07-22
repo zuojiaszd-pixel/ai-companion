@@ -1,0 +1,13 @@
+﻿{
+  "name": "AI Companion",
+  "short_name": "AI Companion",
+  "description": "智能 AI 聊天助手，支持推理、代码、文件和记忆功能",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fcf9f7",
+  "theme_color": "#f5a0b8",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

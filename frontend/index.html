@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"><title>AI Companion</title><style>*{margin:0;padding:0;box-sizing:border-box}:root {
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"><link rel="apple-touch-icon" href="/icon.svg"><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#f5a0b8"><title>AI Companion</title><style>*{margin:0;padding:0;box-sizing:border-box}:root {
     --bg: #fef6f8; --bg2: #fff5f7; --surface: #ffffff; --surface2: #fff0f3;
     --accent: #f5a0b8; --accent2: #f8b4c8; --accent-dark: #e8829e;
     --text: #3d2c33; --text2: #8a6e7a; --text3: #bfa5b1;
@@ -268,4 +268,5 @@ document.getElementById('input').addEventListener('input', function() {
 });
 // Load history on page load
 loadHistory();
+if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js');}
 </script><div id="token-bar"></div></body></html>
