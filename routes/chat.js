@@ -63,7 +63,9 @@ router.post('/chat', async (req, res) => {
 
     } catch (err) {
         console.error('Chat error:', err.message);
-        res.status(500).json({ error: err.message || '服务器错误' });
+        console.error('OpenRouter response:', err.response?.data);
+        const detail = err.response?.data?.error?.message || err.message;
+        res.status(500).json({ error: detail || '服务器错误' });
     }
 });
 
