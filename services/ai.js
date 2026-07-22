@@ -27,7 +27,7 @@ const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 - 需要参考历史信息时先用 recall_memories
 - 保持回答自然、有帮助`;
 
-async function callOpenRouter(messages, tools) {
+async function callOpenRouter(messages, tools, model) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: model || 'qwen/qwen-2.5-72b-instruct',
         messages,
@@ -47,7 +47,7 @@ async function callOpenRouter(messages, tools) {
 async function chat(messages, model) {
     // Tool loop - max 10 iterations to prevent infinite loops
     for (let i = 0; i < 10; i++) {
-        const data = await callOpenRouter(messages, toolDefinitions);
+        const data = await callOpenRouter(messages, toolDefinitions, model);
         const choice = data.choices?.[0];
         if (!choice) throw new Error('API 返回为空');
 
