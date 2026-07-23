@@ -120,7 +120,8 @@ async function chat(messages, model, opts) {
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
             for (const tc of msg.tool_calls) {
                 const func = tc.function;
-                const args = JSON.parse(func.arguments);
+                let args;
+                try { args = JSON.parse(func.arguments); } catch(e) { console.log("JSON parse error:", e.message, "raw:", func.arguments); continue; }
                 const result = await executeTool(func.name, args);
                 console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
