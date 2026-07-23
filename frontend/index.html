@@ -58,14 +58,13 @@ async function send() {
     input.style.height = 'auto';
     loading = true;
     document.getElementById('send-btn').disabled = true;
+    var ldTimer = setTimeout(function(){if(loading){loading=false;document.getElementById('send-btn').disabled=false;}},60000);
     try {
         addMsg('user', text);
         addTyping();
-        var controller = new AbortController();var to = setTimeout(function(){controller.abort();},120000);
         var res = await fetch(BACKEND + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
             body: JSON.stringify({ message: text, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value) })
         });
         clearTimeout(to);
@@ -82,6 +81,7 @@ async function send() {
         removeTyping();
         addMsg('assistant', 'Error: ' + err.message);
     } finally {
+        clearTimeout(ldTimer);
         loading = false;
         document.getElementById('send-btn').disabled = false;
     }
