@@ -108,7 +108,7 @@ async function callOpenRouter(messages, tools, model, opts) {
 async function chat(messages, model, opts) {
     let lastUsage = null;
     for (let i = 0; i < 10; i++) {
-        const data = await callOpenRouter(messages, toolDefinitions, model, opts);
+        const data = await callOpenRouter(messages, undefined, model, opts);
         lastUsage = data.usage;
         const choice = data.choices?.[0];
         if (!choice) throw new Error('API 返回为空');
@@ -151,6 +151,7 @@ async function chat(messages, model, opts) {
             }
         }
 
+        console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
         return { content: content, reasoning: reasoning, usage: lastUsage };
     }
     throw new Error('工具调用次数过多，已终止');
