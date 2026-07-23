@@ -1,4 +1,4 @@
-﻿const CACHE = "ai-companion-v1";
+﻿const CACHE = "ai-companion-v2";
 const STATIC = ["/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", function(e) {
