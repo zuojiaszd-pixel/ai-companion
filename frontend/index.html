@@ -228,7 +228,9 @@ async function loadHistory() {
         if (!res.ok) return;
         var history = await res.json();
         if (!history || !history.length) return;
-        for (var i = 0; i < history.length; i++) {
+        var cur = document.querySelectorAll(".msg-row").length;
+        if (history.length <= cur) return;
+        for (var i = cur; i < history.length; i++) {
             var msg = history[i];
             if (msg.role === 'user') addMsg('user', msg.content);
             else if (msg.role === 'assistant') addMsg('assistant', msg.content);
