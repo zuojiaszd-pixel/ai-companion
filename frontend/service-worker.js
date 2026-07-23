@@ -1,8 +1,8 @@
 ﻿const CACHE = "ai-companion-v1";
-const URLS = [".", "/manifest.json", "/icon.svg"];
+const STATIC = ["/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", function(e) {
-  e.waitUntil(caches.open(CACHE).then(function(c) { return c.addAll(URLS); }));
+  e.waitUntil(caches.open(CACHE).then(function(c) { return c.addAll(STATIC); }));
   self.skipWaiting();
 });
 
@@ -14,12 +14,14 @@ self.addEventListener("activate", function(e) {
 });
 
 self.addEventListener("fetch", function(e) {
+  if (e.request.mode === "navigate") {
+    e.respondWith(fetch(e.request).catch(function() { return caches.match(e.request); }));
+    return;
+  }
   e.respondWith(caches.match(e.request).then(function(r) {
     return r || fetch(e.request).then(function(res) {
-      if (res && res.ok && e.request.method === "GET") {
-        var copy = res.clone();
-        caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
-      }
+      var copy = res.clone();
+      caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
       return res;
     });
   }));
