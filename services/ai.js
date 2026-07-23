@@ -1,4 +1,4 @@
-﻿const axios = require('axios');
+const axios = require('axios');
 const { toolDefinitions, executeTool } = require('./tools');
 const fs = require('fs');
 const path = require('path');
@@ -52,6 +52,9 @@ function extractThinking(content) {
         reasoning += (reasoning ? '\n' : '') + dashMatch[1].trim();
         content = content.replace(dashMatch[0], '').trim();
     }
+
+    // Strip answer prefix: [回答：] [答复] [答案] at start of content
+    content = content.replace(/^\[(?:回答|答复|答案)[：:]\s*/m, '');
 
     return { content: content.trim(), reasoning: reasoning.trim() };
 }
@@ -127,10 +130,19 @@ async function chat(messages, model, opts) {
         let content = msg.content || '';
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
-        if (!reasoning.trim()) {
+        // Some models (like GLM) put the actual response in reasoning and leave content empty
+        if (!content.trim() && reasoning.trim()) {
+            content = reasoning;
+            reasoning = '';
+        } else if (!reasoning.trim()) {
             const cleaned = extractThinking(content);
             content = cleaned.content;
             reasoning = cleaned.reasoning;
+            // Safety: if extractThinking ate the content, restore from reasoning
+            if (!content.trim() && reasoning.trim()) {
+                content = reasoning;
+                reasoning = '';
+            }
         }
 
         return { content: content, reasoning: reasoning, usage: lastUsage };
