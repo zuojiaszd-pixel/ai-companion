@@ -61,7 +61,7 @@ async function send() {
     try {
         addMsg('user', text);
         addTyping();
-        var controller = new AbortController();var to = setTimeout(function(){controller.abort();},30000);
+        var controller = new AbortController();var to = setTimeout(function(){controller.abort();},120000);
         var res = await fetch(BACKEND + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
