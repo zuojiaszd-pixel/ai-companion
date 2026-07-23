@@ -49,13 +49,7 @@ router.post('/chat', async (req, res) => {
         // 7. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
 
-        // 8. 提取重要信息存为记忆（用户说了关键信息时）
-        const keyPhrases = ['我叫', '我喜欢', '我在做', '我是', '我的项目', '我遇到', '我想要', '我需要'];
-        if (keyPhrases.some(k => message.includes(k))) {
-            storeMemory(sessionId, message, 'fact');
-        }
-
-        // 9. 返回（含思考和token用量）
+        // 8. 返回（含思考和token用量）
         res.json({
             reply: result.content,
             thinking: result.reasoning || "",

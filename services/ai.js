@@ -37,6 +37,7 @@ const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 3. current_time - 获取当前时间
 4. read_file - 读取文件
 5. write_file - 写入文件
+6. save_memory - 保存重要信息到长期记忆
 
 当你需要这些能力时，直接使用对应的工具。
 
@@ -52,6 +53,7 @@ async function callOpenRouter(messages, tools, model, opts) {
         messages,
         tools: tools || undefined,
         temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
+        top_p: opts && opts.topP != null ? opts.topP : undefined,
         max_tokens: opts && opts.maxTokens ? opts.maxTokens : 16000
     }, {
         headers: {

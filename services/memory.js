@@ -23,7 +23,7 @@ async function searchMemories(query, limit = 5) {
     try {
         const embedding = await getEmbedding(query);
         if (!embedding) return [];
-        const all = await Memory.find({}).lean();
+        const all = await Memory.find({}).sort({ timestamp: -1 }).limit(200).lean();
         const scored = all.map(m => ({ ...m, score: cosineSim(embedding, m.embedding || []) }));
         scored.sort((a, b) => b.score - a.score);
         return scored.filter(m => m.score > 0.5).slice(0, limit);

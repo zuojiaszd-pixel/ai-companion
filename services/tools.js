@@ -1,4 +1,6 @@
-const { execSync } = require('child_process');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 const path = require('path');
 const fs = require('fs');
 
@@ -68,6 +70,21 @@ const toolDefinitions = [
                 required: ["filepath", "content"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "save_memory",
+            description: "保存一条重要信息到长期记忆中。当用户告诉了你关于自己的重要信息(如名字、喜好、经历、项目等)，调用此工具保存。",
+            parameters: {
+                type: "object",
+                properties: {
+                    content: { type: "string", description: "要保存的记忆内容" },
+                    type: { type: "string", "enum": ["fact", "preference", "experience"], description: "记忆类型" }
+                },
+                required: ["content"]
+            }
+        }
     }
 ];
 
@@ -75,9 +92,14 @@ const toolDefinitions = [
 async function executeTool(name, args) {
     try {
         switch (name) {
+            case 'save_memory': {
+                const { storeMemory } = require('./memory');
+                await storeMemory('default', args.content, args.type || 'fact');
+                return '记忆已保存';
+            }
             case 'execute_command': {
-                const result = execSync(args.command, { timeout: 15000, encoding: 'utf-8' });
-                return result || '(命令执行完毕，无输出)';
+                const { stdout, stderr } = await execPromise(args.command, { timeout: 15000 });
+                return stdout || stderr || '(命令执行完毕，无输出)';
             }
             case 'recall_memories': {
                 const { searchMemories } = require('./memory');
