@@ -227,9 +227,10 @@ function updateTokenBar(usage) {
 async function loadHistory() {
     try {
         var res = await fetch(BACKEND + '/api/history');
-        if (!res.ok) return;
+        if (!res.ok) { console.log('History fail: ' + res.status); return; }
         var history = await res.json();
-        if (!history || !history.length) return;
+        if (!history || !history.length) { console.log('History empty'); return; }
+        console.log('History loaded: ' + history.length + ' msgs');
         var cur = document.querySelectorAll(".msg-row").length;
         if (history.length <= cur) return;
         for (var i = cur; i < history.length; i++) {
