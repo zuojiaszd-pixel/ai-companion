@@ -121,7 +121,7 @@ async function chat(messages, model, opts) {
             for (const tc of msg.tool_calls) {
                 const func = tc.function;
                 let args;
-                try { args = JSON.parse(func.arguments); } catch(e) { console.log("JSON parse error:", e.message, "raw:", func.arguments); continue; }
+                try { args = JSON.parse(func.arguments); } catch(e) { console.log("JSON parse error:", e.message); messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message }); continue; }
                 const result = await executeTool(func.name, args);
                 console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
@@ -153,6 +153,11 @@ async function chat(messages, model, opts) {
         }
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
+        // Fallback: if content is still empty, show a default message
+        if (!content.trim()) {
+            content = '[思考完成但未生成回复文本]';
+            reasoning = '';
+        }
         return { content: content, reasoning: reasoning, usage: lastUsage };
     }
     throw new Error('工具调用次数过多，已终止');
