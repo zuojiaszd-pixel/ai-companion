@@ -225,12 +225,15 @@ function updateTokenBar(usage) {
         localStorage.setItem('lastUsage', JSON.stringify(usage));
     }
 }
+var loadingHistory = false;
 async function loadHistory() {
+    if (loadingHistory) return;
+    loadingHistory = true;
     try {
         var res = await fetch(BACKEND + '/api/history');
-        if (!res.ok) return;
+        if (!res.ok) { loadingHistory = false; return; }
         var history = await res.json();
-        if (!history || !history.length) return;
+        if (!history || !history.length) { loadingHistory = false; return; }
         var chat = document.getElementById('chat');
         var cur = document.querySelectorAll('.msg-row').length;
         if (cur === 0) {
@@ -248,6 +251,7 @@ async function loadHistory() {
             }
         }
     } catch(e) {}
+    loadingHistory = false;
 }function toggleSettings() {
     togglePanel('settings');
     if (document.getElementById('settings-panel').classList.contains('open')) {
@@ -284,5 +288,5 @@ loadHistory();
 var savedUsage = localStorage.getItem('lastUsage');
 if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
 if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js');}
-setInterval(function(){var el=document.querySelectorAll('.msg-row').length;if(el>0&&!loading)loadHistory();},15000);
+
 </script><div id="token-bar"></div></body></html>
