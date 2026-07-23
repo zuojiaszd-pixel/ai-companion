@@ -58,9 +58,9 @@ async function send() {
     input.style.height = 'auto';
     loading = true;
     document.getElementById('send-btn').disabled = true;
-    addMsg('user', text);
-    addTyping();
     try {
+        addMsg('user', text);
+        addTyping();
         var res = await fetch(BACKEND + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -78,9 +78,10 @@ async function send() {
     } catch (err) {
         removeTyping();
         addMsg('assistant', 'Error: ' + err.message);
+    } finally {
+        loading = false;
+        document.getElementById('send-btn').disabled = false;
     }
-    loading = false;
-    document.getElementById('send-btn').disabled = false;
 }
 
 function handleKey(e) {
@@ -287,6 +288,6 @@ document.getElementById('input').addEventListener('input', function() {
 loadHistory();
 var savedUsage = localStorage.getItem('lastUsage');
 if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
-if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js');}
+if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js').then(function(r){r.update();}).catch(function(){});}
 
 </script><div id="token-bar"></div></body></html>
