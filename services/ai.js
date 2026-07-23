@@ -1,4 +1,4 @@
-const axios = require('axios');
+﻿const axios = require('axios');
 const { toolDefinitions, executeTool } = require('./tools');
 const fs = require('fs');
 const path = require('path');
@@ -23,6 +23,37 @@ function saveSettings(data) {
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf-8");
         return true;
     } catch (e) { return false; }
+}
+
+/**
+ * Extract thinking/reasoning from Chinese AI model responses
+ * where the model embeds reasoning inside the content field.
+ */
+function extractThinking(content) {
+    if (!content) return { content: '', reasoning: '' };
+    let reasoning = '';
+
+    // Pattern 1: [思考]/[推理] header lines
+    content = content.replace(/^\[(思考|推理|思考过程|推理过程|分析过程)[：:]\s*([\s\S]*?)(?=\n(?:\[|$)|\n*$)/m, (m, tag, text) => {
+        reasoning += (reasoning ? '\n' : '') + text.trim();
+        return '';
+    });
+
+    // Pattern 2: **思考过程：**\n...\n**回答：** format
+    const thinkBlockMatch = content.match(/\*\*(?:思考|推理|思考过程|思维过程)[：:]\*\*([\s\S]*?)\*\*(?:回答|答复|结论|结果)[：:]\*\*/);
+    if (thinkBlockMatch) {
+        reasoning += (reasoning ? '\n' : '') + thinkBlockMatch[1].trim();
+        content = content.replace(thinkBlockMatch[0], '').trim();
+    }
+
+    // Pattern 3: ---思考---\n...\n---回答--- format
+    const dashMatch = content.match(/---(?:思考|推理|思维)---\n([\s\S]*?)\n---(?:回答|答复)---/);
+    if (dashMatch) {
+        reasoning += (reasoning ? '\n' : '') + dashMatch[1].trim();
+        content = content.replace(dashMatch[0], '').trim();
+    }
+
+    return { content: content.trim(), reasoning: reasoning.trim() };
 }
 
 const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
@@ -57,7 +88,7 @@ async function callOpenRouter(messages, tools, model, opts) {
         max_tokens: opts && opts.maxTokens ? opts.maxTokens : 16000
     }, {
         headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
             'Content-Type': 'application/json'
         },
         timeout: 60000
@@ -66,7 +97,6 @@ async function callOpenRouter(messages, tools, model, opts) {
 }
 
 async function chat(messages, model, opts) {
-    // Tool loop - max 10 iterations to prevent infinite loops
     let lastUsage = null;
     for (let i = 0; i < 10; i++) {
         const data = await callOpenRouter(messages, toolDefinitions, model, opts);
@@ -75,30 +105,35 @@ async function chat(messages, model, opts) {
         if (!choice) throw new Error('API 返回为空');
 
         const msg = choice.message;
-        
-        // Check if AI wants to use tools
-        if (msg.tool_calls && msg.tool_calls.length > 0) {
-            // Add AI's tool call request to messages
+
+        if (msg.tool_calls && msg.tool_calls.length > 0 && i < 9) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
-            
-            // Execute each tool
+            console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
             for (const tc of msg.tool_calls) {
                 const func = tc.function;
                 const args = JSON.parse(func.arguments);
                 const result = await executeTool(func.name, args);
-                console.log(`工具调用: ${func.name}, 结果长度: ${result.length}`);
+                console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
                     role: 'tool',
                     tool_call_id: tc.id,
                     content: result
                 });
             }
-            // Continue loop to let AI process tool results
             continue;
         }
-        
-        // No tool calls - this is the final response
-        return { content: msg.content || '', reasoning: msg.reasoning || msg.reasoning_content || '', usage: lastUsage };
+
+        // Final response — clean it up
+        let content = msg.content || '';
+        let reasoning = msg.reasoning || msg.reasoning_content || '';
+
+        if (!reasoning.trim()) {
+            const cleaned = extractThinking(content);
+            content = cleaned.content;
+            reasoning = cleaned.reasoning;
+        }
+
+        return { content: content, reasoning: reasoning, usage: lastUsage };
     }
     throw new Error('工具调用次数过多，已终止');
 }

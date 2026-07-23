@@ -222,27 +222,33 @@ function updateTokenBar(usage) {
         var c = usage.completion_tokens || 0;
         var t = usage.total_tokens || (p + c);
         bar.innerHTML = p + ' in / ' + c + ' out / ' + t + ' total';
+        localStorage.setItem('lastUsage', JSON.stringify(usage));
     }
 }
 async function loadHistory() {
     try {
         var res = await fetch(BACKEND + '/api/history');
-        if (!res.ok) { console.log('History fail: ' + res.status); return; }
+        if (!res.ok) return;
         var history = await res.json();
-        if (!history || !history.length) { console.log('History empty'); return; }
-        console.log('History loaded: ' + history.length + ' msgs');
-        var cur = document.querySelectorAll(".msg-row").length;
-        if (history.length <= cur) return;
-        for (var i = cur; i < history.length; i++) {
-            try{
-            var msg = history[i];
-            if (msg.role === 'user') addMsg('user', msg.content);
-            else if (msg.role === 'assistant') addMsg('assistant', msg.content);
-            }catch(ex){console.log('addMsg error: ' + ex.message)}
+        if (!history || !history.length) return;
+        var chat = document.getElementById('chat');
+        var cur = document.querySelectorAll('.msg-row').length;
+        if (cur === 0) {
+            chat.innerHTML = '';
+            for (var i = 0; i < history.length; i++) {
+                var msg = history[i];
+                if (msg.role === 'user') addMsg('user', msg.content);
+                else if (msg.role === 'assistant') addMsg('assistant', msg.content);
+            }
+        } else if (history.length > cur) {
+            for (var i = cur; i < history.length; i++) {
+                var msg = history[i];
+                if (msg.role === 'user') addMsg('user', msg.content);
+                else if (msg.role === 'assistant') addMsg('assistant', msg.content);
+            }
         }
     } catch(e) {}
-}
-function toggleSettings() {
+}function toggleSettings() {
     togglePanel('settings');
     if (document.getElementById('settings-panel').classList.contains('open')) {
         var curTheme = document.documentElement.getAttribute('data-theme') || 'light';
@@ -275,6 +281,8 @@ document.getElementById('input').addEventListener('input', function() {
 });
 // Load history on page load
 loadHistory();
+var savedUsage = localStorage.getItem('lastUsage');
+if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
 if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js');}
 setInterval(function(){var el=document.querySelectorAll('.msg-row').length;if(el>0&&!loading)loadHistory();},15000);
 </script><div id="token-bar"></div></body></html>
