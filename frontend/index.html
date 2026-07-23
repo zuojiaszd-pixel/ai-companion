@@ -234,9 +234,11 @@ async function loadHistory() {
         var cur = document.querySelectorAll(".msg-row").length;
         if (history.length <= cur) return;
         for (var i = cur; i < history.length; i++) {
+            try{
             var msg = history[i];
             if (msg.role === 'user') addMsg('user', msg.content);
             else if (msg.role === 'assistant') addMsg('assistant', msg.content);
+            }catch(ex){console.log('addMsg error: ' + ex.message)}
         }
     } catch(e) {}
 }
