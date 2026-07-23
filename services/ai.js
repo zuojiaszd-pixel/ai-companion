@@ -115,13 +115,19 @@ async function chat(messages, model, opts) {
 
         const msg = choice.message;
 
-        if (msg.tool_calls && msg.tool_calls.length > 0 && i < 9) {
+        if (msg.tool_calls && msg.tool_calls.length > 0 && i < 9 && malformedCount < 3) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
             for (const tc of msg.tool_calls) {
-                const func = tc.function;
+                var func_ = tc && tc.function;
+                if (!func_ || !func_.arguments) {
+                    console.log("Malformed tool call, skipping");
+                    messages.push({ role: "tool", tool_call_id: (tc && tc.id) || "unknown", content: "Error: tool call format error" });
+                    continue;
+                }
+                var func = func_;
                 let args;
-                try { args = JSON.parse(func.arguments); } catch(e) { console.log("JSON parse error:", e.message); messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message }); continue; }
+                try { args = JSON.parse(func.arguments); } catch(e) { console.log("JSON parse error:", e.message); messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message }); malformedCount++; continue; }
                 const result = await executeTool(func.name, args);
                 console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
