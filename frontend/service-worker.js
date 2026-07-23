@@ -14,6 +14,9 @@ self.addEventListener("activate", function(e) {
 });
 
 self.addEventListener("fetch", function(e) {
+  // Cache API only supports GET — skip chat API calls etc.
+  if (e.request.method !== "GET") return;
+
   if (e.request.mode === "navigate") {
     e.respondWith(fetch(e.request).catch(function() { return caches.match(e.request); }));
     return;
