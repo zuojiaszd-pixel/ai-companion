@@ -67,7 +67,6 @@ async function send() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: text, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value) })
         });
-        clearTimeout(to);
         if (!res.ok) throw new Error(await res.text());
         var data = await res.json();
         removeTyping();
