@@ -61,11 +61,14 @@ async function send() {
     try {
         addMsg('user', text);
         addTyping();
+        var controller = new AbortController();var to = setTimeout(function(){controller.abort();},30000);
         var res = await fetch(BACKEND + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
             body: JSON.stringify({ message: text, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value) })
         });
+        clearTimeout(to);
         if (!res.ok) throw new Error(await res.text());
         var data = await res.json();
         removeTyping();
@@ -288,6 +291,6 @@ document.getElementById('input').addEventListener('input', function() {
 loadHistory();
 var savedUsage = localStorage.getItem('lastUsage');
 if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
-if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js?v=' + Date.now()).then(function(r){r.update();}).catch(function(){});}
+if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){for(var i=0;i<rs.length;i++)rs[i].unregister();}).then(function(){navigator.serviceWorker.register('/service-worker.js?v='+Date.now()).then(function(r){r.update();}).catch(function(){});});}
 
 </script><div id="token-bar"></div></body></html>
