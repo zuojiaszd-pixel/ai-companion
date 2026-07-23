@@ -86,7 +86,21 @@ const toolDefinitions = [
             }
         }
     }
-];
+,
+    {
+        type: "function",
+        function: {
+            name: "push_to_github",
+            description: "将本地代码修改提交并推送到 GitHub 仓库。需要先在 Render 环境变量中设置 GITHUB_TOKEN。使用前建议先 execute_command('git status') 查看修改状态。",
+            parameters: {
+                type: "object",
+                properties: {
+                    commit_message: { type: "string", description: "git commit -m 的提交信息，描述本次修改内容" }
+                },
+                required: ["commit_message"]
+            }
+        }
+    }];
 
 // Tool handlers - execute each tool and return result
 async function executeTool(name, args) {
@@ -119,6 +133,20 @@ async function executeTool(name, args) {
                 const p = path.resolve(args.filepath);
                 fs.writeFileSync(p, args.content, 'utf-8');
                 return `文件已写入: ${args.filepath}`;
+            }
+
+            case 'push_to_github': {
+                const token = process.env.GITHUB_TOKEN;
+                if (!token) return '错误: 未设置 GITHUB_TOKEN 环境变量。请在 Render 设置中添加 GitHub Personal Access Token。';
+                const { stdout: remoteUrl } = await execPromise('git remote get-url origin', { timeout: 5000 }).catch(() => ({ stdout: 'origin https://github.com/zuojiaszd-pixel/ai-companion.git' }));
+                const urlWithToken = remoteUrl.trim().replace('https://', 'https://x-access-token:' + token + '@');
+                await execPromise('git remote set-url origin "' + urlWithToken + '"', { timeout: 5000 });
+                await execPromise('git add -A', { timeout: 10000 });
+                const safeMsg = args.commit_message.replace(/"/g, '\\"');
+                const { stdout: commitResult } = await execPromise('git commit -m "' + safeMsg + '"', { timeout: 10000 }).catch(e => ({ stdout: e.stdout || '(无新提交)' }));
+                const { stdout: pushResult } = await execPromise('git push', { timeout: 30000 });
+                await execPromise('git remote set-url origin "' + remoteUrl.trim() + '"', { timeout: 5000 });
+                return '提交结果: ' + commitResult + '\\n推送结果: ' + pushResult;
             }
             default:
                 return `未知工具: ${name}`;
