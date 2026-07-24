@@ -1,4 +1,4 @@
-const TelegramBot = require('node-telegram-bot-api');
+const { TelegramBot } = require('node-telegram-bot-api');
 const Chat = require('../models/Chat');
 const { chat, SYSTEM_PROMPT, loadSettings } = require('./ai');
 const { searchMemories, storeMemory } = require('./memory');
