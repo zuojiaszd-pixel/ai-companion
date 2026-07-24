@@ -5,6 +5,9 @@ const path = require('path');
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
+// 默认模型 - 使用 deepseek/deepseek-chat
+const DEFAULT_MODEL = 'deepseek/deepseek-chat';
+
 function loadSettings() {
     try {
         const data = fs.readFileSync(SETTINGS_FILE, "utf-8");
@@ -27,14 +30,8 @@ function saveSettings(data) {
 
 /**
  * Try to parse JSON, with robust fallback for truncated/malformed JSON.
- * Handles:
- * 1. Unterminated strings (from token limit truncation)
- * 2. Literal control characters inside strings (some models output raw newlines)
- * 3. Incomplete escape sequences
- * 4. Unclosed braces/brackets
  */
 function safeJsonParse(str) {
-    // First try normal parse
     try {
         return JSON.parse(str);
     } catch (e) {
@@ -44,8 +41,6 @@ function safeJsonParse(str) {
     let repaired = str.trim();
 
     // Step 1: Fix literal control characters inside strings
-    // Some models output raw newlines/tabs inside JSON string values instead of \n \t
-    // We need to walk through and replace them with proper escape sequences
     let fixed = '';
     let inString = false;
     let escaped = false;
@@ -67,7 +62,6 @@ function safeJsonParse(str) {
             continue;
         }
         if (inString) {
-            // Replace literal control characters with escape sequences
             if (ch === '\n') { fixed += '\\n'; continue; }
             if (ch === '\r') { fixed += '\\r'; continue; }
             if (ch === '\t') { fixed += '\\t'; continue; }
@@ -77,7 +71,7 @@ function safeJsonParse(str) {
     }
     repaired = fixed;
 
-    // Step 2: Check if we're still inside a string (unterminated due to truncation)
+    // Step 2: Check if we're still inside a string
     inString = false;
     escaped = false;
     for (let i = 0; i < repaired.length; i++) {
@@ -88,16 +82,14 @@ function safeJsonParse(str) {
     }
 
     if (inString) {
-        // If the last char is a lone backslash (incomplete escape), remove it
         if (repaired.endsWith('\\')) {
             repaired = repaired.slice(0, -1);
         }
-        // Close the string
         repaired += '"';
         console.log('[JSON Repair] Closed unterminated string');
     }
 
-    // Step 3: Count unclosed braces/brackets (outside of strings)
+    // Step 3: Count unclosed braces/brackets
     let openBraces = 0, openBrackets = 0;
     inString = false;
     escaped = false;
@@ -113,14 +105,12 @@ function safeJsonParse(str) {
         else if (ch === ']') openBrackets--;
     }
 
-    // Close in reverse order: brackets first, then braces
     for (let i = 0; i < openBrackets; i++) repaired += ']';
     for (let i = 0; i < openBraces; i++) repaired += '}';
     if (openBrackets > 0 || openBraces > 0) {
         console.log('[JSON Repair] Closed', openBrackets, 'brackets and', openBraces, 'braces');
     }
 
-    // Try parsing the repaired version
     try {
         const result = JSON.parse(repaired);
         console.log('[JSON Repair] Successfully repaired truncated JSON');
@@ -130,17 +120,14 @@ function safeJsonParse(str) {
     }
 
     // Step 4: Last resort - extract key-value pairs with regex
-    // This handles cases where the JSON structure itself is malformed
     const result = {};
     const kvPattern = /"([^"]+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
     let match;
     while ((match = kvPattern.exec(str)) !== null) {
         let val = match[2];
-        // Unescape
         val = val.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r').replace(/\\\\/g, '\\');
         result[match[1]] = val;
     }
-    // Also try to match non-string values (numbers, booleans, null)
     const kvPattern2 = /"([^"]+)"\s*:\s*(true|false|null|\d+(?:\.\d+)?)/g;
     while ((match = kvPattern2.exec(str)) !== null) {
         if (!(match[1] in result)) {
@@ -155,37 +142,31 @@ function safeJsonParse(str) {
         return result;
     }
 
-    throw new Error('无法解析JSON: ' + e.message);
+    throw new Error('无法解析JSON');
 }
 
 /**
  * Extract thinking/reasoning from Chinese AI model responses
- * where the model embeds reasoning inside the content field.
- * SAFETY: If extraction would result in empty content, return original.
  */
 function extractThinking(content) {
     if (!content) return { content: '', reasoning: '' };
     let reasoning = '';
     let working = content;
 
-    // Pattern 2: **思考过程：**\n...\n**回答：** format
     const thinkBlockMatch = working.match(/\*\*(?:思考|推理|思考过程|思维过程)[：:]\*\*([\s\S]*?)\*\*(?:回答|答复|结论|结果)[：:]\*\*/);
     if (thinkBlockMatch) {
         reasoning += (reasoning ? '\n' : '') + thinkBlockMatch[1].trim();
         working = working.replace(thinkBlockMatch[0], '').trim();
     }
 
-    // Pattern 3: ---思考---\n...\n---回答--- format
     const dashMatch = working.match(/---(?:思考|推理|思维)---\n([\s\S]*?)\n---(?:回答|答复)---/);
     if (dashMatch) {
         reasoning += (reasoning ? '\n' : '') + dashMatch[1].trim();
         working = working.replace(dashMatch[0], '').trim();
     }
 
-    // Strip answer prefix: [回答：] [答复] [答案] at start of content
     working = working.replace(/^\[(?:回答|答复|答案)[：:]\s*/m, '');
 
-    // SAFETY: If we stripped everything, return original content unchanged
     if (!working.trim() && content.trim()) {
         return { content: content.trim(), reasoning: '' };
     }
@@ -193,7 +174,6 @@ function extractThinking(content) {
     return { content: working.trim(), reasoning: reasoning.trim() };
 }
 
-// Patterns that indicate the model didn't actually generate a real response
 const EMPTY_PATTERNS = [
     /^\[思考完成但未生成回复文本\]$/,
     /^\[思考完成.*?\]$/,
@@ -238,7 +218,7 @@ const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 
 async function callOpenRouter(messages, tools, model, opts) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: model || 'qwen/qwen-2.5-72b-instruct',
+        model: model || DEFAULT_MODEL,
         messages,
         tools: tools || undefined,
         temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
@@ -254,7 +234,6 @@ async function callOpenRouter(messages, tools, model, opts) {
     return response.data;
 }
 
-// Retry prompts to nudge the model into generating actual content
 const RETRY_PROMPTS = [
     '请直接回复用户刚才的消息，给出你的回答。',
     '你刚才似乎没有生成回复内容。请重新阅读对话上下文，直接给出你的回答。',
@@ -263,13 +242,23 @@ const RETRY_PROMPTS = [
     '最后一次机会：请直接输出你对用户消息的回复，不要只思考不回答。'
 ];
 
-async function chat(messages, model, opts) {
+/**
+ * chat function
+ * @param {Array} messages - 消息数组
+ * @param {string|null} model - 模型名称
+ * @param {object} opts - 选项 (temperature, topP, maxTokens)
+ * @param {boolean} useTools - 是否启用工具调用，默认 true
+ */
+async function chat(messages, model, opts, useTools = true) {
     let lastUsage = null;
     const MAX_TOOL_ROUNDS = 10;
     const MAX_EMPTY_RETRIES = 5;
 
+    // 根据参数决定是否传工具定义
+    const activeTools = useTools ? toolDefinitions : null;
+
     for (let i = 0; i < MAX_TOOL_ROUNDS; i++) {
-        const data = await callOpenRouter(messages, toolDefinitions, model, opts);
+        const data = await callOpenRouter(messages, activeTools, model, opts);
         lastUsage = data.usage;
         const choice = data.choices?.[0];
         if (!choice) throw new Error('API 返回为空');
@@ -277,7 +266,7 @@ async function chat(messages, model, opts) {
         const msg = choice.message;
 
         // If model wants to call tools, process them
-        if (msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
+        if (useTools && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
             for (const tc of msg.tool_calls) {
@@ -294,8 +283,6 @@ async function chat(messages, model, opts) {
                     console.log('[DEBUG] Tool args parsed OK, keys:', Object.keys(args));
                 } catch(e) {
                     console.log("JSON parse error:", e.message, "| args length:", func.arguments.length);
-                    console.log("JSON snippet (first 200 chars):", func.arguments.substring(0, 200));
-                    console.log("JSON snippet (last 200 chars):", func.arguments.substring(func.arguments.length - 200));
                     if (func.name === 'write_file' && func.arguments.includes('"content"')) {
                         messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 文件内容过长被截断，请尝试分多次写入或缩短内容。" });
                     } else {
@@ -318,7 +305,6 @@ async function chat(messages, model, opts) {
         let content = msg.content || '';
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
-        // Some models (like GLM) put the actual response in reasoning and leave content empty
         if (isEmptyResponse(content) && reasoning.trim()) {
             content = reasoning;
             reasoning = '';
@@ -335,14 +321,12 @@ async function chat(messages, model, opts) {
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
 
-        // If content is empty, retry up to MAX_EMPTY_RETRIES times without tools
         if (isEmptyResponse(content)) {
             console.log('[WARN] Empty response detected, starting retry loop...');
             
             for (let r = 0; r < MAX_EMPTY_RETRIES; r++) {
                 console.log(`[Retry ${r + 1}/${MAX_EMPTY_RETRIES}] Attempting to get non-empty response...`);
                 
-                // Add a nudge message (without tools to prevent tool-calling loops)
                 const retryMessages = [...messages];
                 retryMessages.push({ role: 'user', content: RETRY_PROMPTS[r] });
                 
@@ -362,7 +346,6 @@ async function chat(messages, model, opts) {
                 let retryContent = retryMsg.content || '';
                 let retryReasoning = retryMsg.reasoning || retryMsg.reasoning_content || '';
                 
-                // Same cleanup logic
                 if (isEmptyResponse(retryContent) && retryReasoning.trim()) {
                     retryContent = retryReasoning;
                     retryReasoning = '';
@@ -385,7 +368,6 @@ async function chat(messages, model, opts) {
                 }
             }
             
-            // All retries failed
             console.log('[WARN] All retries exhausted, returning fallback message.');
             content = '（我好像走神了，能再说一遍吗？）';
             reasoning = '';
@@ -395,4 +377,4 @@ async function chat(messages, model, opts) {
     throw new Error('工具调用次数过多，已终止');
 }
 
-module.exports = { chat, SYSTEM_PROMPT, loadSettings, saveSettings };
+module.exports = { chat, SYSTEM_PROMPT, loadSettings, saveSettings, DEFAULT_MODEL };

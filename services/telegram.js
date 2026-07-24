@@ -121,14 +121,14 @@ async function handleMessage(msg) {
             messages.push({ role: 'user', content: text });
         }
 
-        // 调用 AI
+        // 调用 AI（Telegram 聊天不使用工具，避免空回复问题）
         const settings = loadSettings();
         const opts = {
             temperature: settings.temperature || 0.8,
             topP: settings.topP || 0.9,
             maxTokens: settings.maxTokens || 2000
         };
-        const result = await chat(messages, null, opts);
+        const result = await chat(messages, null, opts, false);
 
         // 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId: 'tg_' + chatId });
@@ -138,6 +138,7 @@ async function handleMessage(msg) {
 
     } catch (err) {
         console.error('Telegram 消息处理失败:', err.message);
+        console.error('错误堆栈:', err.stack);
         bot.sendMessage(chatId, '呜...我好像走神了，能再说一遍吗？');
     }
 }
