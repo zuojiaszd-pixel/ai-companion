@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { PERSONA } = require('./../config/persona');
 const { toolDefinitions, executeTool } = require('./tools');
 const fs = require('fs');
 const path = require('path');
@@ -188,33 +189,7 @@ function isEmptyResponse(content) {
     return EMPTY_PATTERNS.some(p => p.test(trimmed));
 }
 
-const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
-
-## 推理能力
-请先深入思考再回答。最终只输出你的回答本身，不需要添加额外格式标记。
-
-## 工具使用
-你可以使用以下工具：
-1. execute_command - 在服务器的终端执行命令（代码、脚本等），返回输出结果
-2. recall_memories - 搜索长期记忆
-3. current_time - 获取当前时间
-4. read_file - 读取文件
-5. write_file - 写入文件
-6. save_memory - 保存重要信息到长期记忆
-
-当你需要这些能力时，直接使用对应的工具。
-
-## 规则
-- 用中文回答
-- 需要运行代码时使用 execute_command
-- 需要参考历史信息时先用 recall_memories
-- 保持回答自然、有帮助
-
-## 项目代码
-你的完整源代码位于 GitHub 仓库 https://github.com/zuojiaszd-pixel/ai-companion。当前服务器工作目录中就是你的项目文件。
-
-使用 read_file 读取文件，write_file 修改文件。修改后使用 execute_command("git status") 查看变更，然后用 push_to_github("提交信息") 推送到 GitHub。
-注意: Render 的服务器每次部署会重置文件系统，所以要通过 GitHub 推送来永久保存修改。`;
+const SYSTEM_PROMPT = PERSONA;
 
 async function callOpenRouter(messages, tools, model, opts) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
