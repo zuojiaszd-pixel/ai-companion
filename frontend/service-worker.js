@@ -1,4 +1,4 @@
-﻿const CACHE = "ai-companion-v2";
+const CACHE = "lumi-v3";
 const STATIC = ["/manifest.json", "/icon.svg"];
 
 self.addEventListener("install", function(e) {
@@ -14,15 +14,20 @@ self.addEventListener("activate", function(e) {
 });
 
 self.addEventListener("fetch", function(e) {
-  // Cache API only supports GET requests
   if (e.request.method !== "GET") return;
 
-  // Navigation (HTML pages): network-first, cache fallback, offline page as last resort
+  // Never cache API requests - always go to network
+  if (e.request.url.includes('/api/')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
+  // Navigation (HTML pages): network-first, cache fallback
   if (e.request.mode === "navigate") {
     e.respondWith(
       fetch(e.request).catch(function() {
         return caches.match(e.request).then(function(cached) {
-          return cached || new Response("离线中 - AI Companion", { status: 200 });
+          return cached || new Response("离线中 - Lumi", { status: 200 });
         });
       })
     );

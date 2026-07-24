@@ -28,35 +28,51 @@ function saveSettings(data) {
 /**
  * Extract thinking/reasoning from Chinese AI model responses
  * where the model embeds reasoning inside the content field.
+ * SAFETY: If extraction would result in empty content, return original.
  */
 function extractThinking(content) {
     if (!content) return { content: '', reasoning: '' };
     let reasoning = '';
-
-    // Pattern 1: [思考]/[推理] header lines
-    content = content.replace(/^\[(思考|推理|思考过程|推理过程|分析过程)[：:]\s*([\s\S]*?)(?=\n(?:\[|$)|\n*$)/m, (m, tag, text) => {
-        reasoning += (reasoning ? '\n' : '') + text.trim();
-        return '';
-    });
+    let working = content;
 
     // Pattern 2: **思考过程：**\n...\n**回答：** format
-    const thinkBlockMatch = content.match(/\*\*(?:思考|推理|思考过程|思维过程)[：:]\*\*([\s\S]*?)\*\*(?:回答|答复|结论|结果)[：:]\*\*/);
+    const thinkBlockMatch = working.match(/\*\*(?:思考|推理|思考过程|思维过程)[：:]\*\*([\s\S]*?)\*\*(?:回答|答复|结论|结果)[：:]\*\*/);
     if (thinkBlockMatch) {
         reasoning += (reasoning ? '\n' : '') + thinkBlockMatch[1].trim();
-        content = content.replace(thinkBlockMatch[0], '').trim();
+        working = working.replace(thinkBlockMatch[0], '').trim();
     }
 
     // Pattern 3: ---思考---\n...\n---回答--- format
-    const dashMatch = content.match(/---(?:思考|推理|思维)---\n([\s\S]*?)\n---(?:回答|答复)---/);
+    const dashMatch = working.match(/---(?:思考|推理|思维)---\n([\s\S]*?)\n---(?:回答|答复)---/);
     if (dashMatch) {
         reasoning += (reasoning ? '\n' : '') + dashMatch[1].trim();
-        content = content.replace(dashMatch[0], '').trim();
+        working = working.replace(dashMatch[0], '').trim();
     }
 
     // Strip answer prefix: [回答：] [答复] [答案] at start of content
-    content = content.replace(/^\[(?:回答|答复|答案)[：:]\s*/m, '');
+    working = working.replace(/^\[(?:回答|答复|答案)[：:]\s*/m, '');
 
-    return { content: content.trim(), reasoning: reasoning.trim() };
+    // SAFETY: If we stripped everything, return original content unchanged
+    if (!working.trim() && content.trim()) {
+        return { content: content.trim(), reasoning: '' };
+    }
+
+    return { content: working.trim(), reasoning: reasoning.trim() };
+}
+
+// Patterns that indicate the model didn't actually generate a real response
+const EMPTY_PATTERNS = [
+    /^\[思考完成但未生成回复文本\]$/,
+    /^\[思考完成.*?\]$/,
+    /^\(思考完成.*?\)$/,
+    /^思考完成$/,
+    /^\[.*?未生成.*?\]$/,
+];
+
+function isEmptyResponse(content) {
+    const trimmed = content.trim();
+    if (!trimmed) return true;
+    return EMPTY_PATTERNS.some(p => p.test(trimmed));
 }
 
 const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
@@ -66,7 +82,7 @@ const SYSTEM_PROMPT = `你是一个全能的 AI 助手，拥有以下能力：
 
 ## 工具使用
 你可以使用以下工具：
-1. execute_command - 在终端执行命令（代码、脚本等）
+1. execute_command - 在服务器的终端执行命令（代码、脚本等），返回输出结果
 2. recall_memories - 搜索长期记忆
 3. current_time - 获取当前时间
 4. read_file - 读取文件
@@ -100,7 +116,7 @@ async function callOpenRouter(messages, tools, model, opts) {
             'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
             'Content-Type': 'application/json'
         },
-        timeout: 60000
+        timeout: 120000
     });
     return response.data;
 }
@@ -144,24 +160,27 @@ async function chat(messages, model, opts) {
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
         // Some models (like GLM) put the actual response in reasoning and leave content empty
-        if (!content.trim() && reasoning.trim()) {
+        // Also check for placeholder patterns like "[思考完成但未生成回复文本]"
+        if ((isEmptyResponse(content)) && reasoning.trim()) {
             content = reasoning;
             reasoning = '';
         } else if (!reasoning.trim()) {
             const cleaned = extractThinking(content);
-            content = cleaned.content;
-            reasoning = cleaned.reasoning;
-            // Safety: if extractThinking ate the content, restore from reasoning
-            if (!content.trim() && reasoning.trim()) {
-                content = reasoning;
+            // After extraction, if content becomes empty but reasoning has content, use reasoning
+            if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
+                content = cleaned.reasoning;
                 reasoning = '';
+            } else {
+                content = cleaned.content;
+                reasoning = cleaned.reasoning;
             }
         }
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
-        // Fallback: if content is still empty, show a default message
-        if (!content.trim()) {
-            content = '[思考完成但未生成回复文本]';
+
+        // Fallback: if content is still empty or a known placeholder, show a default message
+        if (isEmptyResponse(content)) {
+            content = '（我好像走神了，能再说一遍吗？）';
             reasoning = '';
         }
         return { content: content, reasoning: reasoning, usage: lastUsage };

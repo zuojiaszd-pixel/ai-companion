@@ -8,11 +8,12 @@ const { searchMemories, storeMemory } = require('../services/memory');
 // 主聊天接口
 router.post('/chat', async (req, res) => {
     try {
-        const { message, sessionId = 'default', model, temperature, topP, maxTokens } = req.body;
-        if (!message) return res.status(400).json({ error: '消息不能为空' });
+        const { message, sessionId = 'default', model, temperature, topP, maxTokens, image } = req.body;
+        if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
 
         // 1. 存用户消息
-        await Chat.create({ role: 'user', content: message, sessionId });
+        const userContent = image ? `[图片消息] ${message || ''}`.trim() : message;
+        await Chat.create({ role: 'user', content: userContent, sessionId });
 
         // 2. 搜索相关记忆
         const memories = await searchMemories(message);
@@ -38,8 +39,15 @@ router.post('/chat', async (req, res) => {
         }
         // 添加当前用户消息（如果不在历史中）
         const lastMsg = recentHistory[recentHistory.length - 1];
-        if (!lastMsg || lastMsg.content !== message) {
-            messages.push({ role: 'user', content: message });
+        if (!lastMsg || lastMsg.content !== userContent) {
+            if (image) {
+                messages.push({ role: 'user', content: [
+                    { type: 'text', text: message || '请描述这张图片' },
+                    { type: 'image_url', image_url: { url: image } }
+                ]});
+            } else {
+                messages.push({ role: 'user', content: message });
+            }
         }
 
         // 6. 调用 AI
