@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Chat = require('../models/Chat');
 const Memory = require('../models/Memory');
+const Avatar = require('../models/Avatar');
 const { chat, SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
 const { searchMemories, storeMemory } = require('../services/memory');
 
@@ -96,6 +97,31 @@ router.get('/history', async (req, res) => {
         const history = await Chat.find({ sessionId })
             .sort({ timestamp: -1 }).limit(50).lean();
         res.json(history.reverse());
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// === 头像接口 ===
+// 获取所有头像
+router.get('/avatars', async (req, res) => {
+    try {
+        const avatars = await Avatar.find({}).lean();
+        const result = {};
+        avatars.forEach(a => { result[a.key] = a.value; });
+        res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 保存/更新头像
+router.post('/avatar', async (req, res) => {
+    try {
+        const { key, value } = req.body;
+        if (!key || !value) return res.status(400).json({ error: 'key 和 value 不能为空' });
+        await Avatar.findOneAndUpdate(
+            { key },
+            { key, value },
+            { upsert: true, new: true }
+        );
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

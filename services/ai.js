@@ -254,9 +254,21 @@ async function callOpenRouter(messages, tools, model, opts) {
     return response.data;
 }
 
+// Retry prompts to nudge the model into generating actual content
+const RETRY_PROMPTS = [
+    '请直接回复用户刚才的消息，给出你的回答。',
+    '你刚才似乎没有生成回复内容。请重新阅读对话上下文，直接给出你的回答。',
+    '请注意：你必须在回复中包含实际内容。请根据对话上下文，用中文给出你的回答。',
+    '你的上一次回复为空。请忽略任何思考过程，直接用中文回答用户的问题。',
+    '最后一次机会：请直接输出你对用户消息的回复，不要只思考不回答。'
+];
+
 async function chat(messages, model, opts) {
     let lastUsage = null;
-    for (let i = 0; i < 10; i++) {
+    const MAX_TOOL_ROUNDS = 10;
+    const MAX_EMPTY_RETRIES = 5;
+
+    for (let i = 0; i < MAX_TOOL_ROUNDS; i++) {
         const data = await callOpenRouter(messages, toolDefinitions, model, opts);
         lastUsage = data.usage;
         const choice = data.choices?.[0];
@@ -264,7 +276,8 @@ async function chat(messages, model, opts) {
 
         const msg = choice.message;
 
-        if (msg.tool_calls && msg.tool_calls.length > 0 && i < 9) {
+        // If model wants to call tools, process them
+        if (msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
             for (const tc of msg.tool_calls) {
@@ -283,7 +296,6 @@ async function chat(messages, model, opts) {
                     console.log("JSON parse error:", e.message, "| args length:", func.arguments.length);
                     console.log("JSON snippet (first 200 chars):", func.arguments.substring(0, 200));
                     console.log("JSON snippet (last 200 chars):", func.arguments.substring(func.arguments.length - 200));
-                    // Check if this looks like a truncated write_file call
                     if (func.name === 'write_file' && func.arguments.includes('"content"')) {
                         messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 文件内容过长被截断，请尝试分多次写入或缩短内容。" });
                     } else {
@@ -307,7 +319,7 @@ async function chat(messages, model, opts) {
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
         // Some models (like GLM) put the actual response in reasoning and leave content empty
-        if ((isEmptyResponse(content)) && reasoning.trim()) {
+        if (isEmptyResponse(content) && reasoning.trim()) {
             content = reasoning;
             reasoning = '';
         } else if (!reasoning.trim()) {
@@ -323,7 +335,58 @@ async function chat(messages, model, opts) {
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
 
+        // If content is empty, retry up to MAX_EMPTY_RETRIES times without tools
         if (isEmptyResponse(content)) {
+            console.log('[WARN] Empty response detected, starting retry loop...');
+            
+            for (let r = 0; r < MAX_EMPTY_RETRIES; r++) {
+                console.log(`[Retry ${r + 1}/${MAX_EMPTY_RETRIES}] Attempting to get non-empty response...`);
+                
+                // Add a nudge message (without tools to prevent tool-calling loops)
+                const retryMessages = [...messages];
+                retryMessages.push({ role: 'user', content: RETRY_PROMPTS[r] });
+                
+                let retryData;
+                try {
+                    retryData = await callOpenRouter(retryMessages, null, model, opts);
+                } catch(e) {
+                    console.log(`[Retry ${r + 1}] API error:`, e.message);
+                    continue;
+                }
+                
+                lastUsage = retryData.usage || lastUsage;
+                const retryChoice = retryData.choices?.[0];
+                if (!retryChoice) continue;
+                
+                const retryMsg = retryChoice.message;
+                let retryContent = retryMsg.content || '';
+                let retryReasoning = retryMsg.reasoning || retryMsg.reasoning_content || '';
+                
+                // Same cleanup logic
+                if (isEmptyResponse(retryContent) && retryReasoning.trim()) {
+                    retryContent = retryReasoning;
+                    retryReasoning = '';
+                } else if (!retryReasoning.trim()) {
+                    const cleaned = extractThinking(retryContent);
+                    if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
+                        retryContent = cleaned.reasoning;
+                        retryReasoning = '';
+                    } else {
+                        retryContent = cleaned.content;
+                        retryReasoning = cleaned.reasoning;
+                    }
+                }
+                
+                console.log(`[Retry ${r + 1}] Response length:`, retryContent.length, 'reasoning:', retryReasoning.length);
+                
+                if (!isEmptyResponse(retryContent)) {
+                    console.log(`[Retry ${r + 1}] Success! Got non-empty response.`);
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage };
+                }
+            }
+            
+            // All retries failed
+            console.log('[WARN] All retries exhausted, returning fallback message.');
             content = '（我好像走神了，能再说一遍吗？）';
             reasoning = '';
         }
