@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "ai-companion",
   "version": "1.0.0",
   "description": "AI companion with reasoning, memory and tools",
@@ -12,6 +12,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
     "express": "^4.19.0",
-    "mongoose": "^8.4.0"
+    "mongoose": "^8.4.0",
+    "node-telegram-bot-api": "^1.2.0"
   }
 }
