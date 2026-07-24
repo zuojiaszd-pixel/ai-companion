@@ -10,6 +10,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 app.use('/api', require('./routes/chat'));
+app.use('/api/calendar', require('./routes/calendar'));
 
 const PORT = process.env.PORT || 10000;
 connectDB();

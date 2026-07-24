@@ -77,7 +77,88 @@
 
 #img-btn:hover{color:var(--accent);transform:scale(1.1)}
 #img-btn:active{transform:scale(.95)}
-</style></head><body><header><div class="logo"><div class="icon">L</div><span>Lumi</span></div><div class="header-actions"><select id="model-select"><option value="z-ai/glm-5.2" selected>GLM-5.2 (推荐)</option><option value="z-ai/glm-4.7">GLM-4.7 (智谱)</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option><option value="deepseek/deepseek-r1">DeepSeek R1 (深度推理)</option></select><button class="btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme">&#9788;</button><button class="btn-icon" onclick="toggleSettings()" id="settings-btn" title="Settings">&#9881;</button><button class="btn-icon" onclick="location.reload()" title="Refresh" style="width:30px;height:30px;font-size:13px">&#x21BB;</button><button class="btn-icon" onclick="togglePanel('memories')" title="Memories">&#128214;</button></div></header><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span><span>&#x1F4DA; &#x8BB0;&#x5FC6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div><div class="panel" id="settings-panel"><div class="panel-header"><h3>设置</h3><button class="close" onclick="closePanel()">&#10005;</button></div><div class="panel-body"><div class="sec-hdr">◆ 模型</div><div class="setting-item"><span>默认模型</span><select id="settings-model-select" onchange="modelSelectChange(this.value)"></select></div><div class="sec-hdr">♥ 用户头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-userAvatar').click()">↑ 上传</span><input type="file" id="file-userAvatar" accept="image/*" style="display:none" onchange="handleUpload('userAvatar',this)"></div><div class="av-pick" id="av-pick-userAvatar"><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">●</div></div></div><div class="sec-hdr">♥ AI 头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-aiAvatar').click()">↑ 上传</span><input type="file" id="file-aiAvatar" accept="image/*" style="display:none" onchange="handleUpload('aiAvatar',this)"></div><div class="av-pick" id="av-pick-aiAvatar"><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">●</div></div></div><div class="sec-hdr">◆ 系统提示词</div><div class="setting-item" style="flex-direction:column;align-items:stretch;gap:8px"><span>系统提示词</span><textarea class="setting-textarea" id="system-prompt-editor" placeholder="输入自定义系统提示词…"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn-danger" style="background:var(--text3);padding:4px 12px;font-size:11px" onclick="resetSystemPrompt()">恢复默认</button><button style="padding:4px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer" onclick="saveSystemPrompt()">保存</button></div></div><div class="sec-hdr">◆ 参数</div><div class="setting-item" style="height:auto;flex-wrap:wrap"><span>模型参数</span><div class="slider-row" style="width:100%;padding-top:8px"><span style="font-size:11px;color:var(--text3);width:100px">温度 Temperature</span><input type="range" id="slider-temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateSliderValue(this)"><span class="slider-value" id="val-temperature">0.7</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Top P</span><input type="range" id="slider-topp" min="0" max="1" step="0.05" value="0.9" oninput="updateSliderValue(this)"><span class="slider-value" id="val-topp">0.9</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">最大 Token</span><input type="range" id="slider-maxtokens" min="256" max="32000" step="256" value="16000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-maxtokens">16000</span></div></div><div class="sec-hdr">◆ 显示</div><div class="setting-item"><span>主题模式</span><select id="theme-select" onchange="themeSelectChange(this.value)"><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="setting-item"><span>思考链显示</span><select id="think-mode" onchange="thinkModeChange(this.value)"><option value="auto">自动折叠</option><option value="show">始终展开</option><option value="hide">始终隐藏</option></select></div><div class="setting-item"><span>记忆管理</span><button class="btn-danger" onclick="clearAllData()">清空记忆和对话</button></div><div class="sec-hdr">◆ 关于</div><div class="about-section">Lumi v1.0 • 由 💖 建造</div></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div><div class="panel" id="memories-panel"><div class="panel-header"><h3>&#x8BB0;&#x5FC6;</h3><div><button onclick="clearMemories()" style="background:none;border:none;color:#e74c3c;font-size:12px;cursor:pointer;margin-right:8px">&#x6E05;&#x9664;</button><button class="close" onclick="closePanel()">&#10005;</button></div></div><div class="panel-body" id="memories-list"></div></div><script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+
+/* Bottom Navigation Bar */
+#bottom-nav{display:flex;justify-content:space-around;align-items:center;padding:6px 0 8px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;z-index:10}
+[data-theme="dark"] #bottom-nav{background:rgba(26,20,23,.9)}
+.nav-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 16px;border:none;background:none;color:var(--text3);cursor:pointer;font-size:11px;border-radius:var(--radius-sm);transition:all .15s;position:relative}
+.nav-tab:hover{color:var(--text2)}
+.nav-tab.active{color:var(--accent)}
+.nav-tab .nav-icon{display:flex;align-items:center;justify-content:center}.nav-tab .nav-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-tab .nav-label{font-size:10px;white-space:nowrap}
+
+/* Page system */
+.page{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.page.active{display:flex}
+
+/* Calendar Page */
+#page-calendar{padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-header .cal-title{font-size:18px;font-weight:600;color:var(--text)}
+.cal-header .cal-nav-btn{width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cal-header .cal-nav-btn:hover{background:var(--surface2);color:var(--accent);border-color:var(--accent)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-weekday{text-align:center;font-size:11px;color:var(--text3);padding:4px 0;font-weight:600}
+.cal-day{aspect-ratio:1;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;position:relative;font-size:14px;color:var(--text)}
+.cal-day:hover{background:var(--surface2);border-color:var(--accent)}
+.cal-day.other-month{color:var(--text3);opacity:.4}
+.cal-day.today{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.cal-day.today:hover{background:var(--accent-dark)}
+.cal-day.selected{border-color:var(--accent);border-width:2px}
+.cal-day .cal-dot{position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.cal-day.today .cal-dot{background:#fff}
+.cal-day .cal-dots{position:absolute;bottom:3px;display:flex;gap:2px}
+
+/* Calendar events panel */
+.cal-events{margin-top:20px}
+.cal-events h4{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text)}
+.cal-event-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;animation:fadeIn .2s ease-out}
+.cal-event-item .cal-event-color{width:4px;height:24px;border-radius:2px;flex-shrink:0}
+.cal-event-item .cal-event-text{flex:1;font-size:13px;color:var(--text)}
+.cal-event-item .cal-event-del{width:24px;height:24px;border:none;border-radius:50%;background:var(--surface2);color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.cal-event-item .cal-event-del:hover{background:#e74c3c;color:#fff}
+.cal-add-row{display:flex;gap:8px;margin-top:12px}
+.cal-add-row input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none;font-family:var(--font)}
+.cal-add-row input:focus{border-color:var(--accent)}
+.cal-add-row button{padding:8px 16px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.cal-add-row button:hover{opacity:.85}
+.cal-empty{text-align:center;color:var(--text3);font-size:13px;padding:20px}
+@media(max-width:600px){
+  .nav-tab{padding:4px 10px}
+  .nav-tab .nav-icon svg{width:18px;height:18px}
+  .nav-tab .nav-label{font-size:9px}
+  #page-calendar{padding:10px}
+  .cal-day{font-size:12px}
+  .cal-weekday{font-size:10px}
+  .cal-header .cal-title{font-size:16px}
+  #scroll-bottom-btn{bottom:56px}
+  #token-bar{bottom:52px}
+}
+</style></head><body><header><div class="logo"><div class="icon">L</div><span>Lumi</span></div><div class="header-actions"><select id="model-select"><option value="z-ai/glm-5.2" selected>GLM-5.2 (推荐)</option><option value="z-ai/glm-4.7">GLM-4.7 (智谱)</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option><option value="deepseek/deepseek-r1">DeepSeek R1 (深度推理)</option></select><button class="btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme">&#9788;</button><button class="btn-icon" onclick="toggleSettings()" id="settings-btn" title="Settings">&#9881;</button><button class="btn-icon" onclick="location.reload()" title="Refresh" style="width:30px;height:30px;font-size:13px">&#x21BB;</button><button class="btn-icon" onclick="togglePanel('memories')" title="Memories">&#128214;</button></div></header><div id="page-chat" class="page active"><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span><span>&#x1F4DA; &#x8BB0;&#x5FC6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div></div><div id="page-calendar" class="page">
+<div class="cal-header">
+<button class="cal-nav-btn" onclick="calPrevMonth()">&#x2039;</button>
+<div class="cal-title" id="cal-title"></div>
+<button class="cal-nav-btn" onclick="calNextMonth()">&#x203a;</button>
+</div>
+<div class="cal-grid" id="cal-grid"></div>
+<div class="cal-events">
+<h4 id="cal-selected-date"></h4>
+<div id="cal-event-list"></div>
+<div class="cal-add-row">
+<input type="text" id="cal-event-input" placeholder="添加事件..." onkeydown="if(event.key==='Enter')calAddEvent()">
+<button onclick="calAddEvent()">添加</button>
+</div>
+</div>
+</div><div id="bottom-nav">
+<button class="nav-tab active" onclick="switchTab('chat')" id="tab-chat">
+<span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+<span class="nav-label">聊天</span>
+</button>
+<button class="nav-tab" onclick="switchTab('calendar')" id="tab-calendar">
+<span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+<span class="nav-label">日历</span>
+</button>
+</div><div class="panel" id="settings-panel"><div class="panel-header"><h3>设置</h3><button class="close" onclick="closePanel()">&#10005;</button></div><div class="panel-body"><div class="sec-hdr">◆ 模型</div><div class="setting-item"><span>默认模型</span><select id="settings-model-select" onchange="modelSelectChange(this.value)"></select></div><div class="sec-hdr">♥ 用户头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-userAvatar').click()">↑ 上传</span><input type="file" id="file-userAvatar" accept="image/*" style="display:none" onchange="handleUpload('userAvatar',this)"></div><div class="av-pick" id="av-pick-userAvatar"><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">●</div></div></div><div class="sec-hdr">♥ AI 头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-aiAvatar').click()">↑ 上传</span><input type="file" id="file-aiAvatar" accept="image/*" style="display:none" onchange="handleUpload('aiAvatar',this)"></div><div class="av-pick" id="av-pick-aiAvatar"><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">●</div></div></div><div class="sec-hdr">◆ 系统提示词</div><div class="setting-item" style="flex-direction:column;align-items:stretch;gap:8px"><span>系统提示词</span><textarea class="setting-textarea" id="system-prompt-editor" placeholder="输入自定义系统提示词…"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn-danger" style="background:var(--text3);padding:4px 12px;font-size:11px" onclick="resetSystemPrompt()">恢复默认</button><button style="padding:4px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer" onclick="saveSystemPrompt()">保存</button></div></div><div class="sec-hdr">◆ 参数</div><div class="setting-item" style="height:auto;flex-wrap:wrap"><span>模型参数</span><div class="slider-row" style="width:100%;padding-top:8px"><span style="font-size:11px;color:var(--text3);width:100px">温度 Temperature</span><input type="range" id="slider-temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateSliderValue(this)"><span class="slider-value" id="val-temperature">0.7</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Top P</span><input type="range" id="slider-topp" min="0" max="1" step="0.05" value="0.9" oninput="updateSliderValue(this)"><span class="slider-value" id="val-topp">0.9</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">最大 Token</span><input type="range" id="slider-maxtokens" min="256" max="32000" step="256" value="16000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-maxtokens">16000</span></div></div><div class="sec-hdr">◆ 显示</div><div class="setting-item"><span>主题模式</span><select id="theme-select" onchange="themeSelectChange(this.value)"><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="setting-item"><span>思考链显示</span><select id="think-mode" onchange="thinkModeChange(this.value)"><option value="auto">自动折叠</option><option value="show">始终展开</option><option value="hide">始终隐藏</option></select></div><div class="setting-item"><span>记忆管理</span><button class="btn-danger" onclick="clearAllData()">清空记忆和对话</button></div><div class="sec-hdr">◆ 关于</div><div class="about-section">Lumi v1.0 • 由 💖 建造</div></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div><div class="panel" id="memories-panel"><div class="panel-header"><h3>&#x8BB0;&#x5FC6;</h3><div><button onclick="clearMemories()" style="background:none;border:none;color:#e74c3c;font-size:12px;cursor:pointer;margin-right:8px">&#x6E05;&#x9664;</button><button class="close" onclick="closePanel()">&#10005;</button></div></div><div class="panel-body" id="memories-list"></div></div><script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css"><script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/highlight.min.js"></script>
 
 <script>
@@ -435,6 +516,165 @@ loadHistory();
 var savedUsage = localStorage.getItem('lastUsage');
 if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
 if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){for(var i=0;i<rs.length;i++)rs[i].unregister();}).catch(function(){});}
+
+
+// === Tab Switching ===
+var currentTab = 'chat';
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+    document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+    document.getElementById('page-' + tab).classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'calendar') {
+        calRender();
+    }
+}
+
+// === Calendar ===
+var calCurrentDate = new Date();
+var calSelectedDate = null;
+var calEvents = {};
+
+function calFmtDate(d) {
+    var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return y + '-' + m + '-' + day;
+}
+
+function calFmtMonth(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+async function calLoadEvents() {
+    try {
+        var month = calFmtMonth(calCurrentDate);
+        var res = await fetch(BACKEND + '/api/calendar?month=' + month);
+        if (!res.ok) return;
+        var events = await res.json();
+        calEvents = {};
+        events.forEach(function(e) {
+            if (!calEvents[e.date]) calEvents[e.date] = [];
+            calEvents[e.date].push(e);
+        });
+    } catch(e) { console.error('Calendar load error:', e); }
+}
+
+function calRender() {
+    var year = calCurrentDate.getFullYear();
+    var month = calCurrentDate.getMonth();
+    var monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    document.getElementById('cal-title').textContent = year + '年 ' + monthNames[month];
+    
+    var firstDay = new Date(year, month, 1);
+    var lastDay = new Date(year, month + 1, 0);
+    var startWeekday = firstDay.getDay();
+    var daysInMonth = lastDay.getDate();
+    var prevMonthDays = new Date(year, month, 0).getDate();
+    
+    var grid = document.getElementById('cal-grid');
+    var html = '';
+    var weekdays = ['日','一','二','三','四','五','六'];
+    weekdays.forEach(function(w) { html += '<div class="cal-weekday">' + w + '</div>'; });
+    
+    // Previous month days
+    for (var i = startWeekday - 1; i >= 0; i--) {
+        html += '<div class="cal-day other-month">' + (prevMonthDays - i) + '</div>';
+    }
+    
+    // Current month days
+    var today = new Date();
+    var todayStr = calFmtDate(today);
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        var classes = 'cal-day';
+        if (dateStr === todayStr) classes += ' today';
+        if (calSelectedDate === dateStr) classes += ' selected';
+        var dots = '';
+        if (calEvents[dateStr] && calEvents[dateStr].length > 0) {
+            var colors = calEvents[dateStr].map(function(e){return e.color||'#f5a0b8';}).slice(0,3);
+            dots = '<div class="cal-dots">' + colors.map(function(c){return '<div class="cal-dot" style="background:'+c+'"></div>';}).join('') + '</div>';
+        }
+        html += '<div class="' + classes + '" onclick="calSelectDate(\'' + dateStr + '\')">' + d + dots + '</div>';
+    }
+    
+    // Next month days to fill the grid
+    var totalCells = startWeekday + daysInMonth;
+    var remaining = (7 - (totalCells % 7)) % 7;
+    for (var d = 1; d <= remaining; d++) {
+        html += '<div class="cal-day other-month">' + d + '</div>';
+    }
+    
+    grid.innerHTML = html;
+    calRenderEvents();
+}
+
+function calSelectDate(dateStr) {
+    calSelectedDate = dateStr;
+    calRender();
+    document.getElementById('cal-event-input').focus();
+}
+
+function calRenderEvents() {
+    var list = document.getElementById('cal-event-list');
+    var titleEl = document.getElementById('cal-selected-date');
+    if (!calSelectedDate) {
+        titleEl.textContent = '点击日期查看事件';
+        list.innerHTML = '<div class="cal-empty">选择一个日期来添加事件</div>';
+        return;
+    }
+    var parts = calSelectedDate.split('-');
+    titleEl.textContent = parts[1] + '月' + parseInt(parts[2]) + '日的事件';
+    var events = calEvents[calSelectedDate] || [];
+    if (events.length === 0) {
+        list.innerHTML = '<div class="cal-empty">暂无事件</div>';
+    } else {
+        list.innerHTML = events.map(function(e) {
+            return '<div class="cal-event-item"><div class="cal-event-color" style="background:' + (e.color||'#f5a0b8') + '"></div><div class="cal-event-text">' + escapeHtml(e.title) + '</div><button class="cal-event-del" onclick="calDeleteEvent(\'' + e._id + '\')">&times;</button></div>';
+        }).join('');
+    }
+}
+
+async function calAddEvent() {
+    var input = document.getElementById('cal-event-input');
+    var title = input.value.trim();
+    if (!title || !calSelectedDate) return;
+    input.value = '';
+    try {
+        var res = await fetch(BACKEND + '/api/calendar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: calSelectedDate, title: title })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        var event = await res.json();
+        if (!calEvents[calSelectedDate]) calEvents[calSelectedDate] = [];
+        calEvents[calSelectedDate].push(event);
+        calRender();
+    } catch(e) { alert('添加失败: ' + e.message); }
+}
+
+async function calDeleteEvent(id) {
+    try {
+        await fetch(BACKEND + '/api/calendar/' + id, { method: 'DELETE' });
+        if (calSelectedDate && calEvents[calSelectedDate]) {
+            calEvents[calSelectedDate] = calEvents[calSelectedDate].filter(function(e){return e._id !== id;});
+        }
+        calRender();
+    } catch(e) { alert('删除失败: ' + e.message); }
+}
+
+function calPrevMonth() {
+    calCurrentDate.setMonth(calCurrentDate.getMonth() - 1);
+    calLoadEvents().then(function(){ calRender(); });
+}
+
+function calNextMonth() {
+    calCurrentDate.setMonth(calCurrentDate.getMonth() + 1);
+    calLoadEvents().then(function(){ calRender(); });
+}
+
+// Init calendar
+calLoadEvents().then(function(){ calRender(); });
 
 </script><button id="scroll-bottom-btn" onclick="scrollToBottom()" title="回到底部">↓</button>
 <div id="token-bar"></div></body></html>

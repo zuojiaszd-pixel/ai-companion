@@ -26,6 +26,139 @@ function saveSettings(data) {
 }
 
 /**
+ * Try to parse JSON, with robust fallback for truncated/malformed JSON.
+ * Handles:
+ * 1. Unterminated strings (from token limit truncation)
+ * 2. Literal control characters inside strings (some models output raw newlines)
+ * 3. Incomplete escape sequences
+ * 4. Unclosed braces/brackets
+ */
+function safeJsonParse(str) {
+    // First try normal parse
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        console.log('[JSON Repair] Original parse failed:', e.message, '| length:', str.length);
+    }
+
+    let repaired = str.trim();
+
+    // Step 1: Fix literal control characters inside strings
+    // Some models output raw newlines/tabs inside JSON string values instead of \n \t
+    // We need to walk through and replace them with proper escape sequences
+    let fixed = '';
+    let inString = false;
+    let escaped = false;
+    for (let i = 0; i < repaired.length; i++) {
+        const ch = repaired[i];
+        if (escaped) {
+            fixed += ch;
+            escaped = false;
+            continue;
+        }
+        if (ch === '\\' && inString) {
+            fixed += ch;
+            escaped = true;
+            continue;
+        }
+        if (ch === '"') {
+            inString = !inString;
+            fixed += ch;
+            continue;
+        }
+        if (inString) {
+            // Replace literal control characters with escape sequences
+            if (ch === '\n') { fixed += '\\n'; continue; }
+            if (ch === '\r') { fixed += '\\r'; continue; }
+            if (ch === '\t') { fixed += '\\t'; continue; }
+            if (ch.charCodeAt(0) < 32) { fixed += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'); continue; }
+        }
+        fixed += ch;
+    }
+    repaired = fixed;
+
+    // Step 2: Check if we're still inside a string (unterminated due to truncation)
+    inString = false;
+    escaped = false;
+    for (let i = 0; i < repaired.length; i++) {
+        const ch = repaired[i];
+        if (escaped) { escaped = false; continue; }
+        if (ch === '\\') { escaped = true; continue; }
+        if (ch === '"') { inString = !inString; }
+    }
+
+    if (inString) {
+        // If the last char is a lone backslash (incomplete escape), remove it
+        if (repaired.endsWith('\\')) {
+            repaired = repaired.slice(0, -1);
+        }
+        // Close the string
+        repaired += '"';
+        console.log('[JSON Repair] Closed unterminated string');
+    }
+
+    // Step 3: Count unclosed braces/brackets (outside of strings)
+    let openBraces = 0, openBrackets = 0;
+    inString = false;
+    escaped = false;
+    for (let i = 0; i < repaired.length; i++) {
+        const ch = repaired[i];
+        if (escaped) { escaped = false; continue; }
+        if (ch === '\\') { escaped = true; continue; }
+        if (ch === '"') { inString = !inString; continue; }
+        if (inString) continue;
+        if (ch === '{') openBraces++;
+        else if (ch === '}') openBraces--;
+        else if (ch === '[') openBrackets++;
+        else if (ch === ']') openBrackets--;
+    }
+
+    // Close in reverse order: brackets first, then braces
+    for (let i = 0; i < openBrackets; i++) repaired += ']';
+    for (let i = 0; i < openBraces; i++) repaired += '}';
+    if (openBrackets > 0 || openBraces > 0) {
+        console.log('[JSON Repair] Closed', openBrackets, 'brackets and', openBraces, 'braces');
+    }
+
+    // Try parsing the repaired version
+    try {
+        const result = JSON.parse(repaired);
+        console.log('[JSON Repair] Successfully repaired truncated JSON');
+        return result;
+    } catch (e2) {
+        console.log('[JSON Repair] Repair attempt failed:', e2.message);
+    }
+
+    // Step 4: Last resort - extract key-value pairs with regex
+    // This handles cases where the JSON structure itself is malformed
+    const result = {};
+    const kvPattern = /"([^"]+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+    let match;
+    while ((match = kvPattern.exec(str)) !== null) {
+        let val = match[2];
+        // Unescape
+        val = val.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r').replace(/\\\\/g, '\\');
+        result[match[1]] = val;
+    }
+    // Also try to match non-string values (numbers, booleans, null)
+    const kvPattern2 = /"([^"]+)"\s*:\s*(true|false|null|\d+(?:\.\d+)?)/g;
+    while ((match = kvPattern2.exec(str)) !== null) {
+        if (!(match[1] in result)) {
+            if (match[2] === 'true') result[match[1]] = true;
+            else if (match[2] === 'false') result[match[1]] = false;
+            else if (match[2] === 'null') result[match[1]] = null;
+            else result[match[1]] = parseFloat(match[2]);
+        }
+    }
+    if (Object.keys(result).length > 0) {
+        console.log('[JSON Repair] Extracted keys via regex:', Object.keys(result));
+        return result;
+    }
+
+    throw new Error('无法解析JSON: ' + e.message);
+}
+
+/**
  * Extract thinking/reasoning from Chinese AI model responses
  * where the model embeds reasoning inside the content field.
  * SAFETY: If extraction would result in empty content, return original.
@@ -143,7 +276,21 @@ async function chat(messages, model, opts) {
                 }
                 var func = func_;
                 let args;
-                try { args = JSON.parse(func.arguments); } catch(e) { console.log("JSON parse error:", e.message); messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message });  continue; }
+                try {
+                    args = safeJsonParse(func.arguments);
+                    console.log('[DEBUG] Tool args parsed OK, keys:', Object.keys(args));
+                } catch(e) {
+                    console.log("JSON parse error:", e.message, "| args length:", func.arguments.length);
+                    console.log("JSON snippet (first 200 chars):", func.arguments.substring(0, 200));
+                    console.log("JSON snippet (last 200 chars):", func.arguments.substring(func.arguments.length - 200));
+                    // Check if this looks like a truncated write_file call
+                    if (func.name === 'write_file' && func.arguments.includes('"content"')) {
+                        messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 文件内容过长被截断，请尝试分多次写入或缩短内容。" });
+                    } else {
+                        messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message });
+                    }
+                    continue;
+                }
                 const result = await executeTool(func.name, args);
                 console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
@@ -160,13 +307,11 @@ async function chat(messages, model, opts) {
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
         // Some models (like GLM) put the actual response in reasoning and leave content empty
-        // Also check for placeholder patterns like "[思考完成但未生成回复文本]"
         if ((isEmptyResponse(content)) && reasoning.trim()) {
             content = reasoning;
             reasoning = '';
         } else if (!reasoning.trim()) {
             const cleaned = extractThinking(content);
-            // After extraction, if content becomes empty but reasoning has content, use reasoning
             if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
                 content = cleaned.reasoning;
                 reasoning = '';
@@ -178,7 +323,6 @@ async function chat(messages, model, opts) {
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
 
-        // Fallback: if content is still empty or a known placeholder, show a default message
         if (isEmptyResponse(content)) {
             content = '（我好像走神了，能再说一遍吗？）';
             reasoning = '';
