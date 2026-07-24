@@ -91,7 +91,7 @@ async function handleMessage(msg) {
 
     try {
         // 存用户消息
-        await Chat.create({ role: 'user', content: text, sessionId: 'tg_' + chatId });
+        await Chat.create({ role: 'user', content: text, sessionId: 'default' });
 
         // 搜索相关记忆
         const memories = await searchMemories(text);
@@ -104,7 +104,7 @@ async function handleMessage(msg) {
         let systemPrompt = LUMI_PERSONA + memoryContext;
 
         // 加载最近对话历史（最近20条）
-        const history = await Chat.find({ sessionId: 'tg_' + chatId })
+        const history = await Chat.find({ sessionId: 'default' })
             .sort({ timestamp: -1 }).limit(20).lean();
         const recentHistory = history.reverse();
 
@@ -131,7 +131,7 @@ async function handleMessage(msg) {
         const result = await chat(messages, null, opts, false);
 
         // 存 AI 回复
-        await Chat.create({ role: 'assistant', content: result.content, sessionId: 'tg_' + chatId });
+        await Chat.create({ role: 'assistant', content: result.content, sessionId: 'default' });
 
         // 分条发送
         await sendMultiMessage(chatId, result.content);
