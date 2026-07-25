@@ -159,4 +159,13 @@ router.post('/settings', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// 删除单条记忆
+router.delete('/memories/:id', async (req, res) => {
+    try {
+        await Memory.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;
