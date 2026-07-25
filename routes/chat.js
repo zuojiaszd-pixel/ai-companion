@@ -12,9 +12,18 @@ router.post('/chat', async (req, res) => {
         const { message, sessionId = 'default', model, temperature, topP, maxTokens, image } = req.body;
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
 
-        // 1. 存用户消息
+        // 1. 存用户消息（去重：30秒内相同内容不重复存储）
         const userContent = image ? `[图片消息] ${message || ''}`.trim() : message;
-        await Chat.create({ role: 'user', content: userContent, sessionId });
+        const recentDup = await Chat.findOne({
+            role: 'user',
+            content: userContent,
+            sessionId,
+            timestamp: { $gte: new Date(Date.now() - 30000) }
+        }).lean();
+
+        if (!recentDup) {
+            await Chat.create({ role: 'user', content: userContent, sessionId });
+        }
 
         // 2. 搜索相关记忆
         const memories = await searchMemories(message);
@@ -50,18 +59,6 @@ router.post('/chat', async (req, res) => {
         for (const h of recentHistory) {
             if (h.role === 'user') messages.push({ role: 'user', content: h.content });
             else if (h.role === 'assistant') messages.push({ role: 'assistant', content: h.content });
-        }
-        // 添加当前用户消息（如果不在历史中）
-        const lastMsg = recentHistory[recentHistory.length - 1];
-        if (!lastMsg || lastMsg.content !== userContent) {
-            if (image) {
-                messages.push({ role: 'user', content: [
-                    { type: 'text', text: message || '请描述这张图片' },
-                    { type: 'image_url', image_url: { url: image } }
-                ]});
-            } else {
-                messages.push({ role: 'user', content: message });
-            }
         }
 
         // 6. 调用 AI

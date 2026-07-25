@@ -17,6 +17,7 @@ app.post('/telegram/webhook', telegram.handleWebhook);
 app.use('/api', require('./routes/chat'));
 app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/tasks', require('./routes/task'));
+app.use('/api/footprints', require('./routes/footprint'));
 app.use('/api', require('./routes/checkin'));
 
 const PORT = process.env.PORT || 10000;
