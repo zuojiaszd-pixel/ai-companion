@@ -20,7 +20,20 @@ router.post('/chat', async (req, res) => {
         const memories = await searchMemories(message);
         let memoryContext = '';
         if (memories.length > 0) {
-            memoryContext = '\n\n【相关记忆】\n' + memories.map(m => `- ${m.content}`).join('\n');
+            const critical = memories.filter(m => m.priority === 'critical');
+            const others = memories.filter(m => m.priority !== 'critical');
+            
+            memoryContext = '\n\n【记忆】\n';
+            
+            if (critical.length > 0) {
+                memoryContext += '⚠️ 核心记忆（必须牢记）：\n';
+                critical.forEach(m => { memoryContext += `- ${m.content}\n`; });
+            }
+            
+            if (others.length > 0) {
+                memoryContext += '相关记忆：\n';
+                others.forEach(m => { memoryContext += `- ${m.content}\n`; });
+            }
         }
 
         // 3. 构建系统提示（含记忆）

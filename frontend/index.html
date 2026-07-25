@@ -296,6 +296,14 @@ function formatMsg(content) {
 }
 
 function addMsg(role, content) {
+    if (role === 'assistant' && content.indexOf('|') !== -1) {
+        var parts = content.split('|');
+        for (var i = 0; i < parts.length; i++) {
+            var part = parts[i].trim();
+            if (part) addMsg(role, part);
+        }
+        return;
+    }
     var chat = document.getElementById('chat');
     var row = document.createElement('div');
     row.className = 'msg-row ' + role;

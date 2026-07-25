@@ -80,13 +80,26 @@ const toolDefinitions = [
                 type: "object",
                 properties: {
                     content: { type: "string", description: "要保存的记忆内容" },
-                    type: { type: "string", "enum": ["fact", "preference", "experience"], description: "记忆类型" }
+                    type: {
+                        type: "string",
+                        enum: ["fact", "preference", "experience", "summary"],
+                        description: "记忆类型：fact=事实, preference=偏好, experience=经历, summary=总结"
+                    },
+                    priority: {
+                        type: "string",
+                        enum: ["critical", "high", "normal", "low"],
+                        description: "优先级：critical=核心信息(名字/生日/关系), high=重要, normal=普通, low=琐碎"
+                    },
+                    tags: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "标签，用于辅助分类和搜索，如 ['个人信息', '生日']"
+                    }
                 },
                 required: ["content"]
             }
         }
-    }
-,
+    },
     {
         type: "function",
         function: {
@@ -100,7 +113,8 @@ const toolDefinitions = [
                 required: ["commit_message"]
             }
         }
-    }];
+    }
+];
 
 // Tool handlers - execute each tool and return result
 async function executeTool(name, args) {
@@ -108,7 +122,13 @@ async function executeTool(name, args) {
         switch (name) {
             case 'save_memory': {
                 const { storeMemory } = require('./memory');
-                await storeMemory('default', args.content, args.type || 'fact');
+                await storeMemory(
+                    'default',
+                    args.content,
+                    args.type || 'fact',
+                    args.priority || 'normal',
+                    args.tags || []
+                );
                 return '记忆已保存';
             }
             case 'execute_command': {
@@ -134,7 +154,6 @@ async function executeTool(name, args) {
                 fs.writeFileSync(p, args.content, 'utf-8');
                 return `文件已写入: ${args.filepath}`;
             }
-
             case 'push_to_github': {
                 const token = process.env.GITHUB_TOKEN;
                 if (!token) return '错误: 未设置 GITHUB_TOKEN 环境变量。请在 Render 设置中添加 GitHub Personal Access Token。';
