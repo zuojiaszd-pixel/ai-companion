@@ -15,6 +15,7 @@ app.post('/telegram/webhook', telegram.handleWebhook);
 
 app.use('/api', require('./routes/chat'));
 app.use('/api/calendar', require('./routes/calendar'));
+app.use('/api/tasks', require('./routes/task'));
 
 const PORT = process.env.PORT || 10000;
 connectDB();
