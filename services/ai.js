@@ -286,11 +286,12 @@ async function chat(messages, model, opts, useTools = true) {
                     continue;
                 }
                 const result = await executeTool(func.name, args);
-                console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
+                // 直接使用原始结果，不再截断
+                console.log('工具结果: ' + func.name + ', 原始长度: ' + result.length + ', 截断后: ' + truncatedResult.length);
                 messages.push({
                     role: 'tool',
                     tool_call_id: tc.id,
-                    content: result
+                    content: truncatedResult
                 });
             }
             continue;
