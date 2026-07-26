@@ -18,7 +18,7 @@ const coreMemoryPrompt = `
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用智谱AI的GLM-5.2
-const DEFAULT_MODEL = "glm-5-2"
+const DEFAULT_MODEL = "glm-5.2"
 
 function loadSettings() {
     try {
