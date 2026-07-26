@@ -158,7 +158,7 @@ ${dialogue}
 如果没有值得记住的信息，返回：{"memories": []}`;
 
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-            model: 'deepseek/deepseek-chat',
+            model: 'z-ai/glm-5.2',
             provider: { sort: 'price', allow_fallbacks: true },
             messages: [{ role: 'user', content: prompt }],
             temperature: 0.2,

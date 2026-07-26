@@ -6,8 +6,8 @@ const path = require('path');
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
-// 默认模型 - 使用 deepseek/deepseek-chat
-const DEFAULT_MODEL = 'deepseek/deepseek-chat';
+// 默认模型 - 使用 glm
+const DEFAULT_MODEL = 'z-ai/glm-5.2';
 
 function loadSettings() {
     try {
@@ -189,12 +189,18 @@ function isEmptyResponse(content) {
     return EMPTY_PATTERNS.some(p => p.test(trimmed));
 }
 
+// 截断工具结果，避免占用过多token
+const MAX_TOOL_RESULT_LENGTH = 2000;
+function truncateToolResult(result) {
+    if (result.length <= MAX_TOOL_RESULT_LENGTH) return result;
+    return result.slice(0, MAX_TOOL_RESULT_LENGTH) + '\n...(结果已截断，原始长度: ' + result.length + '字符)';
+}
+
 const SYSTEM_PROMPT = PERSONA;
 
 async function callOpenRouter(messages, tools, model, opts) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: model || DEFAULT_MODEL,
-        provider: { sort: 'price', allow_fallbacks: true },
         messages,
         tools: tools || undefined,
         temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
@@ -267,11 +273,12 @@ async function chat(messages, model, opts, useTools = true) {
                     continue;
                 }
                 const result = await executeTool(func.name, args);
-                console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
+                const truncatedResult = truncateToolResult(result);
+                console.log('工具结果: ' + func.name + ', 原始长度: ' + result.length + ', 截断后: ' + truncatedResult.length);
                 messages.push({
                     role: 'tool',
                     tool_call_id: tc.id,
-                    content: result
+                    content: truncatedResult
                 });
             }
             continue;

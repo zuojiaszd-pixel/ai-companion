@@ -59,9 +59,9 @@ router.post('/chat', async (req, res) => {
             await Chat.create({ role: 'user', content: userContent, sessionId });
         }
 
-        // 2. 加载最近对话历史（最近20条）
+        // 2. 加载最近对话历史（最近30条）
         const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(20).lean();
+            .sort({ timestamp: -1 }).limit(30).lean();
         const recentHistory = history.reverse();
 
         // 3. 用最近几条消息拼接做记忆搜索（不只是当前消息）
@@ -166,7 +166,7 @@ router.get('/avatars', async (req, res) => {
 });
 
 // 保存/更新头像
-router.post('/avatar', async (req, res) => {
+router.post('/avatar', (req, res) => {
     try {
         const { key, value } = req.body;
         if (!key || !value) return res.status(400).json({ error: 'key 和 value 不能为空' });
@@ -192,7 +192,7 @@ router.get('/settings', async (req, res) => {
 });
 
 // 更新设置
-router.post('/settings', async (req, res) => {
+router.post('/settings', (req, res) => {
     try {
         const settings = req.body;
         const ok = saveSettings(settings);
