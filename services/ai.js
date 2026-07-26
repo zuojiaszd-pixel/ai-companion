@@ -215,9 +215,10 @@ async function callOpenRouter(messages, tools, model, opts) {
     var models = [model || DEFAULT_MODEL, "z-ai/glm-5.2"];
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
+            console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
             var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
         var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
-        var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt] : models[attempt];
+        var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt].replace("z-ai/", "") : models[attempt];
         const response = await axios.post(_url, {
                 model: _mdl,
                 messages,
