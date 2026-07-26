@@ -358,7 +358,44 @@ async function getMemoryStats(sessionId) {
     };
 }
 
+// === 向后兼容别名（旧代码调用 searchMemories / storeMemory） ===
+async function searchMemories(query, limit) {
+    return recallMemories("default", query, limit || 8);
+}
+async function storeMemory(sessionId, content, type, priority, tags) {
+    return saveMemory(sessionId, content, type, priority, tags);
+}
+async function autoExtractMemories(allMessages) {
+    try {
+        const text = allMessages.map(function(m) { return m.role + ": " + m.content; }).join("\n").slice(0, 3000);
+        const axios = require("axios");
+        const res = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
+            model: "qwen/qwen-2.5-7b-instruct",
+            messages: [
+                { role: "system", content: "你是一个记忆提取器。从对话中提取值得长期记住的信息。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"]}]" },
+                { role: "user", content: text }
+            ],
+            temperature: 0.3,
+            max_tokens: 1000
+        }, {
+            headers: { "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY },
+            timeout: 15000
+        });
+        const reply = res.data.choices[0].message.content;
+        var items;
+        try { items = JSON.parse(reply); } catch(e) { items = []; }
+        for (var i = 0; i < items.length; i++) {
+            var it = items[i];
+            await saveMemory("default", it.content, it.type || "fact", it.priority || "normal", it.tags || []);
+        }
+        if (items.length > 0) console.log("[AutoExtract] " + items.length + " memories saved");
+    } catch(e) { console.error("[AutoExtract] fail:", e.message); }
+}
+
 module.exports = {
+    searchMemories,
+    storeMemory,
+    autoExtractMemories,
     saveMemory,
     recallMemories,
     getRelevantMemories,
