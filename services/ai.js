@@ -215,8 +215,11 @@ async function callOpenRouter(messages, tools, model, opts) {
     var models = [model || DEFAULT_MODEL, "qwen/qwen-2.5-72b-instruct", "openai/o3-mini"];
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
-            const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-                model: models[attempt],
+            var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+        var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
+        var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt].replace('z-ai/', '') : models[attempt];
+        const response = await axios.post(_url, {
+                model: _mdl,
                 messages,
                 tools: tools || undefined,
                 temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
@@ -224,7 +227,7 @@ async function callOpenRouter(messages, tools, model, opts) {
                 max_tokens: opts && opts.maxTokens ? opts.maxTokens : 16000
             }, {
                 headers: {
-                    'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
+                    'Authorization': 'Bearer ' + _key,
                     'Content-Type': 'application/json'
                 },
                 timeout: 120000
