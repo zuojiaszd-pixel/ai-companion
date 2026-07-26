@@ -163,6 +163,51 @@
 .mem-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
 @media(max-width:600px){#page-memory{padding:10px}.mem-header .mem-title{font-size:16px}.mem-item{padding:10px 12px}.mem-item .mem-content{font-size:12px}}
 
+
+/* Memory heat bar */
+.mem-item .mem-heat-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.mem-item .mem-heat-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.mem-item .mem-heat-bar{flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.mem-item .mem-heat-fill{height:100%;border-radius:2px;transition:width .3s ease}
+.mem-item .mem-heat-value{font-size:10px;color:var(--text3);font-family:monospace;min-width:30px;text-align:right}
+.mem-item .mem-locked-badge{font-size:9px;padding:1px 6px;border-radius:4px;background:rgba(255,180,0,.15);color:#ffb400;font-weight:600;margin-left:6px}
+.mem-item .mem-lock-btn{width:24px;height:24px;border:none;border-radius:50%;background:var(--surface2);color:var(--text3);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.mem-item .mem-lock-btn:hover{background:rgba(255,180,0,.2);color:#ffb400}
+.mem-item .mem-lock-btn.locked{background:rgba(255,180,0,.15);color:#ffb400}
+.mem-item .mem-priority-badge{font-size:9px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
+.mem-item .mem-priority-badge.critical{background:rgba(231,76,60,.15);color:#e74c3c}
+.mem-item .mem-priority-badge.high{background:rgba(243,156,18,.15);color:#f39c12}
+.mem-item .mem-priority-badge.normal{background:rgba(46,204,113,.15);color:#2ecc71}
+.mem-item .mem-priority-badge.low{background:rgba(149,165,166,.15);color:#95a5a6}
+.mem-item .mem-access-info{font-size:9px;color:var(--text3);margin-top:4px;display:flex;gap:8px}
+
+/* Dream section */
+.mem-dream-section{margin-top:20px;border-top:1px solid var(--border);padding-top:16px}
+.mem-dream-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 0}
+.mem-dream-header h4{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.mem-dream-toggle{font-size:12px;color:var(--text3);transition:transform .2s}
+.mem-dream-toggle.open{transform:rotate(180deg)}
+.mem-dream-body{display:none;padding:8px 0}
+.mem-dream-body.open{display:block}
+.mem-dream-run-btn{padding:6px 16px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:12px;cursor:pointer;margin-bottom:12px;transition:all .15s}
+.mem-dream-run-btn:hover{opacity:.85}
+.mem-dream-log{display:flex;flex-direction:column;gap:8px}
+.mem-dream-log-item{padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;line-height:1.5}
+.mem-dream-log-item .dream-time{font-size:10px;color:var(--text3);margin-bottom:4px}
+.mem-dream-log-item .dream-stats{display:flex;gap:10px;flex-wrap:wrap}
+.mem-dream-log-item .dream-stat{font-size:11px;color:var(--text2)}
+.mem-dream-log-item .dream-stat b{color:var(--accent)}
+
+/* Memory stats bar */
+.mem-stats-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.mem-stat-card{flex:1;min-width:60px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center}
+.mem-stat-card .stat-val{font-size:18px;font-weight:700;color:var(--accent)}
+.mem-stat-card .stat-label{font-size:9px;color:var(--text3);margin-top:2px}
+
+/* Memory sort dropdown */
+.mem-sort-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.mem-sort-select{padding:4px 20px 4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
+
 /* Task Page */
 #page-task{padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .task-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
@@ -243,6 +288,7 @@
 <div class="mem-title">📖 记忆</div>
 <div class="mem-count" id="mem-count">0 条</div>
 </div>
+<div class="mem-stats-bar" id="mem-stats-bar"></div>
 <div class="mem-filter">
 <button class="mem-filter-btn active" onclick="memFilter('all',this)">全部</button>
 <button class="mem-filter-btn" onclick="memFilter('fact',this)">事实</button>
@@ -250,7 +296,25 @@
 <button class="mem-filter-btn" onclick="memFilter('experience',this)">经历</button>
 <button class="mem-filter-btn" onclick="memFilter('summary',this)">总结</button>
 </div>
+<div class="mem-sort-row">
+<span style="font-size:11px;color:var(--text3)">排序</span>
+<select class="mem-sort-select" id="mem-sort-select" onchange="memLoad()">
+<option value="recent">最近访问</option>
+<option value="heat">热度</option>
+<option value="created">创建时间</option>
+</select>
+</div>
 <div class="mem-list" id="mem-page-list"></div>
+<div class="mem-dream-section">
+<div class="mem-dream-header" onclick="toggleDream()">
+<h4>🌙 Dream 日志</h4>
+<span class="mem-dream-toggle" id="dream-toggle">▼</span>
+</div>
+<div class="mem-dream-body" id="dream-body">
+<button class="mem-dream-run-btn" onclick="runDream()">手动整理记忆</button>
+<div class="mem-dream-log" id="dream-log-list"></div>
+</div>
+</div>
 </div><div id="page-task" class="page">
 <div class="task-header">
 <div class="task-title">✅ 任务清单</div>
@@ -830,7 +894,7 @@ function modelSelectChange(val) { document.getElementById('model-select').value 
 function thinkModeChange(val) { localStorage.setItem('thinkMode', val); }
 function clearAllData() {
     if (!confirm('\u786e\u5b9a\u6e05\u7a7a\u6240\u6709\u8bb0\u5fc6\u548c\u5bf9\u8bdd\uff1f')) return;
-    fetch(BACKEND + '/api/memories', { method: 'DELETE' }).then(function() {
+    fetch(BACKEND + '/api/memory/all', { method: 'DELETE' }).then(function() {
         document.getElementById('chat').innerHTML = '<div class="welcome"><div class="title">\u5df2\u6e05\u9664</div></div>';
         document.getElementById('memories-list').innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Cleared</div>';
     }).catch(function(e) { alert('Failed: ' + e.message); });
@@ -1034,13 +1098,38 @@ var memCurrentFilter = 'all';
 
 async function memLoad() {
     try {
-        var res = await fetch(BACKEND + '/api/memories');
+        var sortVal = document.getElementById('mem-sort-select') ? document.getElementById('mem-sort-select').value : 'recent';
+        var res = await fetch(BACKEND + '/api/memory?sort=' + sortVal + '&limit=100');
         var data = await res.json();
-        memAllData = data || [];
+        memAllData = (data && data.data) ? data.data : (data || []);
         memRender();
+        memLoadStats();
+        memLoadDreamLog();
     } catch(e) {
         document.getElementById('mem-page-list').innerHTML = '<div class="mem-empty">加载失败</div>';
     }
+}
+
+async function memLoadStats() {
+    try {
+        var res = await fetch(BACKEND + '/api/memory/stats');
+        var data = await res.json();
+        if (!data || !data.data) return;
+        var s = data.data;
+        var bar = document.getElementById('mem-stats-bar');
+        if (!bar) return;
+        var cards = [
+            {val: s.total, label: '总记忆'},
+            {val: s.locked, label: '已锁定'},
+            {val: s.contradicted, label: '已取代'},
+            {val: s.byType.fact||0, label: '事实'},
+            {val: s.byType.preference||0, label: '偏好'},
+            {val: s.byType.experience||0, label: '经历'}
+        ];
+        bar.innerHTML = cards.map(function(c){
+            return '<div class="mem-stat-card"><div class="stat-val">'+c.val+'</div><div class="stat-label">'+c.label+'</div></div>';
+        }).join('');
+    } catch(e) {}
 }
 
 function memFilter(type, btn) {
@@ -1048,6 +1137,14 @@ function memFilter(type, btn) {
     document.querySelectorAll('.mem-filter-btn').forEach(function(b){b.classList.remove('active');});
     btn.classList.add('active');
     memRender();
+}
+
+function memHeatColor(heat, baseHeat) {
+    var ratio = heat / (baseHeat || 1);
+    if (ratio > 0.7) return '#e74c3c';
+    if (ratio > 0.4) return '#f39c12';
+    if (ratio > 0.15) return '#2ecc71';
+    return '#95a5a6';
 }
 
 function memRender() {
@@ -1059,32 +1156,141 @@ function memRender() {
         return;
     }
     var typeLabels = {fact:'事实', preference:'偏好', experience:'经历', summary:'总结'};
+    var priorityLabels = {critical:'核心', high:'重要', normal:'普通', low:'琐碎'};
     list.innerHTML = filtered.map(function(m) {
         var type = m.type || 'fact';
         var typeLabel = typeLabels[type] || type;
-        var time = new Date(m.timestamp).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        var priority = m.priority || 'normal';
+        var priorityLabel = priorityLabels[priority] || priority;
+        var time = new Date(m.createdAt || m.timestamp).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
         var tags = (m.tags || []).map(function(t){return '<span class="mem-tag">'+escapeHtml(t)+'</span>';}).join('');
+        
+        // Heat bar
+        var heat = m.heat != null ? m.heat : 1.0;
+        var baseHeat = m.baseHeat != null ? m.baseHeat : 1.0;
+        var heatPct = Math.min(100, Math.max(2, (heat / (baseHeat || 1)) * 100));
+        var heatColor = memHeatColor(heat, baseHeat);
+        var heatBar = '<div class="mem-heat-row">' +
+            '<span class="mem-heat-label">🔥</span>' +
+            '<div class="mem-heat-bar"><div class="mem-heat-fill" style="width:'+heatPct+'%;background:'+heatColor+'"></div></div>' +
+            '<span class="mem-heat-value">'+heat.toFixed(2)+'</span>' +
+            '</div>';
+        
+        // Lock button
+        var locked = m.locked ? ' locked' : '';
+        var lockIcon = m.locked ? '🔒' : '🔓';
+        var lockBtn = '<button class="mem-lock-btn'+locked+'" onclick="memToggleLock(\''+m._id+'\',this)">'+lockIcon+'</button>';
+        var lockedBadge = m.locked ? '<span class="mem-locked-badge">已锁定</span>' : '';
+        
+        // Priority badge
+        var priorityBadge = '<span class="mem-priority-badge '+priority+'">'+priorityLabel+'</span>';
+        
+        // Access info
+        var accessCount = m.accessCount || 0;
+        var lastAcc = m.lastAccessed ? new Date(m.lastAccessed).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+        var accessInfo = '<div class="mem-access-info"><span>访问 '+accessCount+' 次</span><span>最后: '+lastAcc+'</span></div>';
+        
         return '<div class="mem-item">' +
             '<div class="mem-item-header">' +
-            '<span class="mem-type '+type+'">'+typeLabel+'</span>' +
+            '<div><span class="mem-type '+type+'">'+typeLabel+'</span>'+priorityBadge+lockedBadge+'</div>' +
             '<span class="mem-time">'+time+'</span>' +
             '</div>' +
             '<div class="mem-content">'+escapeHtml(m.content||'')+'</div>' +
+            heatBar +
+            accessInfo +
             '<div class="mem-item-footer">' +
             '<div class="mem-tags">'+tags+'</div>' +
+            '<div style="display:flex;gap:4px">' + lockBtn +
             '<button class="mem-del" onclick="memDelete(\''+m._id+'\')">&times;</button>' +
+            '</div>' +
             '</div>' +
             '</div>';
     }).join('');
 }
 
+async function memToggleLock(id, btn) {
+    try {
+        var isLocked = btn.classList.contains('locked');
+        var endpoint = isLocked ? '/unlock' : '/lock';
+        var res = await fetch(BACKEND + '/api/memory/' + id + endpoint, { method: 'POST' });
+        if (!res.ok) throw new Error('操作失败');
+        if (isLocked) {
+            btn.classList.remove('locked');
+            btn.textContent = '🔓';
+        } else {
+            btn.classList.add('locked');
+            btn.textContent = '🔒';
+        }
+        // Update local data
+        var item = memAllData.find(function(m){return m._id === id;});
+        if (item) item.locked = !isLocked;
+    } catch(e) { alert('操作失败'); }
+}
+
 async function memDelete(id) {
     if (!confirm('删除这条记忆？')) return;
     try {
-        await fetch(BACKEND + '/api/memories/' + id, { method: 'DELETE' });
+        await fetch(BACKEND + '/api/memory/' + id, { method: 'DELETE' });
         memAllData = memAllData.filter(function(m){return m._id !== id;});
         memRender();
+        memLoadStats();
     } catch(e) { alert('删除失败'); }
+}
+
+// === Dream ===
+function toggleDream() {
+    var body = document.getElementById('dream-body');
+    var toggle = document.getElementById('dream-toggle');
+    body.classList.toggle('open');
+    toggle.classList.toggle('open');
+}
+
+async function memLoadDreamLog() {
+    try {
+        var res = await fetch(BACKEND + '/api/memory/dream/log');
+        var data = await res.json();
+        if (!data || !data.data) return;
+        var logs = data.data;
+        var list = document.getElementById('dream-log-list');
+        if (!list) return;
+        if (!logs.length) {
+            list.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">还没有Dream日志</div>';
+            return;
+        }
+        list.innerHTML = logs.slice(-10).reverse().map(function(log){
+            var time = new Date(log.timestamp).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+            return '<div class="mem-dream-log-item">' +
+                '<div class="dream-time">'+time+'</div>' +
+                '<div class="dream-stats">' +
+                '<span class="dream-stat">总计 <b>'+log.total+'</b></span>' +
+                '<span class="dream-stat">衰减 <b>'+log.decayed+'</b></span>' +
+                '<span class="dream-stat">清理 <b>'+log.cleaned+'</b></span>' +
+                '<span class="dream-stat">锁定 <b>'+log.locked+'</b></span>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+    } catch(e) {}
+}
+
+async function runDream() {
+    if (!confirm('手动运行Dream记忆整理？这会衰减旧记忆并清理低热度的。')) return;
+    try {
+        var btn = document.querySelector('.mem-dream-run-btn');
+        if (btn) { btn.disabled = true; btn.textContent = '整理中...'; }
+        var res = await fetch(BACKEND + '/api/memory/dream/run', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
+        var data = await res.json();
+        if (btn) { btn.disabled = false; btn.textContent = '手动整理记忆'; }
+        if (data && data.data) {
+            var log = data.data;
+            alert('Dream完成！总计'+log.total+'条，衰减'+log.decayed+'条，清理'+log.cleaned+'条');
+        }
+        memLoadDreamLog();
+        memLoad();
+    } catch(e) {
+        alert('Dream运行失败');
+        var btn = document.querySelector('.mem-dream-run-btn');
+        if (btn) { btn.disabled = false; btn.textContent = '手动整理记忆'; }
+    }
 }
 
 // === Task Page ===
