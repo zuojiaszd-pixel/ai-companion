@@ -159,7 +159,6 @@ ${dialogue}
 
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
             model: 'z-ai/glm-5.2',
-            provider: { sort: 'price', allow_fallbacks: true },
             messages: [{ role: 'user', content: prompt }],
             temperature: 0.2,
             max_tokens: 800
