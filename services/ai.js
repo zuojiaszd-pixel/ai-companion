@@ -194,6 +194,7 @@ const SYSTEM_PROMPT = PERSONA;
 async function callOpenRouter(messages, tools, model, opts) {
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: model || DEFAULT_MODEL,
+        provider: { sort: 'price', allow_fallbacks: true },
         messages,
         tools: tools || undefined,
         temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
