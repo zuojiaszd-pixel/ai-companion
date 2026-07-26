@@ -209,4 +209,13 @@ router.delete('/memories/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.get("/debug/env", function(req, res) {
+    res.json({
+        hasZhipuKey: !!process.env.ZHIPUAI_API_KEY,
+        keyLength: (process.env.ZHIPUAI_API_KEY || "").length,
+        hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+        nodeEnv: process.env.NODE_ENV || ""
+    });
+});
+
 module.exports = router;
