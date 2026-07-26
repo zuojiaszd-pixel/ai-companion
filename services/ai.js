@@ -286,22 +286,12 @@ async function chat(messages, model, opts, useTools = true) {
                     continue;
                 }
                 const result = await executeTool(func.name, args);
-                const truncatedResult = truncateToolResult(result);
-                console.log('工具结果: ' + func.name + ', 原始长度: ' + result.length + ', 截断后: ' + truncatedResult.length);
+                console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
                     role: 'tool',
                     tool_call_id: tc.id,
-                    content: truncatedResult
+                    content: result
                 });
-            }
-
-            // 多轮工具调用时，压缩旧的工具结果（第2轮起，把之前轮次的tool结果缩短）
-            if (i >= 1) {
-                for (let j = 0; j < messages.length; j++) {
-                    if (messages[j].role === 'tool' && messages[j].content && messages[j].content.length > 200) {
-                        messages[j].content = messages[j].content.slice(0, 200) + '\n...[旧工具结果已压缩]';
-                    }
-                }
             }
             continue;
         }
