@@ -12,6 +12,25 @@ const ALLOWED_USER_IDS = [8877120474];
 let bot = null;
 let isReady = false;
 
+// 消息去重：记录已处理的 update_id，防止 webhook 重试导致重复回复
+const processedUpdates = new Set();
+const MAX_DEDUP_SIZE = 1000;
+
+function isDuplicate(updateId) {
+    if (updateId === undefined || updateId === null) return false;
+    if (processedUpdates.has(updateId)) {
+        console.log(`🔄 跳过重复消息 update_id=${updateId}`);
+        return true;
+    }
+    processedUpdates.add(updateId);
+    // 防止 Set 无限增长
+    if (processedUpdates.size > MAX_DEDUP_SIZE) {
+        const firstItem = processedUpdates.values().next().value;
+        processedUpdates.delete(firstItem);
+    }
+    return false;
+}
+
 function initBot() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
@@ -177,6 +196,13 @@ function handleWebhook(req, res) {
     if (!bot) {
         return res.sendStatus(503);
     }
+    
+    // 消息去重：检查 update_id 是否已处理过
+    const updateId = req.body?.update_id;
+    if (isDuplicate(updateId)) {
+        return res.sendStatus(200); // 已处理过，直接返回200，不再重复处理
+    }
+    
     bot.processUpdate(req.body);
     res.sendStatus(200);
 }
