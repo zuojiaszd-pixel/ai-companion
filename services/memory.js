@@ -19,9 +19,20 @@ function cosineSim(a, b) {
     return (mA && mB) ? dot / (mA * mB) : 0;
 }
 
+/**
+ * 搜索记忆 - 支持多轮上下文查询
+ * @param {string|Array} query - 搜索关键词，可以是字符串或最近几条消息的数组
+ * @param {number} limit - 返回数量
+ */
 async function searchMemories(query, limit = 8) {
     try {
-        const embedding = await getEmbedding(query);
+        // 如果传入的是数组（多轮消息），拼接成更丰富的 query
+        let queryString = query;
+        if (Array.isArray(query)) {
+            queryString = query.join(' | ');
+        }
+
+        const embedding = await getEmbedding(queryString);
         if (!embedding) return [];
 
         // 全量拉取（记忆量不大时直接全量）
@@ -116,4 +127,83 @@ async function cleanupMemories() {
     }
 }
 
-module.exports = { searchMemories, storeMemory, getEmbedding, cleanupMemories };
+/**
+ * 自动提取记忆 - 在对话结束后用小模型分析是否有值得记住的信息
+ * @param {Array} recentMessages - 最近的对话消息 [{role, content}]
+ */
+async function autoExtractMemories(recentMessages) {
+    try {
+        // 只取最近几轮对话
+        const dialogue = recentMessages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .slice(-6)
+            .map(m => `${m.role === 'user' ? '用户' : 'Lumi'}: ${m.content}`)
+            .join('\n');
+
+        if (!dialogue.trim()) return;
+
+        const prompt = `分析以下对话，提取值得长期记住的信息。
+
+对话内容：
+${dialogue}
+
+规则：
+1. 只提取重要信息：用户的名字、生日、喜好、经历、关系、重要事件、项目等
+2. 不要提取闲聊、问候、无意义的内容
+3. 如果没有值得记住的信息，返回空数组
+4. 每条记忆包含：content(内容), type(fact/preference/experience/summary), priority(critical/high/normal/low), tags(标签数组)
+
+返回JSON格式：
+{"memories": [{"content": "...", "type": "fact", "priority": "high", "tags": ["标签1"]}]}
+
+如果没有值得记住的信息，返回：{"memories": []}`;
+
+        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model: 'deepseek/deepseek-chat',
+            provider: { sort: 'price', allow_fallbacks: true },
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.3,
+            max_tokens: 1000
+        }, {
+            headers: {
+                'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            timeout: 30000
+        });
+
+        const content = response.data?.choices?.[0]?.message?.content || '';
+        
+        // 解析JSON（容错）
+        let parsed;
+        try {
+            // 尝试提取JSON
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+        } catch (e) {
+            console.log('[自动记忆] JSON解析失败:', e.message);
+            return;
+        }
+
+        if (!parsed.memories || !Array.isArray(parsed.memories) || parsed.memories.length === 0) {
+            console.log('[自动记忆] 本次对话无需提取记忆');
+            return;
+        }
+
+        for (const mem of parsed.memories) {
+            if (!mem.content) continue;
+            await storeMemory(
+                'default',
+                mem.content,
+                mem.type || 'fact',
+                mem.priority || 'normal',
+                mem.tags || []
+            );
+        }
+        console.log(`[自动记忆] 提取了 ${parsed.memories.length} 条记忆`);
+    } catch (e) {
+        console.error('[自动记忆] 提取失败:', e.message);
+    }
+}
+
+module.exports = { searchMemories, storeMemory, getEmbedding, cleanupMemories, autoExtractMemories };

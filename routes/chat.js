@@ -4,7 +4,7 @@ const Chat = require('../models/Chat');
 const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
 const { chat, SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
-const { searchMemories, storeMemory } = require('../services/memory');
+const { searchMemories, storeMemory, autoExtractMemories } = require('../services/memory');
 
 // 主聊天接口
 router.post('/chat', async (req, res) => {
@@ -25,8 +25,14 @@ router.post('/chat', async (req, res) => {
             await Chat.create({ role: 'user', content: userContent, sessionId });
         }
 
-        // 2. 搜索相关记忆
-        const memories = await searchMemories(message);
+        // 2. 加载最近对话历史（最近20条）
+        const history = await Chat.find({ sessionId })
+            .sort({ timestamp: -1 }).limit(20).lean();
+        const recentHistory = history.reverse();
+
+        // 3. 用最近几条消息拼接做记忆搜索（不只是当前消息）
+        const recentMessages = recentHistory.slice(-4).map(h => h.content);
+        const memories = await searchMemories(recentMessages);
         let memoryContext = '';
         if (memories.length > 0) {
             const critical = memories.filter(m => m.priority === 'critical');
@@ -45,14 +51,9 @@ router.post('/chat', async (req, res) => {
             }
         }
 
-        // 3. 构建系统提示（含记忆）
+        // 4. 构建系统提示（含记忆）
         let systemPrompt = SYSTEM_PROMPT;
         if (memoryContext) systemPrompt += memoryContext;
-
-        // 4. 加载最近对话历史（最近20条）
-        const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(20).lean();
-        const recentHistory = history.reverse();
 
         // 5. 构建消息数组
         const messages = [{ role: 'system', content: systemPrompt }];
@@ -68,7 +69,16 @@ router.post('/chat', async (req, res) => {
         // 7. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
 
-        // 8. 返回（含思考和token用量）
+        // 8. 异步自动提取记忆（不阻塞响应）
+        const allMessages = [
+            ...recentHistory.map(h => ({ role: h.role, content: h.content })),
+            { role: 'assistant', content: result.content }
+        ];
+        autoExtractMemories(allMessages).catch(e => {
+            console.error('[自动记忆] 后台提取失败:', e.message);
+        });
+
+        // 9. 返回（含思考和token用量）
         res.json({
             reply: result.content,
             thinking: result.reasoning || "",

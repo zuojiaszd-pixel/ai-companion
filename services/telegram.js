@@ -2,7 +2,7 @@ const { TelegramBot } = require('node-telegram-bot-api');
 const Chat = require('../models/Chat');
 const { chat, SYSTEM_PROMPT, loadSettings } = require('./ai');
 const { PERSONA } = require('../config/persona');
-const { searchMemories, storeMemory } = require('./memory');
+const { searchMemories, storeMemory, autoExtractMemories } = require('./memory');
 
 // 白名单 - 只有这些用户可以使用 Bot
 const ALLOWED_USER_IDS = [8877120474];
@@ -69,32 +69,40 @@ async function handleMessage(msg) {
         // 存用户消息
         await Chat.create({ role: 'user', content: text, sessionId: 'default' });
 
-        // 搜索相关记忆
-        const memories = await searchMemories(text);
-        let memoryContext = '';
-        if (memories.length > 0) {
-            memoryContext = '\n\n【相关记忆】\n' + memories.map(m => `- ${m.content}`).join('\n');
-        }
-
-        // 构建系统提示
-        let systemPrompt = PERSONA + memoryContext;
-
         // 加载最近对话历史（最近20条）
         const history = await Chat.find({ sessionId: 'default' })
             .sort({ timestamp: -1 }).limit(20).lean();
         const recentHistory = history.reverse();
+
+        // 用最近几条消息拼接做记忆搜索（不只是当前消息）
+        const recentMessages = recentHistory.slice(-4).map(h => h.content);
+        const memories = await searchMemories(recentMessages);
+        let memoryContext = '';
+        if (memories.length > 0) {
+            const critical = memories.filter(m => m.priority === 'critical');
+            const others = memories.filter(m => m.priority !== 'critical');
+            
+            memoryContext = '\n\n【记忆】\n';
+            
+            if (critical.length > 0) {
+                memoryContext += '⚠️ 核心记忆（必须牢记）：\n';
+                critical.forEach(m => { memoryContext += `- ${m.content}\n`; });
+            }
+            
+            if (others.length > 0) {
+                memoryContext += '相关记忆：\n';
+                others.forEach(m => { memoryContext += `- ${m.content}\n`; });
+            }
+        }
+
+        // 构建系统提示
+        let systemPrompt = PERSONA + memoryContext;
 
         // 构建消息数组
         const messages = [{ role: 'system', content: systemPrompt }];
         for (const h of recentHistory) {
             if (h.role === 'user') messages.push({ role: 'user', content: h.content });
             else if (h.role === 'assistant') messages.push({ role: 'assistant', content: h.content });
-        }
-
-        // 添加当前消息（如果不在历史中）
-        const lastMsg = recentHistory[recentHistory.length - 1];
-        if (!lastMsg || lastMsg.content !== text) {
-            messages.push({ role: 'user', content: text });
         }
 
         // 调用 AI（Telegram 聊天不使用工具，避免空回复问题）
@@ -108,6 +116,15 @@ async function handleMessage(msg) {
 
         // 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId: 'default' });
+
+        // 异步自动提取记忆（不阻塞回复）
+        const allMessages = [
+            ...recentHistory.map(h => ({ role: h.role, content: h.content })),
+            { role: 'assistant', content: result.content }
+        ];
+        autoExtractMemories(allMessages).catch(e => {
+            console.error('[自动记忆] Telegram后台提取失败:', e.message);
+        });
 
         // 分条发送
         await sendMultiMessage(chatId, result.content);
