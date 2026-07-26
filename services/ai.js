@@ -299,11 +299,11 @@ async function chat(messages, model, opts, useTools = true) {
                 }
                 const result = await executeTool(func.name, args);
                 // 直接使用原始结果，不再截断
-                console.log('工具结果: ' + func.name + ', 原始长度: ' + result.length + ', 截断后: ' + truncatedResult.length);
+                console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
                     role: 'tool',
                     tool_call_id: tc.id,
-                    content: truncatedResult
+                    content: result
                 });
             }
             continue;
