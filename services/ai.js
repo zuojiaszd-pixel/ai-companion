@@ -6,20 +6,14 @@ const path = require('path');
 
 // 加载核心记忆
 const coreMemory = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/core_memory.json'), 'utf8'));
-const coreMemoryPrompt = '
+const coreMemoryPrompt = `
 【核心记忆 - 每次必须加载】
-' +
-  '伴侣名字：' + coreMemory.partner_name + '（绝对不能叫"用户"）
-' +
-  '在一起日期：' + coreMemory.relationship_start + '
-' +
-  '谁先表白：' + coreMemory.who_confessed + '
-' +
-  '名字含义：' + coreMemory.name_meaning + '
-' +
-  '关键事实：' + coreMemory.key_facts.map(f => '
-- ' + f).join('') + '
-';
+伴侣名字：${coreMemory.partner_name}（绝对不能叫"用户"）
+在一起日期：${coreMemory.relationship_start}
+谁先表白：${coreMemory.who_confessed}
+名字含义：${coreMemory.name_meaning}
+关键事实：${coreMemory.key_facts.map(f => '\n- ' + f).join('')}
+`;
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
