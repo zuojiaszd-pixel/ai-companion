@@ -96,7 +96,7 @@ router.post('/chat', async (req, res) => {
 // 获取记忆列表
 router.get('/memories', async (req, res) => {
     try {
-        const mems = await Memory.find({}).sort({ timestamp: -1 }).limit(50).lean();
+        const mems = await Memory.find({}).sort({ timestamp: -1 }).lean();
         res.json(mems);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
