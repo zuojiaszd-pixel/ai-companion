@@ -6,7 +6,7 @@ const path = require('path');
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
-// 默认模型 - 使用 glm
+// 默认模型 - 使用 z-ai/glm-5.2
 const DEFAULT_MODEL = 'z-ai/glm-5.2';
 
 function loadSettings() {
@@ -27,6 +27,15 @@ function saveSettings(data) {
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf-8");
         return true;
     } catch (e) { return false; }
+}
+
+/**
+ * 截断工具结果，避免长输出占用过多token
+ */
+function truncateToolResult(result, maxLen = 2000) {
+    if (typeof result !== 'string') result = String(result);
+    if (result.length <= maxLen) return result;
+    return result.slice(0, maxLen) + '\n...[结果已截断，原始长度' + result.length + '字]';
 }
 
 /**
@@ -189,13 +198,6 @@ function isEmptyResponse(content) {
     return EMPTY_PATTERNS.some(p => p.test(trimmed));
 }
 
-// 截断工具结果，避免占用过多token
-const MAX_TOOL_RESULT_LENGTH = 2000;
-function truncateToolResult(result) {
-    if (result.length <= MAX_TOOL_RESULT_LENGTH) return result;
-    return result.slice(0, MAX_TOOL_RESULT_LENGTH) + '\n...(结果已截断，原始长度: ' + result.length + '字符)';
-}
-
 const SYSTEM_PROMPT = PERSONA;
 
 async function callOpenRouter(messages, tools, model, opts) {
@@ -280,6 +282,15 @@ async function chat(messages, model, opts, useTools = true) {
                     tool_call_id: tc.id,
                     content: truncatedResult
                 });
+            }
+
+            // 多轮工具调用时，压缩旧的工具结果（第2轮起，把之前轮次的tool结果缩短）
+            if (i >= 1) {
+                for (let j = 0; j < messages.length; j++) {
+                    if (messages[j].role === 'tool' && messages[j].content && messages[j].content.length > 200) {
+                        messages[j].content = messages[j].content.slice(0, 200) + '\n...[旧工具结果已压缩]';
+                    }
+                }
             }
             continue;
         }
