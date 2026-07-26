@@ -212,21 +212,33 @@ function isEmptyResponse(content) {
 const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
 async function callOpenRouter(messages, tools, model, opts) {
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: model || DEFAULT_MODEL,
-        messages,
-        tools: tools || undefined,
-        temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
-        top_p: opts && opts.topP != null ? opts.topP : undefined,
-        max_tokens: opts && opts.maxTokens ? opts.maxTokens : 16000
-    }, {
-        headers: {
-            'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
-            'Content-Type': 'application/json'
-        },
-        timeout: 120000
-    });
-    return response.data;
+    var models = [model || DEFAULT_MODEL, "qwen/qwen-2.5-72b-instruct", "openai/o3-mini"];
+    for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
+        try {
+            const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+                model: models[attempt],
+                messages,
+                tools: tools || undefined,
+                temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
+                top_p: opts && opts.topP != null ? opts.topP : undefined,
+                max_tokens: opts && opts.maxTokens ? opts.maxTokens : 16000
+            }, {
+                headers: {
+                    'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 120000
+            });
+            return response.data;
+        } catch (err) {
+            if (err.response?.status === 500 && attempt < 2) {
+                console.log("[Retry] OpenRouter 500 with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
+                await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
+                continue;
+            }
+            throw err;
+        }
+    }
 }
 
 const RETRY_PROMPTS = [
