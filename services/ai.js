@@ -17,8 +17,8 @@ const coreMemoryPrompt = `
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
-// 默认模型 - 使用 glm-5.2
-const DEFAULT_MODEL = 'glm-4.5-air';
+// 默认模型 - 使用 z-ai/glm-5.2
+const DEFAULT_MODEL = 'z-ai/glm-4.5-air';
 
 function loadSettings() {
     try {
@@ -212,12 +212,12 @@ function isEmptyResponse(content) {
 const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
 async function callOpenRouter(messages, tools, model, opts) {
-    var models = [model || DEFAULT_MODEL, "glm-4-flash"];
+    var models = [model || DEFAULT_MODEL, "z-ai/glm-4.5-air", "qwen/qwen-2.5-72b-instruct", "openai/o3-mini"];
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
-            var _url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-        var _key = process.env.ZHIPUAI_API_KEY;
-        var _mdl = models[attempt].replace('z-ai/', '');
+            var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+        var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
+        var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt].replace('z-ai/', '') : models[attempt];
         const response = await axios.post(_url, {
                 model: _mdl,
                 messages,
@@ -235,7 +235,7 @@ async function callOpenRouter(messages, tools, model, opts) {
             return response.data;
         } catch (err) {
             if (err.response?.status === 500 && attempt < 2) {
-                console.log("[Retry] GLM 500 with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
+                console.log("[Retry] OpenRouter 500 with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
                 await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
                 continue;
             }
