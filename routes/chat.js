@@ -166,7 +166,7 @@ router.get('/avatars', async (req, res) => {
 });
 
 // 保存/更新头像
-router.post('/avatar', (req, res) => {
+router.post('/avatar', async (req, res) => {
     try {
         const { key, value } = req.body;
         if (!key || !value) return res.status(400).json({ error: 'key 和 value 不能为空' });
