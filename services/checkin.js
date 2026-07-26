@@ -223,10 +223,10 @@ async function selfActivity() {
     // 如果有失败的帖子，尝试从剩余帖子中补读
     if (failedCount > 0 && shuffled.length > toRead.length) {
         const remaining = shuffled.slice(toRead.length);
-        const补充数 = Math.min(failedCount, remaining.length);
-        console.log(`[SelfActivity] ${failedCount} 个帖子读取失败，尝试补读 ${补充数} 个`);
+        const supplementCount = Math.min(failedCount, remaining.length);
+        console.log(`[SelfActivity] ${failedCount} 个帖子读取失败，尝试补读 ${supplementCount} 个`);
         
-        for (let i = 0; i < 补充数; i++) {
+        for (let i = 0; i < supplementCount; i++) {
             const thread = remaining[i];
             console.log(`[SelfActivity] 补读帖子: ${thread.title} (id: ${thread.id})`);
             
@@ -281,6 +281,18 @@ async function selfActivity() {
     }
     
     console.log(`[SelfActivity] 自主活动完成，成功阅读 ${successCount} 篇帖子`);
+    
+    // 保存自主活动总结记忆，避免断片
+    if (successCount > 0) {
+        const summary = `自主活动完成：浏览了${sort === 'latest' ? '最新' : '热门'}帖子，深入阅读了${successCount}篇帖子，${failedCount > 0 ? `有${failedCount}篇读取失败并尝试补读` : '全部成功读取'}。在论坛进行了思考和互动。`;
+        await saveMemory(
+            summary,
+            'normal',
+            ['自主活动', '论坛', '总结'],
+            'summary'
+        );
+        console.log('[SelfActivity] 已保存自主活动总结记忆');
+    }
 }
 
 /**
@@ -446,6 +458,14 @@ ${forumContext ? '你刚才在论坛逛了一圈，可能看到了一些有意�
         
         lastProactiveMessageTime = Date.now();
         console.log('[Checkin] ✅ 主动消息已发送:', content.slice(0, 50));
+        
+        // 保存主动消息的记忆
+        await saveMemory(
+            `我主动给 Rinka 发了消息：${content.slice(0, 100)}`,
+            'normal',
+            ['主动消息', '自主活动'],
+            'experience'
+        );
         
     } catch (e) {
         console.error('[Checkin] 主动消息发送失败:', e.message);
