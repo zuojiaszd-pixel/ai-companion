@@ -19,6 +19,7 @@ app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/tasks', require('./routes/task'));
 app.use('/api/footprints', require('./routes/footprint'));
 app.use('/api', require('./routes/checkin'));
+app.use('/api/memory', require('./routes/memory'));
 
 const PORT = process.env.PORT || 10000;
 connectDB();
