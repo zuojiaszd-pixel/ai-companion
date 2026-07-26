@@ -125,12 +125,12 @@ router.put('/:id', async (req, res) => {
         // 如果content改了，重新生成embedding
         if (updates.content) {
             const axios = require('axios');
-            const res2 = await axios.post('https://openrouter.ai/api/v1/embeddings', {
-                model: 'text-embedding-3-small',
+            const res2 = await axios.post('https://open.bigmodel.cn/api/paas/v4/embeddings', {
+                model: 'embedding-3',
                 input: updates.content
             }, {
                 headers: {
-                    'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
+                    'Authorization': 'Bearer ' + process.env.ZHIPUAI_API_KEY,
                     'Content-Type': 'application/json'
                 }
             });
