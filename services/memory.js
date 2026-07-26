@@ -370,7 +370,7 @@ async function autoExtractMemories(allMessages) {
         const text = allMessages.map(function(m) { return m.role + ": " + m.content; }).join("\n").slice(0, 3000);
         const axios = require("axios");
         const res = await axios.post("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
-            model: "glm-5.2",
+            model: "glm-4.5-air",
             messages: [
                 { role: "system", content: "你是一个记忆提取器。从对话中提取值得长期记住的信息。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"]}]" },
                 { role: "user", content: text }
