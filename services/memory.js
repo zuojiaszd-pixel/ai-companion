@@ -378,7 +378,7 @@ async function autoExtractMemories(allMessages) {
             temperature: 0.3,
             max_tokens: 1000
         }, {
-            headers: { "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY },
+            headers: { "Authorization": "Bearer " + _key2 },
             timeout: 15000
         });
         const reply = res.data.choices[0].message.content;
