@@ -212,7 +212,7 @@ function isEmptyResponse(content) {
 const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
 async function callOpenRouter(messages, tools, model, opts) {
-    var models = [model || DEFAULT_MODEL, "glm-5.2"];
+    var models = [model || DEFAULT_MODEL, "z-ai/glm-5.2"];
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
