@@ -17,8 +17,8 @@ const coreMemoryPrompt = `
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
-// 默认模型 - 使用 z-ai/glm-5.2
-const DEFAULT_MODEL = 'glm-5.2';
+// 默认模型 - 使用 glm-4.5-air
+const DEFAULT_MODEL = 'glm-4.5-air';
 
 function loadSettings() {
     try {
@@ -212,7 +212,7 @@ function isEmptyResponse(content) {
 const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
 async function callOpenRouter(messages, tools, model, opts) {
-    var models = [model || DEFAULT_MODEL, "glm-4.5-air", "glm-4-flash"];
+    var models = [model || DEFAULT_MODEL, "glm-4-flash"];
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             var _url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
