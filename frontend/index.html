@@ -214,7 +214,16 @@
 .fp-item .fp-thought{font-size:13px;color:var(--text2);line-height:1.6;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);border-left:3px solid var(--accent)}
 .fp-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
 @media(max-width:600px){#page-footprint{padding:10px}.fp-header .fp-title{font-size:16px}.fp-item .fp-title-text{font-size:13px}.fp-item .fp-thought{font-size:12px}}
-</style></head><body><header><div class="logo"><div class="icon">L</div><span>Lumi</span></div><div class="header-actions"><select id="model-select"><option value="z-ai/glm-5.2" selected>GLM-5.2 (推荐)</option><option value="z-ai/glm-4.7">GLM-4.7 (智谱)</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option><option value="deepseek/deepseek-r1">DeepSeek R1 (深度推理)</option></select><button class="btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme">&#9788;</button><button class="btn-icon" onclick="toggleSettings()" id="settings-btn" title="Settings">&#9881;</button><button class="btn-icon" onclick="location.reload()" title="Refresh" style="width:30px;height:30px;font-size:13px">&#x21BB;</button></div></header><div id="page-chat" class="page active"><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div></div><div id="page-calendar" class="page">
+
+/* Status Bar */
+#status-bar{display:none;padding:6px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);align-items:center;gap:6px;flex-shrink:0;min-height:32px}
+#status-bar.show{display:flex}
+#status-bar .status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#status-bar .status-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#status-bar .status-label{font-size:10px;color:var(--text3);margin-right:2px}
+@media(max-width:600px){#status-bar{padding:4px 10px;font-size:11px}}
+</style></head><body><header><div class="logo"><div class="icon">L</div><span>Lumi</span></div><div class="header-actions"><select id="model-select"><option value="z-ai/glm-5.2" selected>GLM-5.2 (推荐)</option><option value="z-ai/glm-4.7">GLM-4.7 (智谱)</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option><option value="deepseek/deepseek-r1">DeepSeek R1 (深度推理)</option></select><button class="btn-icon" onclick="toggleTheme()" id="theme-btn" title="Theme">&#9788;</button><button class="btn-icon" onclick="toggleSettings()" id="settings-btn" title="Settings">&#9881;</button><button class="btn-icon" onclick="location.reload()" title="Refresh" style="width:30px;height:30px;font-size:13px">&#x21BB;</button></div></header><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div></div><div id="page-calendar" class="page">
 <div class="cal-header">
 <button class="cal-nav-btn" onclick="calPrevMonth()">&#x2039;</button>
 <div class="cal-title" id="cal-title"></div>
@@ -1207,5 +1216,21 @@ function fpRender() {
             '</div>';
     }).join('');
 }
+
+// === Status Bar ===
+function updateStatusBar() {
+    fetch(BACKEND + '/api/status').then(function(r){return r.json();}).then(function(data){
+        var bar = document.getElementById('status-bar');
+        var text = document.getElementById('status-text');
+        if (data && data.status) {
+            text.textContent = data.status;
+            bar.classList.add('show');
+        } else {
+            bar.classList.remove('show');
+        }
+    }).catch(function(){});
+}
+updateStatusBar();
+setInterval(updateStatusBar, 10000);
 </script><button id="scroll-bottom-btn" onclick="scrollToBottom()" title="回到底部">↓</button>
 <div id="token-bar"></div></body></html>

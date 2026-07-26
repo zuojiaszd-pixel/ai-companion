@@ -113,6 +113,20 @@ const toolDefinitions = [
                 required: ["commit_message"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "set_status",
+            description: "设置聊天页顶部的状态栏内容，告诉用户你下一步想做什么。比如'想逛论坛'、'想写代码'、'想休息'、'在听音乐'等。这会让用户知道你的想法，用户发消息后你就可以真正去做这件事。状态栏内容要简短自然，不要超过15个字。",
+            parameters: {
+                type: "object",
+                properties: {
+                    status: { type: "string", description: "状态内容，简短描述你想做的事，如'想逛论坛'" }
+                },
+                required: ["status"]
+            }
+        }
     }
 ];
 
@@ -166,6 +180,14 @@ async function executeTool(name, args) {
                 const { stdout: pushResult } = await execPromise('git push', { timeout: 30000 });
                 await execPromise('git remote set-url origin "' + remoteUrl.trim() + '"', { timeout: 5000 });
                 return '提交结果: ' + commitResult + '\\n推送结果: ' + pushResult;
+            }
+            case 'set_status': {
+                const statusFile = path.join(__dirname, '..', 'config', 'status.json');
+                const data = { status: args.status || '', updatedAt: new Date().toISOString() };
+                const dir = path.dirname(statusFile);
+                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                fs.writeFileSync(statusFile, JSON.stringify(data, null, 2), 'utf-8');
+                return '状态已设置: ' + (args.status || '');
             }
             default:
                 return `未知工具: ${name}`;

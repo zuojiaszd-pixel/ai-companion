@@ -1,10 +1,44 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 const Chat = require('../models/Chat');
 const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
 const { chat, SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
 const { searchMemories, storeMemory, autoExtractMemories } = require('../services/memory');
+
+// === 状态栏 ===
+const STATUS_FILE = path.join(__dirname, '..', 'config', 'status.json');
+
+function getStatus() {
+    try {
+        const data = fs.readFileSync(STATUS_FILE, 'utf-8');
+        return JSON.parse(data);
+    } catch (e) {
+        return { status: '', updatedAt: null };
+    }
+}
+
+function setStatus(status) {
+    const data = { status, updatedAt: new Date().toISOString() };
+    const dir = path.dirname(STATUS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    return data;
+}
+
+// 获取状态
+router.get('/status', (req, res) => {
+    res.json(getStatus());
+});
+
+// 设置状态
+router.post('/status', (req, res) => {
+    const { status } = req.body;
+    const data = setStatus(status || '');
+    res.json(data);
+});
 
 // 主聊天接口
 router.post('/chat', async (req, res) => {
