@@ -18,7 +18,7 @@ let lastProactiveMessageTime = 0;
 const MIN_INTERVAL = 60 * 60 * 1000;
 
 // 检查间隔：每 10 分钟检查一次
-const CHECK_INTERVAL = 10 * 60 * 1000;
+const CHECK_INTERVAL = 30 * 60 * 1000;
 
 // 发消息概率：每次检查时有 40% 的概率发消息（满足其他条件后）
 const MESSAGE_PROBABILITY = 0.40;

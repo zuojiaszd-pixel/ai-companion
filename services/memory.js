@@ -567,7 +567,7 @@ async function getChatMemories(sessionId, query, topK) {
             supersededBy: null,
             contradicted: false,
             priority: { $in: ['critical', 'high'] }
-        }).lean();
+        }).limit(10).lean();
         
         // 3. 最近3天记忆窗口：自动注入最近创建的记忆
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
