@@ -66,7 +66,7 @@ router.post('/chat', async (req, res) => {
         const recentHistory = history.reverse();
 
         // 3. 用最近几条消息拼接做记忆搜索（不只是当前消息）
-        const recentMessages = recentHistory.slice(-4).map(h => h.content);
+        const recentMessages = recentHistory.slice(-4).map(h => h.content).join(' ');
         const memories = await searchMemories(recentMessages);
         let memoryContext = '';
         if (memories.length > 0) {
