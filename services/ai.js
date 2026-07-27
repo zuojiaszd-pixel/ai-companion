@@ -315,7 +315,7 @@ async function callOpenRouter(messages, tools, model, opts) {
                     'Authorization': 'Bearer ' + _key,
                     'Content-Type': 'application/json'
                 },
-                timeout: 120000
+                timeout: 60000
             });
             return response.data;
         } catch (err) {
@@ -369,7 +369,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     messages = trimContext(messages, 40);
     const MAX_TOOL_ROUNDS = 10;
-    const MAX_EMPTY_RETRIES = 5;
+    const MAX_EMPTY_RETRIES = 2;
     const MAX_REPEAT_RETRIES = 2;
 
     // 有图片时禁用工具调用（4.6v可能不支持工具）
