@@ -60,9 +60,9 @@ router.post('/chat', async (req, res) => {
             await Chat.create({ role: 'user', content: userContent, sessionId });
         }
 
-        // 2. 加载最近对话历史（最近30条）
+        // 2. 加载最近对话历史（最近15条，省token）
         const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(30).lean();
+            .sort({ timestamp: -1 }).limit(15).lean();
         const recentHistory = history.reverse();
 
         // 3. 用最近几条消息拼接做记忆搜索（不只是当前消息）
@@ -122,14 +122,17 @@ router.post('/chat', async (req, res) => {
         // 7. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
 
-        // 8. 异步自动提取记忆（不阻塞响应）
-        const allMessages = [
-            ...recentHistory.map(h => ({ role: h.role, content: h.content })),
-            { role: 'assistant', content: result.content }
-        ];
-        autoExtractMemories(allMessages).catch(e => {
-            console.error('[自动记忆] 后台提取失败:', e.message);
-        });
+        // 8. 异步自动提取记忆（每5条消息才触发一次，省token）
+        const totalMessages = await Chat.countDocuments({ sessionId });
+        if (totalMessages % 5 === 0) {
+            const allMessages = [
+                ...recentHistory.map(h => ({ role: h.role, content: h.content })),
+                { role: 'assistant', content: result.content }
+            ];
+            autoExtractMemories(allMessages).catch(e => {
+                console.error('[自动记忆] 后台提取失败:', e.message);
+            });
+        }
 
         // 9. 返回（含思考和token用量）
         res.json({

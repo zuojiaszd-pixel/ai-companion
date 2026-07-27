@@ -27,7 +27,7 @@ function loadSettings() {
         const data = fs.readFileSync(SETTINGS_FILE, "utf-8");
         return JSON.parse(data);
     } catch (e) {
-        return { temperature: 0.7, topP: 0.9, maxTokens: 16000, systemPrompt: null };
+        return { temperature: 0.7, topP: 0.9, maxTokens: 4000, systemPrompt: null };
     }
 }
 
@@ -304,14 +304,14 @@ async function callOpenRouter(messages, tools, model, opts) {
         var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
         var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt].replace("z-ai/", "") : models[attempt];
             // 图片模式用更短的超时，避免总时间过长
-            var timeout = hasImage ? 45000 : 60000;
+            var timeout = hasImage ? 35000 : 50000;
             const response = await axios.post(_url, {
                 model: _mdl,
                 messages,
                 tools: tools || undefined,
                 temperature: opts && opts.temperature != null ? opts.temperature : 0.7,
                 top_p: opts && opts.topP != null ? opts.topP : undefined,
-                max_tokens: opts && opts.maxTokens ? opts.maxTokens : 16000
+                max_tokens: opts && opts.maxTokens ? opts.maxTokens : 4000
             }, {
                 headers: {
                     'Authorization': 'Bearer ' + _key,
@@ -359,7 +359,7 @@ const REPEAT_RETRY_PROMPTS = [
  * @param {Array} messages - 消息数组
  * @param {number} maxRounds - 保留的最大对话轮数
  */
-function trimContext(messages, maxRounds = 40) {
+function trimContext(messages, maxRounds = 15) {
     // 消息数未超限则不动
     if (messages.length <= maxRounds * 2 + 1) return messages;
     const system = messages[0];
@@ -369,7 +369,7 @@ function trimContext(messages, maxRounds = 40) {
 
 async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
-    messages = trimContext(messages, 40);
+    messages = trimContext(messages, 15);
     const MAX_TOOL_ROUNDS = 10;
     // 图片模式：不重试，一次就返回，避免超时
     const MAX_EMPTY_RETRIES = hasImage ? 0 : 2;

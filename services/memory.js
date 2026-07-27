@@ -43,33 +43,12 @@ function tokenize(text) {
 function generateMultiQueries(query) {
     const queries = [query]; // 原始query
     
-    // query 2: 关键词组合
+    // query 2: 去掉停用词后的关键词组合
     const tokens = tokenize(query);
-    if (tokens.length > 1) {
-        // 取前5个关键词重新组合
-        const topTokens = tokens.slice(0, 5);
-        queries.push(topTokens.join(' '));
-    }
-    
-    // query 3: 去掉停用词后的query
     const stopwords = new Set(['的', '了', '是', '在', '我', '你', '他', '她', '它', '们', '这', '那', '和', '与', '或', '也', '都', '就', '不', '没', '有', 'the', 'a', 'an', 'is', 'are', 'was', 'were', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'and', 'or', 'but', 'to', 'of', 'in', 'on', 'at', 'for']);
     const filtered = tokens.filter(t => !stopwords.has(t));
     if (filtered.length > 0 && filtered.length < tokens.length) {
         queries.push(filtered.join(' '));
-    }
-    
-    // query 4: 如果query是问句，提取核心实体
-    if (query.includes('？') || query.includes('?')) {
-        // 去掉疑问词
-        const questionWords = ['什么', '怎么', '为什么', '哪', '谁', '多少', '是不是', '有没有', 'what', 'how', 'why', 'where', 'who', 'when'];
-        let coreQuery = query;
-        for (const qw of questionWords) {
-            coreQuery = coreQuery.replace(new RegExp(qw, 'gi'), '');
-        }
-        coreQuery = coreQuery.replace(/[？?！!]/g, '').trim();
-        if (coreQuery.length > 0 && coreQuery !== query) {
-            queries.push(coreQuery);
-        }
     }
     
     return queries;
