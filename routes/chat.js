@@ -91,17 +91,21 @@ router.post('/chat', async (req, res) => {
         if (memoryContext) systemPrompt += memoryContext;
 
         // 5. 构建消息数组
+        // 有图片时，最后一条用户消息用多模态格式，历史中的图片消息只保留文字描述
+        const hasImage = !!image;
         const messages = [{ role: 'system', content: systemPrompt }];
         for (let i = 0; i < recentHistory.length; i++) {
             const h = recentHistory[i];
             if (h.role === 'user') {
-                // 如果是最后一条用户消息且有图片，构建多模态消息
-                if (i === recentHistory.length - 1 && image) {
-                    const content = [
-                        { type: 'text', text: message || '请描述这张图片' },
-                        { type: 'image_url', image_url: { url: image } }
-                    ];
-                    messages.push({ role: 'user', content });
+                // 最后一条用户消息且有图片时，构建多模态消息
+                if (i === recentHistory.length - 1 && hasImage) {
+                    messages.push({
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: message || '请描述这张图片' },
+                            { type: 'image_url', image_url: { url: image } }
+                        ]
+                    });
                 } else {
                     messages.push({ role: 'user', content: h.content });
                 }
@@ -110,26 +114,7 @@ router.post('/chat', async (req, res) => {
             }
         }
 
-        // 5.5 如果有图片，把最后一条用户消息替换成多模态格式
-        let hasImage = false;
-        if (image) {
-            hasImage = true;
-            // 找到最后一条用户消息，替换为多模态格式
-            for (let i = messages.length - 1; i >= 0; i--) {
-                if (messages[i].role === 'user') {
-                    messages[i] = {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: message || '请描述这张图片' },
-                            { type: 'image_url', image_url: { url: image } }
-                        ]
-                    };
-                    break;
-                }
-            }
-        }
-
-        // 6. 调用 AI（有图片时强制用glm-4.6v）
+        // 6. 调用 AI（有图片时强制用glm-4.6v，禁用工具调用）
         const opts = { temperature, topP, maxTokens };
         const chatModel = hasImage ? 'glm-4.6v' : model;
         const result = await chat(messages, chatModel, opts, true, hasImage);

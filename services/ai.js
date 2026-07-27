@@ -211,6 +211,45 @@ function isEmptyResponse(content) {
     return EMPTY_PATTERNS.some(p => p.test(trimmed));
 }
 
+/**
+ * 计算两个字符串的相似度（基于字符重叠率）
+ * 返回 0-1 之间的值，1表示完全相同
+ */
+function similarity(s1, s2) {
+    if (!s1 || !s2) return 0;
+    const set1 = new Set(s1.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').split(''));
+    const set2 = new Set(s2.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').split(''));
+    if (set1.size === 0 || set2.size === 0) return 0;
+    let intersection = 0;
+    for (const ch of set1) {
+        if (set2.has(ch)) intersection++;
+    }
+    const union = set1.size + set2.size - intersection;
+    return intersection / union;
+}
+
+/**
+ * 检查新回复是否与最近的助手回复过于相似
+ * @param {string} newReply - 新回复
+ * @param {Array} messages - 消息历史
+ * @returns {boolean} - 是否过于相似
+ */
+function isTooSimilar(newReply, messages) {
+    const recentAssistantReplies = messages
+        .filter(m => m.role === 'assistant' && typeof m.content === 'string')
+        .slice(-3)
+        .map(m => m.content);
+    
+    for (const oldReply of recentAssistantReplies) {
+        const sim = similarity(newReply, oldReply);
+        if (sim > 0.6) {
+            console.log(`[Repeat Check] Similarity ${sim.toFixed(2)} with: "${oldReply.slice(0, 50)}..."`);
+            return true;
+        }
+    }
+    return false;
+}
+
 const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
 /**
@@ -298,6 +337,12 @@ const RETRY_PROMPTS = [
     '最后一次机会：请直接输出你对用户消息的回复，不要只思考不回答。'
 ];
 
+const REPEAT_RETRY_PROMPTS = [
+    '你刚才的回复和之前说过的内容太相似了。请换一个完全不同的角度和用词来回复。',
+    '不要重复之前说过的表达。用全新的方式来回应这条消息，换个话题方向也行。',
+    '你的回复太像之前说过的了。请确保这次的回复和之前的回复用词不同、角度不同。'
+];
+
 /**
  * chat function
  * @param {Array} messages - 消息数组
@@ -310,6 +355,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     const MAX_TOOL_ROUNDS = 10;
     const MAX_EMPTY_RETRIES = 5;
+    const MAX_REPEAT_RETRIES = 2;
 
     // 有图片时禁用工具调用（4.6v可能不支持工具）
     const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
@@ -430,6 +476,54 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
             content = '（我好像走神了，能再说一遍吗？）';
             reasoning = '';
         }
+
+        // 重复检测：检查新回复是否与最近的助手回复过于相似
+        if (!isEmptyResponse(content) && isTooSimilar(content, messages)) {
+            console.log('[WARN] Reply too similar to recent replies, retrying...');
+            for (let r = 0; r < MAX_REPEAT_RETRIES; r++) {
+                const retryMessages = [...messages];
+                retryMessages.push({ role: 'user', content: REPEAT_RETRY_PROMPTS[r] });
+                
+                let retryData;
+                try {
+                    retryData = await callOpenRouter(retryMessages, activeTools, model, opts);
+                } catch(e) {
+                    console.log(`[Repeat Retry ${r + 1}] API error:`, e.message);
+                    break;
+                }
+                
+                lastUsage = retryData.usage || lastUsage;
+                const retryChoice = retryData.choices?.[0];
+                if (!retryChoice) break;
+                
+                const retryMsg = retryChoice.message;
+                let retryContent = retryMsg.content || '';
+                let retryReasoning = retryMsg.reasoning || retryMsg.reasoning_content || '';
+                
+                if (isEmptyResponse(retryContent) && retryReasoning.trim()) {
+                    retryContent = retryReasoning;
+                    retryReasoning = '';
+                } else if (!retryReasoning.trim()) {
+                    const cleaned = extractThinking(retryContent);
+                    if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
+                        retryContent = cleaned.reasoning;
+                        retryReasoning = '';
+                    } else {
+                        retryContent = cleaned.content;
+                        retryReasoning = cleaned.reasoning;
+                    }
+                }
+                
+                if (!isEmptyResponse(retryContent) && !isTooSimilar(retryContent, messages)) {
+                    console.log(`[Repeat Retry ${r + 1}] Success! Got distinct response.`);
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage };
+                }
+                console.log(`[Repeat Retry ${r + 1}] Still similar, trying again...`);
+            }
+            // 如果重试后仍然相似，就用最后一次的回复（总比没有好）
+            console.log('[WARN] Repeat retries exhausted, using last response.');
+        }
+
         return { content: content, reasoning: reasoning, usage: lastUsage };
     }
     throw new Error('工具调用次数过多，已终止');
