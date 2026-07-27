@@ -5,7 +5,7 @@ const router = express.Router();
 const Chat = require('../models/Chat');
 const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
-const { chat, SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
+const { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
 const { searchMemories, storeMemory, autoExtractMemories, getChatMemories } = require('../services/memory');
 
 // === 状态栏 ===
@@ -68,44 +68,57 @@ router.post('/chat', async (req, res) => {
         // 3. 用最近几条消息拼接做记忆搜索（不只是当前消息）
         const recentMessages = recentHistory.slice(-4).map(h => h.content).join(' ');
         const memories = await getChatMemories("default", recentMessages, 10);
-        let memoryContext = '';
-        if (memories.length > 0) {
-            const critical = memories.filter(m => m.priority === 'critical');
-            const others = memories.filter(m => m.priority !== 'critical');
-            
-            memoryContext = '\n\n【记忆】\n';
-            
-            if (critical.length > 0) {
-                memoryContext += '⚠️ 核心记忆（必须牢记）：\n';
-                critical.forEach(m => { memoryContext += `- ${m.content}\n`; });
-            }
-            
-            if (others.length > 0) {
-                memoryContext += '相关记忆：\n';
-                others.forEach(m => { memoryContext += `- ${m.content}\n`; });
-            }
+
+        // 4. 分层：固定记忆（critical/high，很少变化）vs 动态记忆（normal/low）
+        const fixedMemories = memories.filter(m => m.priority === 'critical' || m.priority === 'high');
+        const dynamicMemories = memories.filter(m => m.priority !== 'critical' && m.priority !== 'high');
+
+        // 5. 构建固定记忆提示（作为第二个 system 消息，很少变 → 利于 prompt caching）
+        let fixedMemoryPrompt = '';
+        if (fixedMemories.length > 0) {
+            fixedMemoryPrompt = '\n\n【核心记忆】\n' +
+                fixedMemories.map(m => `- ${m.content}`).join('\n');
         }
 
-        // 4. 构建系统提示（含记忆）
-        let systemPrompt = SYSTEM_PROMPT;
-        if (memoryContext) systemPrompt += memoryContext;
+        // 6. 构建动态记忆提示（注入到最后一条 user 消息前）
+        let dynamicMemoryPrompt = '';
+        if (dynamicMemories.length > 0) {
+            dynamicMemoryPrompt = '\n\n【相关记忆】\n' +
+                dynamicMemories.map(m => `- ${m.content}`).join('\n');
+        }
 
-        // 5. 构建消息数组
-        // 有图片时，最后一条用户消息用多模态格式，历史中的图片消息只保留文字描述
+        // 7. 构建消息数组（分层结构，前缀尽可能不变 → 利于 prompt caching）
         const hasImage = !!image;
-        const messages = [{ role: 'system', content: systemPrompt }];
+        const messages = [
+            { role: 'system', content: STATIC_SYSTEM_PROMPT },  // 第一层：人设（永远不变）
+        ];
+        // 第二层：固定记忆（作为独立 system 消息，很少变化）
+        if (fixedMemoryPrompt) {
+            messages.push({ role: 'system', content: fixedMemoryPrompt });
+        }
+        // 第三层：历史对话 + 最后一条注入动态记忆
         for (let i = 0; i < recentHistory.length; i++) {
             const h = recentHistory[i];
             if (h.role === 'user') {
-                // 最后一条用户消息且有图片时，构建多模态消息
-                if (i === recentHistory.length - 1 && hasImage) {
-                    messages.push({
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: message || '请描述这张图片' },
-                            { type: 'image_url', image_url: { url: image } }
-                        ]
-                    });
+                // 最后一条用户消息，注入动态记忆
+                if (i === recentHistory.length - 1) {
+                    const userContent = dynamicMemoryPrompt
+                        ? `【上下文记忆】${dynamicMemoryPrompt}\n\n用户消息：${message || ''}`
+                        : message;
+                    if (hasImage) {
+                        messages.push({
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: userContent },
+                                { type: 'image_url', image_url: { url: image } }
+                            ]
+                        });
+                    } else {
+                        messages.push({ role: 'user', content: userContent });
+                    }
+                } else if (hasImage) {
+                    // 历史中的图片消息只保留文字描述
+                    messages.push({ role: 'user', content: h.content.replace(/^\[图片消息\]\s*/, '') });
                 } else {
                     messages.push({ role: 'user', content: h.content });
                 }

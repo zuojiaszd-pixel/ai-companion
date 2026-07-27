@@ -250,7 +250,7 @@ function isTooSimilar(newReply, messages) {
     return false;
 }
 
-const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
+const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
 /**
  * 检查消息数组中是否包含多模态内容（图片）
@@ -558,4 +558,4 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
     throw new Error('工具调用次数过多，已终止');
 }
 
-module.exports = { chat, SYSTEM_PROMPT, loadSettings, saveSettings, DEFAULT_MODEL };
+module.exports = { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings, DEFAULT_MODEL };
