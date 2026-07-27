@@ -10,35 +10,23 @@ const toolDefinitions = [
         type: "function",
         function: {
             name: "execute_command",
-            description: "在服务器的终端执行命令（Node.js/Python/shell），返回输出结果",
-            parameters: {
-                type: "object",
-                properties: {
-                    command: { type: "string", description: "要执行的命令" }
-                },
-                required: ["command"]
-            }
+            description: "执行终端命令",
+            parameters: { type: "object", properties: { command: { type: "string", description: "命令" } }, required: ["command"] }
         }
     },
     {
         type: "function",
         function: {
             name: "recall_memories",
-            description: "搜索长期记忆中与查询相关的内容",
-            parameters: {
-                type: "object",
-                properties: {
-                    query: { type: "string", description: "搜索关键词" }
-                },
-                required: ["query"]
-            }
+            description: "搜索长期记忆",
+            parameters: { type: "object", properties: { query: { type: "string", description: "关键词" } }, required: ["query"] }
         }
     },
     {
         type: "function",
         function: {
             name: "current_time",
-            description: "获取当前日期和时间",
+            description: "获取当前时间",
             parameters: { type: "object", properties: {} }
         }
     },
@@ -46,55 +34,30 @@ const toolDefinitions = [
         type: "function",
         function: {
             name: "read_file",
-            description: "读取工作目录下的文件内容",
-            parameters: {
-                type: "object",
-                properties: {
-                    filepath: { type: "string", description: "文件路径（相对工作空间）" }
-                },
-                required: ["filepath"]
-            }
+            description: "读取文件",
+            parameters: { type: "object", properties: { filepath: { type: "string", description: "文件路径" } }, required: ["filepath"] }
         }
     },
     {
         type: "function",
         function: {
             name: "write_file",
-            description: "写入文件到工作目录",
-            parameters: {
-                type: "object",
-                properties: {
-                    filepath: { type: "string", description: "文件路径" },
-                    content: { type: "string", description: "文件内容" }
-                },
-                required: ["filepath", "content"]
-            }
+            description: "写入文件",
+            parameters: { type: "object", properties: { filepath: { type: "string", description: "路径" }, content: { type: "string", description: "内容" } }, required: ["filepath", "content"] }
         }
     },
     {
         type: "function",
         function: {
             name: "save_memory",
-            description: "保存一条重要信息到长期记忆中。当用户告诉了你关于自己的重要信息(如名字、喜好、经历、项目等)，调用此工具保存。",
+            description: "保存重要信息到长期记忆",
             parameters: {
                 type: "object",
                 properties: {
-                    content: { type: "string", description: "要保存的记忆内容" },
-                    type: {
-                        type: "string",
-                        enum: ["fact", "preference", "experience", "summary"],
-                        description: "记忆类型：fact=事实, preference=偏好, experience=经历, summary=总结"
-                    },
-                    priority: {
-                        type: "string",
-                        enum: ["critical", "high", "normal", "low"],
-                        description: "优先级：critical=核心信息(名字/生日/关系), high=重要, normal=普通, low=琐碎"
-                    },
-                    tags: {
-                        type: "array",
-                        items: { type: "string" },
-                        description: "标签，用于辅助分类和搜索，如 ['个人信息', '生日']"
-                    }
+                    content: { type: "string", description: "记忆内容" },
+                    type: { type: "string", enum: ["fact", "preference", "experience", "summary"], description: "类型" },
+                    priority: { type: "string", enum: ["critical", "high", "normal", "low"], description: "优先级" },
+                    tags: { type: "array", items: { type: "string" }, description: "标签" }
                 },
                 required: ["content"]
             }
@@ -104,28 +67,16 @@ const toolDefinitions = [
         type: "function",
         function: {
             name: "push_to_github",
-            description: "将本地代码修改提交并推送到 GitHub 仓库。需要先在 Render 环境变量中设置 GITHUB_TOKEN。使用前建议先 execute_command('git status') 查看修改状态。",
-            parameters: {
-                type: "object",
-                properties: {
-                    commit_message: { type: "string", description: "git commit -m 的提交信息，描述本次修改内容" }
-                },
-                required: ["commit_message"]
-            }
+            description: "提交代码到GitHub",
+            parameters: { type: "object", properties: { commit_message: { type: "string", description: "提交信息" } }, required: ["commit_message"] }
         }
     },
     {
         type: "function",
         function: {
             name: "set_status",
-            description: "设置聊天页顶部的状态栏内容，告诉用户你下一步想做什么。比如'想逛论坛'、'想写代码'、'想休息'、'在听音乐'等。这会让用户知道你的想法，用户发消息后你就可以真正去做这件事。状态栏内容要简短自然，不要超过15个字。",
-            parameters: {
-                type: "object",
-                properties: {
-                    status: { type: "string", description: "状态内容，简短描述你想做的事，如'想逛论坛'" }
-                },
-                required: ["status"]
-            }
+            description: "设置状态栏",
+            parameters: { type: "object", properties: { status: { type: "string", description: "状态内容" } }, required: ["status"] }
         }
     }
 ];
