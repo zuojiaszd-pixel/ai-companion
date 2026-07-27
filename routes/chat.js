@@ -6,7 +6,7 @@ const Chat = require('../models/Chat');
 const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
 const { chat, SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
-const { searchMemories, storeMemory, autoExtractMemories } = require('../services/memory');
+const { searchMemories, storeMemory, autoExtractMemories, getChatMemories } = require('../services/memory');
 
 // === 状态栏 ===
 const STATUS_FILE = path.join(__dirname, '..', 'config', 'status.json');
@@ -67,7 +67,7 @@ router.post('/chat', async (req, res) => {
 
         // 3. 用最近几条消息拼接做记忆搜索（不只是当前消息）
         const recentMessages = recentHistory.slice(-4).map(h => h.content).join(' ');
-        const memories = await searchMemories(recentMessages);
+        const memories = await getChatMemories("default", recentMessages, 10);
         let memoryContext = '';
         if (memories.length > 0) {
             const critical = memories.filter(m => m.priority === 'critical');

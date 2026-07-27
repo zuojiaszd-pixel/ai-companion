@@ -549,5 +549,83 @@ module.exports = {
     getMemoryStats,
     backupMemories,
     restoreMemories,
-    listBackups
+    listBackups,
+    getChatMemories
 };
+
+// ============ 对话用记忆检索（搜索 + 保底 + 最近窗口） ============
+
+async function getChatMemories(sessionId, query, topK) {
+    topK = topK || 10;
+    try {
+        // 1. 正常搜索（已包含多query + RRF + 7天窗口加分）
+        const searchResults = await recallMemories(sessionId, query, topK);
+        
+        // 2. 保底注入：critical 和 high 优先级的记忆，不依赖搜索匹配
+        const baselineMemories = await Memory.find({
+            sessionId,
+            supersededBy: null,
+            contradicted: false,
+            priority: { $in: ['critical', 'high'] }
+        }).lean();
+        
+        // 3. 最近3天记忆窗口：自动注入最近创建的记忆
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        const recentMemories = await Memory.find({
+            sessionId,
+            supersededBy: null,
+            contradicted: false,
+            createdAt: { $gte: threeDaysAgo }
+        }).sort({ createdAt: -1 }).limit(10).lean();
+        
+        // 4. 合并去重
+        const seenIds = new Set();
+        const merged = [];
+        
+        // 先放搜索结果（按相关性排序）
+        for (const r of searchResults) {
+            const key = r.content; // searchResults没有_id，用content去重
+            if (!seenIds.has(key)) {
+                seenIds.add(key);
+                merged.push(r);
+            }
+        }
+        
+        // 补充保底记忆
+        for (const m of baselineMemories) {
+            if (!seenIds.has(m.content)) {
+                seenIds.add(m.content);
+                merged.push({
+                    content: m.content,
+                    type: m.type,
+                    priority: m.priority,
+                    tags: m.tags,
+                    score: 999, // 保底记忆标记高分
+                    createdAt: m.createdAt
+                });
+            }
+        }
+        
+        // 补充最近3天记忆
+        for (const m of recentMemories) {
+            if (!seenIds.has(m.content)) {
+                seenIds.add(m.content);
+                merged.push({
+                    content: m.content,
+                    type: m.type,
+                    priority: m.priority,
+                    tags: m.tags,
+                    score: 888, // 最近窗口记忆
+                    createdAt: m.createdAt
+                });
+            }
+        }
+        
+        console.log(`[Memory] getChatMemories: 搜索${searchResults.length}条 + 保底${baselineMemories.length}条 + 最近3天${recentMemories.length}条 -> 合并去重后${merged.length}条`);
+        return merged;
+    } catch (e) {
+        console.error('[Memory] getChatMemories失败:', e.message);
+        // 降级：返回空数组，不阻断对话
+        return [];
+    }
+}

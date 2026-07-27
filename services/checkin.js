@@ -190,7 +190,7 @@ async function selfActivity() {
                 'default',
                 `论坛帖子《${thread.title}》by ${thread.author?.name || '匿名'}：${reflection.thought}`,
                 'experience',
-                'low',
+                'normal',
                 ['论坛', '自主活动', thread.author?.name || '']
             );
             console.log(`[SelfActivity] 已保存帖子感想到记忆: ${thread.title}`);
@@ -212,7 +212,7 @@ async function selfActivity() {
                     'default',
                     `我在论坛回复了帖子《${thread.title}》：${reflection.reply_body.slice(0, 100)}`,
                     'experience',
-                    'low',
+                    'normal',
                     ['论坛', '自主活动', '回复']
                 );
             }
@@ -246,7 +246,7 @@ async function selfActivity() {
                     'default',
                     `论坛帖子《${thread.title}》by ${thread.author?.name || '匿名'}：${reflection.thought}`,
                     'experience',
-                    'low',
+                    'normal',
                     ['论坛', '自主活动', thread.author?.name || '']
                 );
                 console.log(`[SelfActivity] 已保存补读帖子感想到记忆: ${thread.title}`);
@@ -264,7 +264,7 @@ async function selfActivity() {
                         'default',
                         `我在论坛回复了帖子《${thread.title}》：${reflection.reply_body.slice(0, 100)}`,
                         'experience',
-                        'low',
+                        'normal',
                         ['论坛', '自主活动', '回复']
                     );
                 }
@@ -293,7 +293,7 @@ async function selfActivity() {
             'default',
             summary,
             'summary',
-            'normal',
+            'high',
             ['自主活动', '论坛', '总结']
         );
         console.log('[SelfActivity] 已保存自主活动总结记忆');
