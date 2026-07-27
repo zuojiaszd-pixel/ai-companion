@@ -92,9 +92,22 @@ router.post('/chat', async (req, res) => {
 
         // 5. 构建消息数组
         const messages = [{ role: 'system', content: systemPrompt }];
-        for (const h of recentHistory) {
-            if (h.role === 'user') messages.push({ role: 'user', content: h.content });
-            else if (h.role === 'assistant') messages.push({ role: 'assistant', content: h.content });
+        for (let i = 0; i < recentHistory.length; i++) {
+            const h = recentHistory[i];
+            if (h.role === 'user') {
+                // 如果是最后一条用户消息且有图片，构建多模态消息
+                if (i === recentHistory.length - 1 && image) {
+                    const content = [
+                        { type: 'text', text: message || '请描述这张图片' },
+                        { type: 'image_url', image_url: { url: image } }
+                    ];
+                    messages.push({ role: 'user', content });
+                } else {
+                    messages.push({ role: 'user', content: h.content });
+                }
+            } else if (h.role === 'assistant') {
+                messages.push({ role: 'assistant', content: h.content });
+            }
         }
 
         // 5.5 如果有图片，把最后一条用户消息替换成多模态格式
@@ -187,7 +200,7 @@ router.get('/avatars', async (req, res) => {
 });
 
 // 保存/更新头像
-router.post('/avatar', async (req, res) => {
+router.post('/avatar', (req, res) => {
     try {
         const { key, value } = req.body;
         if (!key || !value) return res.status(400).json({ error: 'key 和 value 不能为空' });
