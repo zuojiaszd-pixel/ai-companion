@@ -303,7 +303,9 @@ async function callOpenRouter(messages, tools, model, opts) {
             var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
         var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
         var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt].replace("z-ai/", "") : models[attempt];
-        const response = await axios.post(_url, {
+            // 图片模式用更短的超时，避免总时间过长
+            var timeout = hasImage ? 45000 : 60000;
+            const response = await axios.post(_url, {
                 model: _mdl,
                 messages,
                 tools: tools || undefined,
@@ -315,7 +317,7 @@ async function callOpenRouter(messages, tools, model, opts) {
                     'Authorization': 'Bearer ' + _key,
                     'Content-Type': 'application/json'
                 },
-                timeout: 60000
+                timeout: timeout
             });
             return response.data;
         } catch (err) {
@@ -369,8 +371,9 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     messages = trimContext(messages, 40);
     const MAX_TOOL_ROUNDS = 10;
-    const MAX_EMPTY_RETRIES = 2;
-    const MAX_REPEAT_RETRIES = 2;
+    // 图片模式：不重试，一次就返回，避免超时
+    const MAX_EMPTY_RETRIES = hasImage ? 0 : 2;
+    const MAX_REPEAT_RETRIES = hasImage ? 0 : 2;
 
     // 有图片时禁用工具调用（4.6v可能不支持工具）
     const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
@@ -439,6 +442,15 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
         }
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
+
+        // 图片模式：直接返回结果，不做任何重试
+        if (hasImage) {
+            if (isEmptyResponse(content)) {
+                content = '（图片我看不太清楚，能描述一下吗？）';
+                reasoning = '';
+            }
+            return { content: content, reasoning: reasoning, usage: lastUsage };
+        }
 
         if (isEmptyResponse(content)) {
             console.log('[WARN] Empty response detected, starting retry loop...');

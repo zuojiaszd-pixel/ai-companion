@@ -604,16 +604,24 @@ async function send() {
     input.style.height = 'auto';
     loading = true;
     document.getElementById('send-btn').disabled = true;
-    var ldTimer = setTimeout(function(){if(loading){loading=false;document.getElementById('send-btn').disabled=false;}},120000);
+    var ldTimer = setTimeout(function(){if(loading){loading=false;document.getElementById('send-btn').disabled=false;}},90000);
     try {
         if (imageData) { addMsgWithImage('user', text, imageData); clearImageSelect(); }
         else addMsg('user', text);
         addTyping();
-        var res = await fetch(BACKEND + '/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text, image: imageData, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value) })
-        });
+        var ctrl = new AbortController();
+        var fetchTimer = setTimeout(function(){ ctrl.abort(); }, 90000);
+        var res;
+        try {
+            res = await fetch(BACKEND + '/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, image: imageData, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value) }),
+                signal: ctrl.signal
+            });
+        } finally {
+            clearTimeout(fetchTimer);
+        }
         if (!res.ok) throw new Error(await res.text());
         var data = await res.json();
         removeTyping();
