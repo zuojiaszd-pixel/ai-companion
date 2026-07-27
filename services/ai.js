@@ -351,8 +351,23 @@ const REPEAT_RETRY_PROMPTS = [
  * @param {boolean} useTools - 是否启用工具调用，默认 true
  * @param {boolean} hasImage - 是否包含图片，默认 false
  */
+
+/**
+ * 上下文裁剪：保留系统提示 + 最近 N 轮对话
+ * @param {Array} messages - 消息数组
+ * @param {number} maxRounds - 保留的最大对话轮数
+ */
+function trimContext(messages, maxRounds = 40) {
+    // 消息数未超限则不动
+    if (messages.length <= maxRounds * 2 + 1) return messages;
+    const system = messages[0];
+    const recent = messages.slice(-maxRounds * 2);
+    return [system, ...recent];
+}
+
 async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
+    messages = trimContext(messages, 40);
     const MAX_TOOL_ROUNDS = 10;
     const MAX_EMPTY_RETRIES = 5;
     const MAX_REPEAT_RETRIES = 2;
