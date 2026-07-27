@@ -19,6 +19,8 @@ const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用智谱AI的GLM-5.2
 const DEFAULT_MODEL = "glm-5.2"
+// 图片模型 - 使用智谱AI的GLM-4.6V
+const IMAGE_MODEL = "glm-4.6v"
 
 function loadSettings() {
     try {
@@ -211,8 +213,51 @@ function isEmptyResponse(content) {
 
 const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
+/**
+ * 检查消息数组中是否包含多模态内容（图片）
+ */
+function hasMultimodalContent(messages) {
+    for (const msg of messages) {
+        if (Array.isArray(msg.content)) {
+            for (const part of msg.content) {
+                if (part.type === 'image_url') return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * 将消息数组中的多模态内容转换为纯文本（用于回退到5.2时）
+ */
+function stripMultimodalContent(messages) {
+    return messages.map(msg => {
+        if (Array.isArray(msg.content)) {
+            let text = '';
+            for (const part of msg.content) {
+                if (part.type === 'text') text += part.text;
+                else if (part.type === 'image_url') text += '[图片]';
+            }
+            return { ...msg, content: text };
+        }
+        return msg;
+    });
+}
+
 async function callOpenRouter(messages, tools, model, opts) {
-    var models = [model || DEFAULT_MODEL, "z-ai/glm-5.2"];
+    // 检测是否包含图片内容
+    const hasImage = hasMultimodalContent(messages);
+    
+    // 有图片时强制使用IMAGE_MODEL，不回退
+    // 无图片时使用传入的model或DEFAULT_MODEL，可回退
+    var models;
+    if (hasImage) {
+        models = [IMAGE_MODEL];
+        console.log('[Image Mode] Using image model:', IMAGE_MODEL);
+    } else {
+        models = [model || DEFAULT_MODEL, "z-ai/glm-5.2"];
+    }
+    
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
@@ -235,7 +280,7 @@ async function callOpenRouter(messages, tools, model, opts) {
             });
             return response.data;
         } catch (err) {
-            if (err.response?.status === 500 && attempt < 2) {
+            if (err.response?.status === 500 && attempt < 2 && !hasImage) {
                 console.log("[Retry] OpenRouter 500 with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
                 await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
                 continue;
@@ -259,14 +304,15 @@ const RETRY_PROMPTS = [
  * @param {string|null} model - 模型名称
  * @param {object} opts - 选项 (temperature, topP, maxTokens)
  * @param {boolean} useTools - 是否启用工具调用，默认 true
+ * @param {boolean} hasImage - 是否包含图片，默认 false
  */
-async function chat(messages, model, opts, useTools = true) {
+async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     const MAX_TOOL_ROUNDS = 10;
     const MAX_EMPTY_RETRIES = 5;
 
-    // 根据参数决定是否传工具定义
-    const activeTools = useTools ? toolDefinitions : null;
+    // 有图片时禁用工具调用（4.6v可能不支持工具）
+    const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
 
     for (let i = 0; i < MAX_TOOL_ROUNDS; i++) {
         const data = await callOpenRouter(messages, activeTools, model, opts);
@@ -277,7 +323,7 @@ async function chat(messages, model, opts, useTools = true) {
         const msg = choice.message;
 
         // If model wants to call tools, process them
-        if (useTools && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
+        if (useTools && !hasImage && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
             for (const tc of msg.tool_calls) {

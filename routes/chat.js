@@ -47,6 +47,7 @@ router.post('/chat', async (req, res) => {
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
 
         // 1. 存用户消息（去重：30秒内相同内容不重复存储）
+        // 有图片时存文字描述，不存图片base64（太长且5.2看不了）
         const userContent = image ? `[图片消息] ${message || ''}`.trim() : message;
         const recentDup = await Chat.findOne({
             role: 'user',
@@ -96,9 +97,29 @@ router.post('/chat', async (req, res) => {
             else if (h.role === 'assistant') messages.push({ role: 'assistant', content: h.content });
         }
 
-        // 6. 调用 AI
+        // 5.5 如果有图片，把最后一条用户消息替换成多模态格式
+        let hasImage = false;
+        if (image) {
+            hasImage = true;
+            // 找到最后一条用户消息，替换为多模态格式
+            for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].role === 'user') {
+                    messages[i] = {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: message || '请描述这张图片' },
+                            { type: 'image_url', image_url: { url: image } }
+                        ]
+                    };
+                    break;
+                }
+            }
+        }
+
+        // 6. 调用 AI（有图片时强制用glm-4.6v）
         const opts = { temperature, topP, maxTokens };
-        const result = await chat(messages, model, opts);
+        const chatModel = hasImage ? 'glm-4.6v' : model;
+        const result = await chat(messages, chatModel, opts, true, hasImage);
 
         // 7. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
