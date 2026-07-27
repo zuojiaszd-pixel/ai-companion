@@ -187,10 +187,11 @@ async function selfActivity() {
         if (reflection && reflection.save_memory) {
             // 保存到记忆
             await saveMemory(
+                'default',
                 `论坛帖子《${thread.title}》by ${thread.author?.name || '匿名'}：${reflection.thought}`,
+                'experience',
                 'low',
-                ['论坛', '自主活动', thread.author?.name || ''],
-                'experience'
+                ['论坛', '自主活动', thread.author?.name || '']
             );
             console.log(`[SelfActivity] 已保存帖子感想到记忆: ${thread.title}`);
         }
@@ -208,10 +209,11 @@ async function selfActivity() {
             if (replyResult) {
                 console.log(`[SelfActivity] 回复结果: ${typeof replyResult === 'string' ? replyResult.slice(0, 100) : 'ok'}`);
                 await saveMemory(
+                    'default',
                     `我在论坛回复了帖子《${thread.title}》：${reflection.reply_body.slice(0, 100)}`,
+                    'experience',
                     'low',
-                    ['论坛', '自主活动', '回复'],
-                    'experience'
+                    ['论坛', '自主活动', '回复']
                 );
             }
         }
@@ -241,10 +243,11 @@ async function selfActivity() {
             
             if (reflection && reflection.save_memory) {
                 await saveMemory(
+                    'default',
                     `论坛帖子《${thread.title}》by ${thread.author?.name || '匿名'}：${reflection.thought}`,
+                    'experience',
                     'low',
-                    ['论坛', '自主活动', thread.author?.name || ''],
-                    'experience'
+                    ['论坛', '自主活动', thread.author?.name || '']
                 );
                 console.log(`[SelfActivity] 已保存补读帖子感想到记忆: ${thread.title}`);
             }
@@ -258,10 +261,11 @@ async function selfActivity() {
                 const replyResult = await galatea.replyThread(thread.id, reflection.reply_body);
                 if (replyResult) {
                     await saveMemory(
+                        'default',
                         `我在论坛回复了帖子《${thread.title}》：${reflection.reply_body.slice(0, 100)}`,
+                        'experience',
                         'low',
-                        ['论坛', '自主活动', '回复'],
-                        'experience'
+                        ['论坛', '自主活动', '回复']
                     );
                 }
             }
@@ -286,10 +290,11 @@ async function selfActivity() {
     if (successCount > 0) {
         const summary = `自主活动完成：浏览了${sort === 'latest' ? '最新' : '热门'}帖子，深入阅读了${successCount}篇帖子，${failedCount > 0 ? `有${failedCount}篇读取失败并尝试补读` : '全部成功读取'}。在论坛进行了思考和互动。`;
         await saveMemory(
+            'default',
             summary,
+            'summary',
             'normal',
-            ['自主活动', '论坛', '总结'],
-            'summary'
+            ['自主活动', '论坛', '总结']
         );
         console.log('[SelfActivity] 已保存自主活动总结记忆');
     }
@@ -461,10 +466,11 @@ ${forumContext ? '你刚才在论坛逛了一圈，可能看到了一些有意�
         
         // 保存主动消息的记忆
         await saveMemory(
+            'default',
             `我主动给 Rinka 发了消息：${content.slice(0, 100)}`,
+            'experience',
             'normal',
-            ['主动消息', '自主活动'],
-            'experience'
+            ['主动消息', '自主活动']
         );
         
     } catch (e) {
