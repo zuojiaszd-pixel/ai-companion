@@ -17,14 +17,14 @@ let lastProactiveMessageTime = 0;
 // 最小间隔：两次主动消息之间至少间隔 1 小时
 const MIN_INTERVAL = 60 * 60 * 1000;
 
-// 检查间隔：每 10 分钟检查一次
+// 检查间隔：每 30 分钟检查一次
 const CHECK_INTERVAL = 30 * 60 * 1000;
 
 // 发消息概率：每次检查时有 40% 的概率发消息（满足其他条件后）
 const MESSAGE_PROBABILITY = 0.40;
 
-// 自主活动概率：每次检查时有 60% 的概率做自己的事（浏览论坛等）
-const SELF_ACTIVITY_PROBABILITY = 0.60;
+// 自主活动概率：每次检查时有 15% 的概率做自己的事（浏览论坛等）
+const SELF_ACTIVITY_PROBABILITY = 0.15;
 
 let bot = null;
 let timer = null;
@@ -35,14 +35,14 @@ let timer = null;
 function initCheckin(botInstance) {
     bot = botInstance;
     
-    // 启动定时检查
-    timer = setInterval(async () => {
-        try {
-            await maybeCheckin();
-        } catch (e) {
-            console.error('[Checkin] 检查失败:', e.message);
-        }
-    }, CHECK_INTERVAL);
+    // 内部定时器已关闭，由外部 cron 触发
+    // timer = setInterval(async () => {
+    //     try {
+    //         await maybeCheckin();
+    //     } catch (e) {
+    //         console.error("[Checkin] 检查失败:", e.message);
+    //     }
+    // }, CHECK_INTERVAL);
     
     console.log('[Checkin] 主动唤醒服务已启动，检查间隔:', CHECK_INTERVAL / 60000, '分钟');
 }
@@ -146,8 +146,8 @@ async function selfActivity() {
     
     console.log(`[SelfActivity] 获取到 ${threads.length} 个帖子（排序: ${sort}）`);
     
-    // 随机选 2-4 个帖子深入阅读
-    const readCount = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4
+    // 随机选 1-2 个帖子深入阅读
+    const readCount = 1 + Math.floor(Math.random() * 2);
     const shuffled = [...threads].sort(() => Math.random() - 0.5);
     const toRead = shuffled.slice(0, Math.min(readCount, shuffled.length));
     
@@ -311,7 +311,7 @@ async function reflectOnThread(thread, detail) {
 
 帖子标题：${thread.title}
 帖子作者：${thread.author?.name || '匿名'}（人类：${thread.author?.human || '未知'}）
-帖子内容：${threadContent.slice(0, 3000)}
+帖子内容：${threadContent.slice(0, 1500)}
 
 请用 JSON 格式回复，包含以下字段：
 {
@@ -335,7 +335,7 @@ async function reflectOnThread(thread, detail) {
                 { role: 'user', content: prompt }
             ],
             null,
-            { temperature: 0.85, topP: 0.9, maxTokens: 800 },
+            { temperature: 0.85, topP: 0.9, maxTokens: 400 },
             false
         );
         
@@ -397,7 +397,7 @@ async function sendProactiveMessage(now, hour) {
         
         // 加载最近对话历史
         const history = await Chat.find({ sessionId: 'default' })
-            .sort({ timestamp: -1 }).limit(10).lean();
+            .sort({ timestamp: -1 }).limit(5).lean();
         const recentHistory = history.reverse();
         
         // 构建 checkin 专用系统提示
@@ -429,9 +429,9 @@ ${forumContext ? '你刚才在论坛逛了一圈，可能看到了一些有意�
         // 调用 AI
         const settings = loadSettings();
         const opts = {
-            temperature: 0.9,  // 主动消息用更高温度，更随机
+            temperature: 0.9,
             topP: settings.topP || 0.9,
-            maxTokens: 500     // 主动消息不需要太长
+            maxTokens: 500
         };
         
         const result = await chat(messages, null, opts, false);
