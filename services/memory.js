@@ -1,5 +1,7 @@
 const axios = require('axios');
 const Memory = require('../models/Memory');
+const fs = require('fs').promises;
+const path = require('path');
 
 // ============ 基础工具函数 ============
 
@@ -34,6 +36,43 @@ function tokenize(text) {
         .replace(/[^\w\u4e00-\u9fff]/g, ' ')
         .split(/\s+/)
         .filter(t => t.length > 0);
+}
+
+// ============ 多Query生成 ============
+
+function generateMultiQueries(query) {
+    const queries = [query]; // 原始query
+    
+    // query 2: 关键词组合
+    const tokens = tokenize(query);
+    if (tokens.length > 1) {
+        // 取前5个关键词重新组合
+        const topTokens = tokens.slice(0, 5);
+        queries.push(topTokens.join(' '));
+    }
+    
+    // query 3: 去掉停用词后的query
+    const stopwords = new Set(['的', '了', '是', '在', '我', '你', '他', '她', '它', '们', '这', '那', '和', '与', '或', '也', '都', '就', '不', '没', '有', 'the', 'a', 'an', 'is', 'are', 'was', 'were', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'and', 'or', 'but', 'to', 'of', 'in', 'on', 'at', 'for']);
+    const filtered = tokens.filter(t => !stopwords.has(t));
+    if (filtered.length > 0 && filtered.length < tokens.length) {
+        queries.push(filtered.join(' '));
+    }
+    
+    // query 4: 如果query是问句，提取核心实体
+    if (query.includes('？') || query.includes('?')) {
+        // 去掉疑问词
+        const questionWords = ['什么', '怎么', '为什么', '哪', '谁', '多少', '是不是', '有没有', 'what', 'how', 'why', 'where', 'who', 'when'];
+        let coreQuery = query;
+        for (const qw of questionWords) {
+            coreQuery = coreQuery.replace(new RegExp(qw, 'gi'), '');
+        }
+        coreQuery = coreQuery.replace(/[？?！!]/g, '').trim();
+        if (coreQuery.length > 0 && coreQuery !== query) {
+            queries.push(coreQuery);
+        }
+    }
+    
+    return queries;
 }
 
 // ============ 存储记忆 ============
@@ -92,13 +131,17 @@ async function saveMemory(sessionId, content, type, priority, tags) {
     }
 }
 
-// ============ 检索记忆（RRF混合检索） ============
+// ============ 检索记忆（多Query并行 + RRF混合检索） ============
 
 async function recallMemories(sessionId, query, topK) {
     topK = topK || 10;
     try {
-        const queryEmbedding = await getEmbedding(query);
-        const queryTokens = tokenize(query);
+        // 生成多个query变体
+        const multiQueries = generateMultiQueries(query);
+        console.log(`[Memory] 多Query搜索: ${multiQueries.length}个变体`);
+        
+        // 并行获取所有query的embedding
+        const embeddings = await Promise.all(multiQueries.map(q => getEmbedding(q).catch(() => null)));
         
         // 获取所有未被取代的记忆
         const all = await Memory.find({ 
@@ -109,46 +152,62 @@ async function recallMemories(sessionId, query, topK) {
         
         if (all.length === 0) return [];
         
-        // 向量检索排名
-        const vectorRanked = all.map(m => ({
-            memory: m,
-            vectorScore: cosineSim(queryEmbedding, m.embedding || []),
-            keywordScore: 0
-        }));
-        vectorRanked.sort((a, b) => b.vectorScore - a.vectorScore);
-        
-        // 关键词检索排名
-        for (const item of vectorRanked) {
-            const contentTokens = tokenize(item.memory.content + ' ' + (item.memory.tags || []).join(' '));
-            const matchCount = queryTokens.filter(t => contentTokens.includes(t)).length;
-            item.keywordScore = queryTokens.length > 0 ? matchCount / queryTokens.length : 0;
-        }
-        const keywordRanked = [...vectorRanked].sort((a, b) => b.keywordScore - a.keywordScore);
-        
-        // RRF融合：Reciprocal Rank Fusion
         const rrfK = 60; // RRF常数
         const rrfScores = new Map();
         
-        vectorRanked.forEach((item, rank) => {
-            const id = item.memory._id.toString();
-            const score = rrfScores.get(id) || { item, score: 0 };
-            score.score += 1 / (rrfK + rank + 1);
-            rrfScores.set(id, score);
-        });
+        // 对每个query分别做向量检索和关键词检索，然后用RRF融合
+        for (let qi = 0; qi < multiQueries.length; qi++) {
+            const queryEmbedding = embeddings[qi];
+            const queryTokens = tokenize(multiQueries[qi]);
+            if (!queryEmbedding) continue;
+            
+            // 向量检索排名
+            const vectorRanked = all.map(m => ({
+                memory: m,
+                vectorScore: cosineSim(queryEmbedding, m.embedding || []),
+                keywordScore: 0
+            }));
+            vectorRanked.sort((a, b) => b.vectorScore - a.vectorScore);
+            
+            // 关键词检索排名
+            for (const item of vectorRanked) {
+                const contentTokens = tokenize(item.memory.content + ' ' + (item.memory.tags || []).join(' '));
+                const matchCount = queryTokens.filter(t => contentTokens.includes(t)).length;
+                item.keywordScore = queryTokens.length > 0 ? matchCount / queryTokens.length : 0;
+            }
+            const keywordRanked = [...vectorRanked].sort((a, b) => b.keywordScore - a.keywordScore);
+            
+            // RRF融合：每个query的向量排名和关键词排名都贡献分数
+            vectorRanked.forEach((item, rank) => {
+                const id = item.memory._id.toString();
+                const score = rrfScores.get(id) || { item, score: 0 };
+                score.score += 1 / (rrfK + rank + 1);
+                rrfScores.set(id, score);
+            });
+            
+            keywordRanked.forEach((item, rank) => {
+                const id = item.memory._id.toString();
+                const score = rrfScores.get(id) || { item, score: 0 };
+                score.score += 1 / (rrfK + rank + 1);
+                rrfScores.set(id, score);
+            });
+        }
         
-        keywordRanked.forEach((item, rank) => {
-            const id = item.memory._id.toString();
-            const score = rrfScores.get(id) || { item, score: 0 };
-            score.score += 1 / (rrfK + rank + 1);
-            rrfScores.set(id, score);
-        });
+        // 热度加权 + 优先级加权 + 最近记忆窗口加分
+        const RECENT_WINDOW_DAYS = 7;
+        const RECENT_BONUS = 0.08;
+        const now = new Date();
         
-        // 热度加权 + 优先级加权
         const ranked = Array.from(rrfScores.values()).map(entry => {
             const m = entry.item.memory;
             const heat = m.decayHeat ? m.decayHeat() : 1.0;
             const priorityBoost = { critical: 0.3, high: 0.15, normal: 0, low: -0.1 }[m.priority] || 0;
-            entry.finalScore = entry.score + heat * 0.05 + priorityBoost;
+            
+            // 最近记忆窗口：7天内创建的记忆额外加分
+            const ageDays = (now - m.createdAt) / (1000 * 60 * 60 * 24);
+            const recentBonus = ageDays <= RECENT_WINDOW_DAYS ? RECENT_BONUS * (1 - ageDays / RECENT_WINDOW_DAYS) : 0;
+            
+            entry.finalScore = entry.score + heat * 0.05 + priorityBoost + recentBonus;
             return entry;
         });
         
@@ -171,7 +230,7 @@ async function recallMemories(sessionId, query, topK) {
         // 批量保存touch后的状态
         await Promise.all(ranked.slice(0, topK).map(entry => entry.item.memory.save()));
         
-        console.log(`[Memory] 检索完成: query="${query.slice(0, 30)}...", 返回${results.length}条`);
+        console.log(`[Memory] 检索完成: query="${query.slice(0, 30)}...", ${multiQueries.length}个query变体, 返回${results.length}条`);
         return results;
     } catch (e) {
         console.error('[Memory] 检索失败:', e.message);
@@ -254,7 +313,7 @@ async function runDream(sessionId) {
                 log.decayed++;
             }
             
-            // 清理：热度低于阈值且不是critical
+            // 清理：热度低于阈值且不是critical（critical保底）
             const CLEAN_THRESHOLD = 0.05;
             if (newHeat < CLEAN_THRESHOLD && m.priority !== 'critical' && !m.locked) {
                 log.cleaned++;
@@ -292,6 +351,101 @@ async function runDream(sessionId) {
         console.error('[Dream] 整理失败:', e.message);
         log.error = e.message;
         return log;
+    }
+}
+
+// ============ 备份与恢复 ============
+
+async function backupMemories(sessionId) {
+    sessionId = sessionId || 'default';
+    try {
+        const all = await Memory.find({ sessionId }).lean();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupDir = path.join(__dirname, '..', 'backups');
+        
+        // 确保备份目录存在
+        try {
+            await fs.mkdir(backupDir, { recursive: true });
+        } catch (e) {
+            // 目录已存在则忽略
+        }
+        
+        const filename = `memory_backup_${sessionId}_${timestamp}.json`;
+        const filepath = path.join(backupDir, filename);
+        
+        const backupData = {
+            sessionId,
+            timestamp: new Date(),
+            count: all.length,
+            memories: all.map(m => ({
+                content: m.content,
+                embedding: m.embedding,
+                type: m.type,
+                priority: m.priority,
+                tags: m.tags,
+                heat: m.heat,
+                baseHeat: m.baseHeat,
+                halfLife: m.halfLife,
+                lastAccessed: m.lastAccessed,
+                accessCount: m.accessCount,
+                supersededBy: m.supersededBy,
+                contradicted: m.contradicted,
+                locked: m.locked,
+                createdAt: m.createdAt,
+                updatedAt: m.updatedAt
+            }))
+        };
+        
+        await fs.writeFile(filepath, JSON.stringify(backupData, null, 2), 'utf-8');
+        console.log(`[Backup] 备份完成: ${all.length}条记忆 -> ${filename}`);
+        return { success: true, filename, count: all.length, path: filepath };
+    } catch (e) {
+        console.error('[Backup] 备份失败:', e.message);
+        return { success: false, error: e.message };
+    }
+}
+
+async function restoreMemories(filepath) {
+    try {
+        const data = await fs.readFile(filepath, 'utf-8');
+        const backupData = JSON.parse(data);
+        
+        let restored = 0;
+        for (const m of backupData.memories) {
+            // 检查是否已存在（按content去重）
+            const existing = await Memory.findOne({ 
+                sessionId: backupData.sessionId, 
+                content: m.content 
+            });
+            if (!existing) {
+                await Memory.create({
+                    sessionId: backupData.sessionId,
+                    ...m
+                });
+                restored++;
+            }
+        }
+        
+        console.log(`[Restore] 恢复完成: ${restored}/${backupData.count}条记忆`);
+        return { success: true, restored, total: backupData.count };
+    } catch (e) {
+        console.error('[Restore] 恢复失败:', e.message);
+        return { success: false, error: e.message };
+    }
+}
+
+async function listBackups(sessionId) {
+    try {
+        const backupDir = path.join(__dirname, '..', 'backups');
+        const files = await fs.readdir(backupDir);
+        const prefix = `memory_backup_${sessionId || 'default'}_`;
+        const backups = files.filter(f => f.startsWith(prefix)).map(f => {
+            const stat = fs.statSync(path.join(backupDir, f));
+            return { filename: f, size: stat.size, created: stat.mtime };
+        }).sort((a, b) => b.created - a.created);
+        return backups;
+    } catch (e) {
+        return [];
     }
 }
 
@@ -404,5 +558,8 @@ module.exports = {
     unlockMemory,
     deleteMemory,
     listMemories,
-    getMemoryStats
+    getMemoryStats,
+    backupMemories,
+    restoreMemories,
+    listBackups
 };
