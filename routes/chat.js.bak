@@ -138,8 +138,7 @@ router.post('/chat', async (req, res) => {
         res.json({
             reply: result.content,
             thinking: result.reasoning || "",
-            usage: result.usage || null,
-            toolCalls: result.toolCalls || []
+            usage: result.usage || null
         });
 
     } catch (err) {

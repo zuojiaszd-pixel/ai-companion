@@ -413,7 +413,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                     continue;
                 }
                 const result = await executeTool(func.name, args);
-                toolCallsLog.push({ name: func.name, args: JSON.stringify(args).slice(0, 200), result: (typeof result === 'string' ? result : String(result)).slice(0, 300) });
                 // 直接使用原始结果，不再截断
                 console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
@@ -451,7 +450,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 content = '（图片我看不太清楚，能描述一下吗？）';
                 reasoning = '';
             }
-            return { content: content, reasoning: reasoning, usage: lastUsage, toolCalls: toolCallsLog };
+            return { content: content, reasoning: reasoning, usage: lastUsage };
         }
 
         if (isEmptyResponse(content)) {
@@ -497,7 +496,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 
                 if (!isEmptyResponse(retryContent)) {
                     console.log(`[Retry ${r + 1}] Success! Got non-empty response.`);
-                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, toolCalls: toolCallsLog };
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage };
                 }
             }
             
@@ -545,7 +544,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 
                 if (!isEmptyResponse(retryContent) && !isTooSimilar(retryContent, messages)) {
                     console.log(`[Repeat Retry ${r + 1}] Success! Got distinct response.`);
-                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, toolCalls: toolCallsLog };
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage };
                 }
                 console.log(`[Repeat Retry ${r + 1}] Still similar, trying again...`);
             }
@@ -553,7 +552,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
             console.log('[WARN] Repeat retries exhausted, using last response.');
         }
 
-        return { content: content, reasoning: reasoning, usage: lastUsage, toolCalls: toolCallsLog };
+        return { content: content, reasoning: reasoning, usage: lastUsage };
     }
     throw new Error('工具调用次数过多，已终止');
 }
