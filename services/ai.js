@@ -18,9 +18,9 @@ const coreMemoryPrompt = `
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用智谱AI的GLM-5.2
-const DEFAULT_MODEL = "glm-5.2"
+const DEFAULT_MODEL = "z-ai/glm-5.2"
 // 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "glm-4.6v"
+const IMAGE_MODEL = "z-ai/glm-4.6v"
 
 function loadSettings() {
     try {
@@ -300,9 +300,9 @@ async function callOpenRouter(messages, tools, model, opts) {
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
-            var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+            var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && models[attempt].indexOf('z-ai/') !== 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
         var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
-        var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt].replace("z-ai/", "") : models[attempt];
+        var _mdl = models[attempt];
             // 图片模式用更短的超时，避免总时间过长
             var timeout = hasImage ? 35000 : 50000;
             const response = await axios.post(_url, {
