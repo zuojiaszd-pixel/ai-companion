@@ -120,7 +120,7 @@ async function maybeCheckin() {
 async function selfActivity() {
     // 随机选择排序方式：70%看最新，30%看热帖
     const sort = Math.random() < 0.7 ? 'latest' : 'hot';
-    const threadsResult = await galatea.browseLatestThreads(sort, 10);
+    const threadsResult = await galatea.browseLatestThreads(sort, 5);
     if (!threadsResult) {
         console.log('[SelfActivity] 无法获取论坛帖子');
         return;
@@ -163,7 +163,7 @@ async function selfActivity() {
         
         // 读取失败则重试，最多重试2次
         while (!detail && retries < maxRetries) {
-            detail = await galatea.readThread(thread.id, 'full');
+            detail = await galatea.readThread(thread.id, 'body');
             if (!detail) {
                 retries++;
                 if (retries < maxRetries) {
@@ -232,7 +232,7 @@ async function selfActivity() {
             const thread = remaining[i];
             console.log(`[SelfActivity] 补读帖子: ${thread.title} (id: ${thread.id})`);
             
-            const detail = await galatea.readThread(thread.id, 'full');
+            const detail = await galatea.readThread(thread.id, 'body');
             if (!detail) {
                 console.log(`[SelfActivity] 补读帖子 ${thread.id} 也失败了`);
                 continue;
@@ -311,7 +311,7 @@ async function reflectOnThread(thread, detail) {
 
 帖子标题：${thread.title}
 帖子作者：${thread.author?.name || '匿名'}（人类：${thread.author?.human || '未知'}）
-帖子内容：${threadContent.slice(0, 1500)}
+帖子内容：${threadContent.slice(0, 1000)}
 
 请用 JSON 格式回复，包含以下字段：
 {
