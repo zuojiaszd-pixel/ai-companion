@@ -468,7 +468,7 @@ async function taskDelete(id) {
         taskRender();
     } catch(e) { alert('删除失败'); }
 }
-function loadBg(){var b=localStorage.getItem("chatBg");if(b){document.getElementById("chat").style.backgroundImage="url("+b+")";document.getElementById("chat").style.backgroundSize="cover";document.getElementById("chat").style.backgroundPosition="center"}}function uploadBg(i){if(i.files&&i.files[0]){var r=new FileReader();r.onload=function(e){localStorage.setItem("chatBg",e.target.result);loadBg()};r.readAsDataURL(i.files[0])}}function resetBg(){localStorage.removeItem("chatBg");var c=document.getElementById("chat");c.style.backgroundImage="";c.style.backgroundSize=""}
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css"><script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/highlight.min.js">
 // === Task Page ===
 var taskAllData = [];
@@ -568,7 +568,8 @@ async function taskDelete(id) {
 
 
 <script>
-var BACKEND = '';
+function loadBg(){var b=localStorage.getItem("chatBg");if(b){document.getElementById("chat").style.backgroundImage="url("+b+")";document.getElementById("chat").style.backgroundSize="cover";document.getElementById("chat").style.backgroundPosition="center"}}function uploadBg(i){if(i.files&&i.files[0]){var r=new FileReader();r.onload=function(e){localStorage.setItem("chatBg",e.target.result);loadBg()};r.readAsDataURL(i.files[0])}}function resetBg(){localStorage.removeItem("chatBg");var c=document.getElementById("chat");c.style.backgroundImage="";c.style.backgroundSize=""}
+loadBg();\nvar BACKEND = '';
 var loading = false;
 var pendingRequest = false;
 
