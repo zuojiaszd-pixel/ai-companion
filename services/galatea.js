@@ -124,7 +124,7 @@ async function browseLatestThreads(sort = 'latest', limit = 10) {
 /**
  * 读取帖子详情
  */
-async function readThread(threadId, view = 'full') {
+async function readThread(threadId, view = 'body') {
     return await callTool('get_thread', { thread_id: threadId, view });
 }
 
