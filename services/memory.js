@@ -138,7 +138,7 @@ async function findRelatedByTags(sessionId, tagSet, excludeIds) {
 
 // ============ 存储记忆（带去重逻辑 + 自动提取标签） ============
 
-async function saveMemory(sessionId, content, type, priority, tags) {
+async function saveMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood) {
     try {
         const embedding = await getEmbedding(content);
         const defaults = Memory.applyPriorityDefaults(priority);
@@ -197,6 +197,9 @@ async function saveMemory(sessionId, content, type, priority, tags) {
             type: type || 'fact',
             priority: priority || 'normal',
             tags: tags || [],
+            mood: mood || null,
+            moodIntensity: mood ? (typeof moodIntensity === "number" ? moodIntensity : 0.5) : null,
+            lumiMood: lumiMood || null,
             heat: defaults.baseHeat,
             baseHeat: defaults.baseHeat,
             halfLife: defaults.halfLife,
@@ -299,6 +302,9 @@ async function recallMemories(sessionId, query, topK) {
                 type: entry.item.memory.type,
                 priority: entry.item.memory.priority,
                 tags: entry.item.memory.tags,
+                mood: entry.item.memory.mood || null,
+                moodIntensity: entry.item.memory.moodIntensity || null,
+                lumiMood: entry.item.memory.lumiMood || null,
                 score: entry.finalScore,
                 createdAt: entry.item.memory.createdAt
             };
@@ -329,6 +335,9 @@ async function recallMemories(sessionId, query, topK) {
                     type: m.type,
                     priority: m.priority,
                     tags: m.tags,
+                    mood: m.mood || null,
+                    moodIntensity: m.moodIntensity || null,
+                    lumiMood: m.lumiMood || null,
                     score: tagScore * 0.5,
                     createdAt: m.createdAt
                 };
@@ -364,6 +373,9 @@ async function recallMemories(sessionId, query, topK) {
                         type: unarchived.type,
                         priority: unarchived.priority,
                         tags: unarchived.tags,
+                        mood: unarchived.mood || null,
+                        moodIntensity: unarchived.moodIntensity || null,
+                        lumiMood: unarchived.lumiMood || null,
                         score: hit.score * 0.3,
                         createdAt: unarchived.createdAt
                     });
@@ -585,7 +597,7 @@ async function getMemoryStats(sessionId) {
 
 // === 向后兼容别名 ===
 async function searchMemories(query, limit) { return recallMemories("default", query, limit || 8); }
-async function storeMemory(sessionId, content, type, priority, tags) { return saveMemory(sessionId, content, type, priority, tags); }
+async function storeMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood) { return saveMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood); }
 
 // ============ 自动提取 + 状态记忆 ============
 
@@ -610,7 +622,7 @@ async function autoExtractMemories(allMessages) {
         const res = await axios.post(url, {
             model,
             messages: [
-                { role: "system", content: "你是一个记忆提取器。从对话中提取值得长期记住的信息。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"]}]" },
+                { role: "system", content: "你是一个记忆提取器。从对话中提取值得长期记住的信息。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"],\"mood\":\"happy|sad|angry|anxious|neutral|excited|tired|confused\",\"moodIntensity\":0.0-1.0,\"lumiMood\":\"joy|sorrow|calm|eager|concern\"}]" },
                 { role: "user", content: text }
             ],
             temperature: 0.3, max_tokens: 1000
@@ -620,7 +632,7 @@ async function autoExtractMemories(allMessages) {
         let items;
         try { items = JSON.parse(reply); } catch(e) { items = []; }
         for (const it of items) {
-            await saveMemory("default", it.content, it.type || "fact", it.priority || "normal", it.tags || []);
+            await saveMemory("default", it.content, it.type || "fact", it.priority || "normal", it.tags || [], it.mood || null, it.moodIntensity || null, it.lumiMood || null);
         }
         if (items.length > 0) console.log("[AutoExtract] " + items.length + " memories saved");
         
@@ -681,7 +693,7 @@ async function getChatMemories(sessionId, query, topK) {
             const id = m._id.toString();
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, score: 1000, createdAt: m.createdAt });
+                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 1000, createdAt: m.createdAt });
             }
         }
         
@@ -694,7 +706,7 @@ async function getChatMemories(sessionId, query, topK) {
             const id = m._id.toString();
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, score: 999, createdAt: m.createdAt });
+                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 999, createdAt: m.createdAt });
             }
         }
         
@@ -702,14 +714,33 @@ async function getChatMemories(sessionId, query, topK) {
             const id = m._id.toString();
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, score: 888, createdAt: m.createdAt });
+                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 888, createdAt: m.createdAt });
             }
         }
         
-        return merged;
+        // 情绪轨迹：从最新记忆中按时间排序提取情绪变化
+        const moodTrajectory = [];
+        const moodMemories = await Memory.find({
+            sessionId, archived: false,
+            mood: { $ne: null }
+        }).sort({ createdAt: -1 }).limit(20).lean();
+        
+        const moodOrdered = moodMemories.reverse();
+        for (const mm of moodOrdered) {
+            if (mm.mood) {
+                moodTrajectory.push({
+                    mood: mm.mood,
+                    intensity: mm.moodIntensity || 0.5,
+                    lumiMood: mm.lumiMood || null,
+                    time: mm.createdAt
+                });
+            }
+        }
+        
+        return { memories: merged, moodTrajectory };
     } catch (e) {
         console.error('[Memory] getChatMemories失败:', e.message);
-        return [];
+        return { memories: [], moodTrajectory: [] };
     }
 }
 

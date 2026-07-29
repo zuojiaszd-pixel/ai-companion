@@ -21,6 +21,7 @@ app.use('/api/footprints', require('./routes/footprint'));
 app.use('/api', require('./routes/checkin'));
 app.use('/api/memory', require('./routes/memory'));
 app.use('/api/finance', require('./routes/finance'));
+app.use('/api/journal', require('./routes/journal'));
 
 const PORT = process.env.PORT || 10000;
 connectDB();

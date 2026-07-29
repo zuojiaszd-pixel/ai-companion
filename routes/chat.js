@@ -87,7 +87,7 @@ router.post('/chat', async (req, res) => {
 
         // 3. 用最近几条消息做记忆搜索
         const recentMessages = recentHistory.slice(-4).map(h => h.content).join(' ');
-        const memories = await getChatMemories("default", recentMessages, 10);
+        const { memories, moodTrajectory } = await getChatMemories("default", recentMessages, 10);
 
         // 4. 分层：固定记忆 vs 动态记忆
         const fixedMemories = memories.filter(m => m.priority === 'critical' || m.priority === 'high');
@@ -105,6 +105,14 @@ router.post('/chat', async (req, res) => {
         if (dynamicMemories.length > 0) {
             dynamicMemoryPrompt = '\n\n【相关记忆】\n' +
                 dynamicMemories.map(m => `- ${m.content}`).join('\n');
+        }
+        
+        // 6.1 情绪轨迹
+        let moodPrompt = '';
+        if (moodTrajectory && moodTrajectory.length > 0) {
+            const recentMoods = moodTrajectory.slice(-5);
+            moodPrompt = '\n\n【情绪轨迹】\n' +
+                recentMoods.map(m => `[${m.mood}] 强度:${m.intensity}${m.lumiMood ? ' Lumi:'+m.lumiMood : ''}`).join('\n');
         }
 
         // 6.5 加载对话摘要
@@ -132,8 +140,8 @@ router.post('/chat', async (req, res) => {
             const h = recentHistory[i];
             if (h.role === 'user') {
                 if (i === recentHistory.length - 1) {
-                    const userContent = dynamicMemoryPrompt
-                        ? `【上下文记忆】${dynamicMemoryPrompt}\n\n用户消息：${message || ''}`
+                    const userContent = dynamicMemoryPrompt || moodPrompt
+                        ? `【上下文记忆】${dynamicMemoryPrompt || ''}${moodPrompt || ''}\n\n用户消息：${message || ''}`
                         : message;
                     if (hasImage) {
                         messages.push({

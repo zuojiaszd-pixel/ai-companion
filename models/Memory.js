@@ -7,6 +7,13 @@ const MemorySchema = new mongoose.Schema({
     type: { type: String, enum: ['fact', 'preference', 'experience', 'summary', 'state'], default: 'fact' },
     priority: { type: String, enum: ['critical', 'high', 'normal', 'low'], default: 'normal' },
     tags: [String],
+
+    // 情绪层 - Rinka的情绪
+    mood: { type: String, default: null },  // positive | negative | neutral | anxious | sad | happy | frustrated | tired | touched | excited | etc.
+    // 情绪强度 0-1
+    moodIntensity: { type: Number, default: null },
+    // Lumi记录这个记忆时的情绪
+    lumiMood: { type: String, default: null },
     
     // 热度系统
     heat: { type: Number, default: 1.0 },
