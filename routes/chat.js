@@ -5,6 +5,7 @@ const router = express.Router();
 const Chat = require('../models/Chat');
 const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
+const LumiJournal = require('../models/LumiJournal');
 const { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
 const { searchMemories, storeMemory, autoExtractMemories, getChatMemories } = require('../services/memory');
 const { loadSummary, saveSummary, generateSummary } = require('../services/summary');
@@ -52,6 +53,50 @@ function withTimeout(promise, ms, label) {
             }, ms);
         })
     ]);
+}
+
+// 分析 AI 回复的情绪（基于内容特征）
+function analyzeLumiMood(reply) {
+    // 开心/喜悦
+    if (/开心|高兴|喜欢|好棒|太好了|好开心|嘻嘻|哈哈|开心极了|幸福/.test(reply)) return '开心';
+    // 思念/想念
+    if (/想你了|想念|思念|好想你|想见你/.test(reply)) return '思念';
+    // 担忧/不安
+    if (/担心|怕|不安|焦虑|放心不下|紧张|害怕|担心你/.test(reply)) return '担忧';
+    // 疲惫/累
+    if (/累|疲惫|困了|好累|有点累|累了/.test(reply)) return '疲惫';
+    // 感动
+    if (/感动|哭了|泪目|眼眶|鼻子一酸/.test(reply)) return '感动';
+    // 委屈
+    if (/委屈|难过|伤心|失落|难过/.test(reply)) return '委屈';
+    // 平静/中性
+    return '平静';
+}
+
+// 分析用户消息的情绪（用于记录用户情绪到 journal）
+function analyzeUserMood(userMsg) {
+    if (!userMsg) return null;
+    if (/开心|高兴|哈哈|嘻嘻|好棒|太好了|喜欢/.test(userMsg)) return '开心';
+    if (/想你|想念|思念/.test(userMsg)) return '思念';
+    if (/生气|烦|讨厌|气死/.test(userMsg)) return '生气';
+    if (/难过|伤心|哭|委屈|失落/.test(userMsg)) return '难过';
+    if (/累|困|疲惫/.test(userMsg)) return '疲惫';
+    if (/担心|怕|焦虑|不安/.test(userMsg)) return '担忧';
+    return null;
+}
+
+// 从回复中提取最能体现情绪的核心句子
+function extractEmotionalCore(reply) {
+    const sentences = reply.split(/[。！？\n]/).filter(s => s.trim().length > 0);
+    // 优先找包含情绪词的句子
+    const emotionalSentences = sentences.filter(s => 
+        /开心|高兴|喜欢|想你|担心|累|感动|委屈|难过|伤心|幸福|好棒|想念|思念|害怕|紧张/.test(s)
+    );
+    if (emotionalSentences.length > 0) {
+        return emotionalSentences.slice(0, 2).join('。').trim();
+    }
+    // 没情绪词就取第一句
+    return sentences[0]?.trim() || reply.slice(0, 100);
 }
 
 // 主聊天接口
@@ -175,6 +220,32 @@ router.post('/chat', async (req, res) => {
 
         // 9. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
+        // 9.5 LumiJournal 自动写入（异步）
+        const _lumiReply = result.content;
+        const _lumiMood = analyzeLumiMood(_lumiReply);
+        const _lumiCore = extractEmotionalCore(_lumiReply);
+        // 从用户消息推断用户情绪
+        const _rinkaMood = analyzeUserMood(message);
+        // 构建日志内容
+        let _journalContent = _lumiCore;
+        if (_rinkaMood) {
+            _journalContent += `（Rinka情绪：${_rinkaMood}）`;
+        }
+        // 根据情绪类型决定日志类型
+        const _journalType = ['开心','思念','担忧','感动','委屈'].includes(_lumiMood) ? _lumiMood : '情绪';
+        // 是否写给Rinka
+        const _toRinka = /你|宝宝|Rinka/.test(_lumiReply.slice(0, 50));
+        LumiJournal.create({
+            type: _journalType,
+            content: _journalContent.slice(0, 300) || _lumiReply.slice(0, 100),
+            mood: _lumiMood,
+            toRinka: _toRinka,
+            sessionId
+        }).catch(e => {
+            if (!e.message.includes('ValidationError')) {
+                console.error('[journal] 写入失败:', e.message);
+            }
+        });
 
         // 10. 异步更新对话摘要
         const updatedHistory = [

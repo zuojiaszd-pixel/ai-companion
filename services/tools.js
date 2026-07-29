@@ -57,7 +57,10 @@ const toolDefinitions = [
                     content: { type: "string", description: "记忆内容" },
                     type: { type: "string", enum: ["fact", "preference", "experience", "summary"], description: "类型" },
                     priority: { type: "string", enum: ["critical", "high", "normal", "low"], description: "优先级" },
-                    tags: { type: "array", items: { type: "string" }, description: "标签" }
+                    tags: { type: "array", items: { type: "string" }, description: "标签" },
+                    mood: { type: "string", description: "记忆时的情绪" },
+                    moodIntensity: { type: "number", description: "情绪强度 0-10" },
+                    lumiMood: { type: "string", description: "Lumi当时的情绪" }
                 },
                 required: ["content"]
             }
@@ -92,7 +95,10 @@ async function executeTool(name, args) {
                     args.content,
                     args.type || 'fact',
                     args.priority || 'normal',
-                    args.tags || []
+                    args.tags || [],
+                    args.mood || '',
+                    args.moodIntensity || 0,
+                    args.lumiMood || ''
                 );
                 return '记忆已保存';
             }
