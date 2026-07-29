@@ -333,7 +333,31 @@
 .tool-call-card .tc-section{margin-top:4px}
 .tool-call-card .tc-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
 .tool-call-card .tc-content{font-family:'SF Mono',Menlo,Consolas,monospace;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;margin-top:2px}
-.dropdown-menu{display:none;position:fixed;top:56px;right:8px;width:280px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:200;overflow:hidden;animation:fadeIn 0.15s ease-out}.dropdown-menu.open{display:block}.menu-section{padding:12px 16px;border-bottom:1px solid var(--border)}.menu-section:last-child{border-bottom:none}.menu-section-title{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}.menu-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;font-size:13px;color:var(--text);cursor:pointer;transition:color 0.15s}.menu-item:hover{color:var(--accent)}.menu-item span:first-child{display:flex;align-items:center;gap:8px}.cache-info{display:flex;flex-direction:column;gap:6px}.cache-row{display:flex;justify-content:space-between;font-size:12px}.cache-label{color:var(--text3)}.cache-value{color:var(--text);font-family:monospace;font-weight:600}.cache-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:4px}.cache-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width 0.3s ease}.switch{position:relative;display:inline-block;width:36px;height:20px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border);border-radius:20px;transition:0.2s}.slider:before{content:"";position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.2s}input:checked+.slider{background:var(--accent)}input:checked+.slider:before{transform:translateX(16px)}.dropdown-menu select{width:100%;padding:6px 24px 6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239c97b0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}@media(max-width:600px){.dropdown-menu{top:48px;right:4px;width:calc(100vw - 8px)}}</style></head><body><header><div class="logo"><div class="icon">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="deepseek-v4-flash" selected>DeepSeek V4 Flash (推荐)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="z-ai/glm-4.5-air">GLM-4.5-Air</option><option value="z-ai/glm-5.2">GLM-5.2</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option></select></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div></div><div id="page-calendar" class="page">
+.dropdown-menu{display:none;position:fixed;top:56px;right:8px;width:280px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:200;overflow:hidden;animation:fadeIn 0.15s ease-out}.dropdown-menu.open{display:block}.menu-section{padding:12px 16px;border-bottom:1px solid var(--border)}.menu-section:last-child{border-bottom:none}.menu-section-title{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}.menu-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;font-size:13px;color:var(--text);cursor:pointer;transition:color 0.15s}.menu-item:hover{color:var(--accent)}.menu-item span:first-child{display:flex;align-items:center;gap:8px}.cache-info{display:flex;flex-direction:column;gap:6px}.cache-row{display:flex;justify-content:space-between;font-size:12px}.cache-label{color:var(--text3)}.cache-value{color:var(--text);font-family:monospace;font-weight:600}.cache-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:4px}.cache-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width 0.3s ease}.switch{position:relative;display:inline-block;width:36px;height:20px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border);border-radius:20px;transition:0.2s}.slider:before{content:"";position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.2s}input:checked+.slider{background:var(--accent)}input:checked+.slider:before{transform:translateX(16px)}.dropdown-menu select{width:100%;padding:6px 24px 6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239c97b0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}@media(max-width:600px){.dropdown-menu{top:48px;right:4px;width:calc(100vw - 8px)}}/* Sessions sidebar */
+#sessions-btn{position:relative}
+.sessions-sidebar{position:fixed;top:0;left:0;bottom:0;width:320px;max-width:85vw;background:var(--surface);border-right:1px solid var(--border);z-index:200;display:none;flex-direction:column;box-shadow:8px 0 40px rgba(0,0,0,.4)}
+.sessions-sidebar.open{display:flex;animation:slideInLeft .2s ease-out}
+@keyframes slideInLeft{from{transform:translateX(-20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.sessions-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.sessions-header h3{font-size:14px;font-weight:600}
+.sessions-header .close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px}
+.sessions-body{flex:1;overflow-y:auto;padding:8px}
+.sessions-footer{padding:10px 16px;border-top:1px solid var(--border)}
+.sessions-footer button{width:100%;padding:8px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;cursor:pointer;transition:all .15s}
+.sessions-footer button:hover{opacity:.85}
+.session-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;margin-bottom:2px}
+.session-item:hover{background:var(--surface2)}
+.session-item.active{background:var(--accent);color:#fff}
+.session-item .session-name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.session-item .session-count{font-size:10px;color:var(--text3);white-space:nowrap}
+.session-item.active .session-count{color:rgba(255,255,255,.7)}
+.session-item .session-del{width:22px;height:22px;border:none;border-radius:50%;background:transparent;color:var(--text3);cursor:pointer;font-size:14px;display:none;align-items:center;justify-content:center;flex-shrink:0}
+.session-item:hover .session-del{display:flex}
+.session-item .session-del:hover{background:rgba(231,76,60,.2);color:#e74c3c}
+.session-item.active .session-del{color:rgba(255,255,255,.6)}
+.session-item.active .session-del:hover{background:rgba(255,255,255,.2);color:#fff}
+@media(max-width:600px){.sessions-sidebar{width:100%;max-width:100vw}}
+</style></head><body><header><div class="logo"><div class="icon">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleSessions()" id="sessions-btn" title="对话列表"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="deepseek-v4-flash" selected>DeepSeek V4 Flash (推荐)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="z-ai/glm-4.5-air">GLM-4.5-Air</option><option value="z-ai/glm-5.2">GLM-5.2</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option></select></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div></div><div id="page-calendar" class="page">
 <div class="cal-header">
 <button class="cal-nav-btn" onclick="calPrevMonth()">&#x2039;</button>
 <div class="cal-title" id="cal-title"></div>
@@ -798,6 +822,7 @@ async function taskDelete(id) {
 
 <script>
 var BACKEND = '';
+var currentSessionId = 'default';
 var loading = false;
 var pendingRequest = false;
 
@@ -857,7 +882,7 @@ async function send() {
             res = await fetch(BACKEND + '/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, image: imageData, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value), contextRounds: parseInt(document.getElementById('slider-contextRounds').value) }),
+                body: JSON.stringify({ message: text, image: imageData, sessionId: currentSessionId, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value), contextRounds: parseInt(document.getElementById('slider-contextRounds').value) }),
                 signal: ctrl.signal
             });
         } finally {
@@ -1117,7 +1142,7 @@ async function loadHistory() {
     if (loadingHistory) return;
     loadingHistory = true;
     try {
-        var res = await fetch(BACKEND + '/api/history');
+        var res = await fetch(BACKEND + '/api/history?sessionId=' + currentSessionId);
         if (!res.ok) { loadingHistory = false; return; }
         var history = await res.json();
         if (!history || !history.length) { loadingHistory = false; return; }
@@ -1139,8 +1164,6 @@ async function loadHistory() {
         }
     } catch(e) {}
     loadingHistory = false;
-}function toggleSettings() {
-    togglePanel('settings');
     if (document.getElementById('settings-panel').classList.contains('open')) {
         var curTheme = document.documentElement.getAttribute('data-theme') || 'light';
         document.getElementById('theme-select').value = curTheme;
@@ -1712,5 +1735,102 @@ function updateStatusBar() {
 }
 updateStatusBar();
 setInterval(updateStatusBar, 10000);
+
+
+// === Session Management ===
+var sessionsSidebarOpen = false;
+
+function toggleSessions() {
+    sessionsSidebarOpen = !sessionsSidebarOpen;
+    document.getElementById('sessions-sidebar').classList.toggle('open', sessionsSidebarOpen);
+    if (sessionsSidebarOpen) loadSessions();
+}
+
+async function loadSessions() {
+    try {
+        var body = document.getElementById('sessions-body');
+        body.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px">加载中...</div>';
+        var res = await fetch(BACKEND + '/api/sessions');
+        if (!res.ok) throw new Error(await res.text());
+        var sessions = await res.json();
+        if (!sessions || !sessions.length) {
+            body.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px">暂无对话</div>';
+            return;
+        }
+        var currentLabel = currentSessionId || 'default';
+        body.innerHTML = sessions.map(function(s) {
+            var sid = s.sessionId || 'default';
+            var name = s.name || (sid === 'default' ? '默认对话' : '对话 ' + sid.slice(0, 6));
+            var count = s.messageCount || 0;
+            var isActive = sid === currentLabel ? ' active' : '';
+            var delBtn = sid === 'default' ? '' : '<button class="session-del" onclick="event.stopPropagation();deleteSession(''+sid+'')">×</button>';
+            return '<div class="session-item' + isActive + '" onclick="switchSession(''+sid+'')">' +
+                '<span class="session-name">' + escapeHtml(name) + '</span>' +
+                '<span class="session-count">' + count + '</span>' +
+                delBtn +
+                '</div>';
+        }).join('');
+    } catch(e) {
+        document.getElementById('sessions-body').innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px">加载失败: ' + escapeHtml(e.message) + '</div>';
+    }
+}
+
+async function createSession() {
+    try {
+        var res = await fetch(BACKEND + '/api/sessions', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: '新对话'})
+        });
+        if (!res.ok) throw new Error(await res.text());
+        var session = await res.json();
+        await switchSession(session.sessionId);
+    } catch(e) {
+        alert('创建失败: ' + e.message);
+    }
+}
+
+async function switchSession(sessionId) {
+    if (sessionId === currentSessionId) return;
+    currentSessionId = sessionId;
+    // Clear chat and reload history
+    document.getElementById('chat').innerHTML = '';
+    // Add welcome back if needed
+    loadSessions();
+    loadHistory();
+    // Close sidebar on mobile
+    if (window.innerWidth <= 600) {
+        sessionsSidebarOpen = false;
+        document.getElementById('sessions-sidebar').classList.remove('open');
+    }
+}
+
+async function deleteSession(sessionId) {
+    if (sessionId === 'default') return;
+    if (!confirm('删除此对话及其所有消息？')) return;
+    try {
+        var res = await fetch(BACKEND + '/api/sessions/' + sessionId, {method: 'DELETE'});
+        if (!res.ok) throw new Error(await res.text());
+        if (currentSessionId === sessionId) {
+            currentSessionId = 'default';
+            document.getElementById('chat').innerHTML = '';
+            loadHistory();
+        }
+        loadSessions();
+    } catch(e) {
+        alert('删除失败: ' + e.message);
+    }
+}
 </script><button id="scroll-bottom-btn" onclick="scrollToBottom()" title="回到底部">↓</button>
-<div id="token-bar"></div></body></html>
+<div id="token-bar"></div><!-- Sessions sidebar -->
+<div id="sessions-sidebar" class="sessions-sidebar">
+<div class="sessions-header">
+<h3>💬 对话</h3>
+<button class="close" onclick="toggleSessions()">✕</button>
+</div>
+<div class="sessions-body" id="sessions-body"></div>
+<div class="sessions-footer">
+<button onclick="createSession()">+ 新对话</button>
+</div>
+</div>
+</body></html>
