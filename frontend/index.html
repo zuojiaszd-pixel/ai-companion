@@ -875,20 +875,32 @@ async function send() {
         if (imageData) { addMsgWithImage('user', text, imageData); clearImageSelect(); }
         else addMsg('user', text);
         addTyping();
-        var ctrl = new AbortController();
-        var fetchTimer = setTimeout(function(){ ctrl.abort(); }, 90000);
         var res;
-        try {
-            res = await fetch(BACKEND + '/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, image: imageData, sessionId: currentSessionId, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value), contextRounds: parseInt(document.getElementById('slider-contextRounds').value) }),
-                signal: ctrl.signal
-            });
-        } finally {
-            clearTimeout(fetchTimer);
+        var maxRetries = 2;
+        for (var retry = 0; retry <= maxRetries; retry++) {
+            try {
+                var ctrl = new AbortController();
+                var fetchTimer = setTimeout(function(){ ctrl.abort(); }, 90000);
+                try {
+                    res = await fetch(BACKEND + '/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text, image: imageData, sessionId: currentSessionId, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value), contextRounds: parseInt(document.getElementById('slider-contextRounds').value) }),
+                        signal: ctrl.signal
+                    });
+                } finally {
+                    clearTimeout(fetchTimer);
+                }
+                if (res.ok) break;
+                throw new Error(await res.text());
+            } catch (e) {
+                if (retry < maxRetries) {
+                    await new Promise(function(r){setTimeout(r, 1500);});
+                    continue;
+                }
+                throw e;
+            }
         }
-        if (!res.ok) throw new Error(await res.text());
         var data = await res.json();
         removeTyping();
         var reply = data.reply || '';
@@ -1215,7 +1227,7 @@ if (savedModel && savedModel.indexOf("z-ai/glm") >= 0) { localStorage.removeItem
 loadAvatarsFromBackend().then(function(){loadHistory();});
 var savedUsage = localStorage.getItem('lastUsage');
 if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
-if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){for(var i=0;i<rs.length;i++)rs[i].unregister();}).catch(function(){});}
+if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js').catch(function(){});}
 
 
 // === Tab Switching ===
