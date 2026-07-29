@@ -3,6 +3,7 @@ const { PERSONA } = require('./../config/persona');
 const { toolDefinitions, executeTool } = require('./tools');
 const fs = require('fs');
 const path = require('path');
+const { loadSummary } = require('./summary');
 
 // 加载核心记忆
 const coreMemory = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/core_memory.json'), 'utf8'));
@@ -20,7 +21,7 @@ const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 // 默认模型 - 使用DeepSeek V4 Flash
 const DEFAULT_MODEL = "deepseek-v4-flash"
 // 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "z-ai/glm-4.6v" // 图片模型暂保留GLM，DeepSeek无视觉模型
+const IMAGE_MODEL = "z-ai/glm-4.6v"
 
 function loadSettings() {
     try {
@@ -369,23 +370,49 @@ const REPEAT_RETRY_PROMPTS = [
  * @param {number} maxRounds - 保留的最大对话轮数
  */
 function trimContext(messages, maxRounds = 15) {
-    // 消息数未超限则不动
     if (messages.length <= maxRounds * 2 + 1) return messages;
     const system = messages[0];
     const recent = messages.slice(-maxRounds * 2);
     return [system, ...recent];
 }
 
+/**
+ * 注入对话摘要（如果存在且未重复注入）
+ * 用于模型切换时恢复上下文
+ */
+function injectSummary(messages) {
+    // 避免重复注入：检查是否已经有摘要标记
+    if (messages.some(m => typeof m.content === 'string' && m.content.includes('【之前聊到的内容】'))) {
+        return messages;
+    }
+
+    const summaryData = loadSummary();
+    if (!summaryData.summary || !summaryData.updatedAt) return messages;
+
+    const hoursSinceUpdate = (Date.now() - new Date(summaryData.updatedAt).getTime()) / 3600000;
+    if (hoursSinceUpdate >= 24) return messages;
+
+    // 只在历史较短时注入（说明可能是新模型启动，需要恢复上下文）
+    // messages[0] 是 system prompt，其余是对话历史
+    if (messages.length >= 6) return messages;
+
+    const summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
+    return [
+        messages[0],
+        { role: 'system', content: summaryPrompt },
+        ...messages.slice(1)
+    ];
+}
+
 async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     let toolCallsLog = [];
     messages = trimContext(messages, 15);
+    messages = injectSummary(messages);
     const MAX_TOOL_ROUNDS = 10;
-    // 图片模式：不重试，一次就返回，避免超时
     const MAX_EMPTY_RETRIES = hasImage ? 0 : 2;
     const MAX_REPEAT_RETRIES = hasImage ? 0 : 2;
 
-    // 有图片时禁用工具调用（4.6v可能不支持工具）
     const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
 
     for (let i = 0; i < MAX_TOOL_ROUNDS; i++) {
@@ -396,7 +423,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
 
         const msg = choice.message;
 
-        // If model wants to call tools, process them
         if (useTools && !hasImage && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
@@ -423,7 +449,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 }
                 const result = await executeTool(func.name, args);
                 toolCallsLog.push({ name: func.name, args: JSON.stringify(args).slice(0, 200), result: (typeof result === 'string' ? result : String(result)).slice(0, 300) });
-                // 直接使用原始结果，不再截断
                 console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
                     role: 'tool',
@@ -434,7 +459,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
             continue;
         }
 
-        // Final response — clean it up
         let content = msg.content || '';
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
@@ -454,7 +478,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
 
-        // 图片模式：直接返回结果，不做任何重试
         if (hasImage) {
             if (isEmptyResponse(content)) {
                 content = '（图片我看不太清楚，能描述一下吗？）';
@@ -515,7 +538,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
             reasoning = '';
         }
 
-        // 重复检测：检查新回复是否与最近的助手回复过于相似
         if (!isEmptyResponse(content) && isTooSimilar(content, messages)) {
             console.log('[WARN] Reply too similar to recent replies, retrying...');
             for (let r = 0; r < MAX_REPEAT_RETRIES; r++) {
@@ -558,7 +580,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 }
                 console.log(`[Repeat Retry ${r + 1}] Still similar, trying again...`);
             }
-            // 如果重试后仍然相似，就用最后一次的回复（总比没有好）
             console.log('[WARN] Repeat retries exhausted, using last response.');
         }
 

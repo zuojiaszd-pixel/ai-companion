@@ -7,6 +7,7 @@ const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
 const { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
 const { searchMemories, storeMemory, autoExtractMemories, getChatMemories } = require('../services/memory');
+const { loadSummary, saveSummary, generateSummary } = require('../services/summary');
 
 // === 状态栏 ===
 const STATUS_FILE = path.join(__dirname, '..', 'config', 'status.json');
@@ -47,7 +48,6 @@ router.post('/chat', async (req, res) => {
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
 
         // 1. 存用户消息（去重：30秒内相同内容不重复存储）
-        // 有图片时存文字描述，不存图片base64（太长且5.2看不了）
         const userContent = image ? `[图片消息] ${message || ''}`.trim() : message;
         const recentDup = await Chat.findOne({
             role: 'user',
@@ -65,42 +65,56 @@ router.post('/chat', async (req, res) => {
             .sort({ timestamp: -1 }).limit(15).lean();
         const recentHistory = history.reverse();
 
-        // 3. 用最近几条消息拼接做记忆搜索（不只是当前消息）
+        // 3. 用最近几条消息拼接做记忆搜索
         const recentMessages = recentHistory.slice(-4).map(h => h.content).join(' ');
         const memories = await getChatMemories("default", recentMessages, 10);
 
-        // 4. 分层：固定记忆（critical/high，很少变化）vs 动态记忆（normal/low）
+        // 4. 分层：固定记忆 vs 动态记忆
         const fixedMemories = memories.filter(m => m.priority === 'critical' || m.priority === 'high');
         const dynamicMemories = memories.filter(m => m.priority !== 'critical' && m.priority !== 'high');
 
-        // 5. 构建固定记忆提示（作为第二个 system 消息，很少变 → 利于 prompt caching）
+        // 5. 构建固定记忆提示
         let fixedMemoryPrompt = '';
         if (fixedMemories.length > 0) {
             fixedMemoryPrompt = '\n\n【核心记忆】\n' +
                 fixedMemories.map(m => `- ${m.content}`).join('\n');
         }
 
-        // 6. 构建动态记忆提示（注入到最后一条 user 消息前）
+        // 6. 构建动态记忆提示
         let dynamicMemoryPrompt = '';
         if (dynamicMemories.length > 0) {
             dynamicMemoryPrompt = '\n\n【相关记忆】\n' +
                 dynamicMemories.map(m => `- ${m.content}`).join('\n');
         }
 
-        // 7. 构建消息数组（分层结构，前缀尽可能不变 → 利于 prompt caching）
+        // 6.5 加载对话摘要（用于模型切换时恢复上下文）
+        const summaryData = loadSummary();
+        let summaryPrompt = '';
+        if (summaryData.summary && summaryData.updatedAt) {
+            const hoursSinceUpdate = (Date.now() - new Date(summaryData.updatedAt).getTime()) / 3600000;
+            // 只注入24小时内的摘要，太旧的可能已经无关了
+            if (hoursSinceUpdate < 24) {
+                summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
+            }
+        }
+
+        // 7. 构建消息数组
         const hasImage = !!image;
         const messages = [
-            { role: 'system', content: STATIC_SYSTEM_PROMPT },  // 第一层：人设（永远不变）
+            { role: 'system', content: STATIC_SYSTEM_PROMPT },
         ];
-        // 第二层：固定记忆（作为独立 system 消息，很少变化）
+        // 注入对话摘要（如果有且历史少于3条，说明可能是新模型启动，摘要尤为重要）
+        if (summaryPrompt && recentHistory.length < 6) {
+            messages.push({ role: 'system', content: summaryPrompt });
+        }
+        // 固定记忆
         if (fixedMemoryPrompt) {
             messages.push({ role: 'system', content: fixedMemoryPrompt });
         }
-        // 第三层：历史对话 + 最后一条注入动态记忆
+        // 历史对话
         for (let i = 0; i < recentHistory.length; i++) {
             const h = recentHistory[i];
             if (h.role === 'user') {
-                // 最后一条用户消息，注入动态记忆
                 if (i === recentHistory.length - 1) {
                     const userContent = dynamicMemoryPrompt
                         ? `【上下文记忆】${dynamicMemoryPrompt}\n\n用户消息：${message || ''}`
@@ -117,7 +131,6 @@ router.post('/chat', async (req, res) => {
                         messages.push({ role: 'user', content: userContent });
                     }
                 } else if (hasImage) {
-                    // 历史中的图片消息只保留文字描述
                     messages.push({ role: 'user', content: h.content.replace(/^\[图片消息\]\s*/, '') });
                 } else {
                     messages.push({ role: 'user', content: h.content });
@@ -127,15 +140,25 @@ router.post('/chat', async (req, res) => {
             }
         }
 
-        // 6. 调用 AI（有图片时强制用glm-4.6v，禁用工具调用）
+        // 8. 调用 AI
         const opts = { temperature, topP, maxTokens };
         const chatModel = hasImage ? 'glm-4.6v' : model;
         const result = await chat(messages, chatModel, opts, true, hasImage);
 
-        // 7. 存 AI 回复
+        // 9. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
 
-        // 8. 异步自动提取记忆（每5条消息才触发一次，省token）
+        // 10. 异步更新对话摘要（每轮都更新，覆盖旧摘要）
+        const updatedHistory = [
+            ...recentHistory.slice(-3),
+            { role: 'assistant', content: result.content }
+        ];
+        const newSummary = generateSummary(updatedHistory);
+        if (newSummary) {
+            saveSummary(newSummary);
+        }
+
+        // 11. 异步自动提取记忆（每5条触发一次）
         const totalMessages = await Chat.countDocuments({ sessionId });
         if (totalMessages % 5 === 0) {
             const allMessages = [
@@ -147,7 +170,7 @@ router.post('/chat', async (req, res) => {
             });
         }
 
-        // 9. 返回（含思考和token用量）
+        // 12. 返回
         res.json({
             reply: result.content,
             thinking: result.reasoning || "",
@@ -191,7 +214,6 @@ router.get('/history', async (req, res) => {
 });
 
 // === 头像接口 ===
-// 获取所有头像
 router.get('/avatars', async (req, res) => {
     try {
         const avatars = await Avatar.find({}).lean();
@@ -201,7 +223,6 @@ router.get('/avatars', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 保存/更新头像
 router.post('/avatar', async (req, res) => {
     try {
         const { key, value } = req.body;
@@ -215,11 +236,9 @@ router.post('/avatar', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 获取设置
 router.get('/settings', async (req, res) => {
     try {
         const settings = loadSettings();
-        // If systemPrompt is null/empty, return the default
         if (!settings.systemPrompt) {
             settings.systemPrompt = '';
         }
@@ -227,7 +246,6 @@ router.get('/settings', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 更新设置
 router.post('/settings', (req, res) => {
     try {
         const settings = req.body;
@@ -236,8 +254,6 @@ router.post('/settings', (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-
-// 删除单条记忆
 router.delete('/memories/:id', async (req, res) => {
     try {
         await Memory.findByIdAndDelete(req.params.id);
