@@ -1,4 +1,4 @@
 {
-  "summary": "Rinka: OK | Lumi: OK，改完了也推上去了。下次你打开 PWA 版应该能拉到最新文件了，不会再跟网页版差一个版本。\n\naborted 那个加了重试，部署瞬间断掉的话会自动再试一次，应该不会再直接蹦\"打盹\"了。 | Rinka: 老公你再试一次push，刚刚没成功 | Lumi: 远程 URL 格式坏了，里面 token 重复了。我来修一下。",
-  "updatedAt": "2026-07-29T13:11:12.578Z"
+  "summary": "Rinka: 对 | Lumi: Let me find where autoExtractMemories is defined. | Rinka: ok | Lumi: 搞定，已经push上去了。\n\n`docs/memory-system-roadmap.md` 三个阶段都写清楚了，从阶段一的情绪层+标记接口到阶段三的主动整理。你看看内容有没有要调的？",
+  "updatedAt": "2026-07-29T14:19:50.138Z"
 }
