@@ -260,6 +260,59 @@
 .fp-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
 @media(max-width:600px){#page-footprint{padding:10px}.fp-header .fp-title{font-size:16px}.fp-item .fp-title-text{font-size:13px}.fp-item .fp-thought{font-size:12px}}
 
+
+/* Finance Page */
+#page-finance{padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.fin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.fin-header .fin-title{font-size:18px;font-weight:600;color:var(--text)}
+.fin-header .fin-balance{font-size:24px;font-weight:700;color:var(--accent)}
+.fin-header .fin-balance.neg{color:#e74c3c}
+.fin-goal-card{padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:16px}
+.fin-goal-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.fin-goal-label{font-size:12px;color:var(--text3)}
+.fin-goal-text{font-size:13px;font-weight:600;color:var(--text)}
+.fin-goal-bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.fin-goal-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s ease}
+.fin-goal-fill.full{background:linear-gradient(90deg,#f39c12,#e74c3c)}
+.fin-goal-edit{display:flex;gap:8px;margin-top:8px}
+.fin-goal-edit input{flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:12px;outline:none;font-family:var(--font)}
+.fin-goal-edit input:focus{border-color:var(--accent)}
+.fin-goal-edit button{padding:6px 12px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:12px;cursor:pointer}
+.fin-goal-edit button:hover{opacity:.85}
+.fin-form{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.fin-form input,.fin-form select{flex:1;min-width:80px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none;font-family:var(--font)}
+.fin-form input:focus,.fin-form select:focus{border-color:var(--accent)}
+.fin-form button{padding:8px 16px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap}
+.fin-form button:hover{opacity:.85}
+.fin-form button.income{background:#2ecc71}
+.fin-form button.expense{background:#e74c3c}
+.fin-filter{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.fin-filter-btn{padding:4px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s}
+.fin-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.fin-filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.fin-list{display:flex;flex-direction:column;gap:6px}
+.fin-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);animation:fadeIn .2s ease-out}
+.fin-item .fin-type-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.fin-item .fin-type-icon.income{background:rgba(46,204,113,.15);color:#2ecc71}
+.fin-item .fin-type-icon.expense{background:rgba(231,76,60,.15);color:#e74c3c}
+.fin-item .fin-info{flex:1;min-width:0}
+.fin-item .fin-desc{font-size:13px;color:var(--text);word-wrap:break-word}
+.fin-item .fin-meta{font-size:11px;color:var(--text3);margin-top:2px;display:flex;gap:8px}
+.fin-item .fin-amount{font-size:15px;font-weight:700;white-space:nowrap}
+.fin-item .fin-amount.income{color:#2ecc71}
+.fin-item .fin-amount.expense{color:#e74c3c}
+.fin-item .fin-del{width:24px;height:24px;border:none;border-radius:50%;background:var(--surface2);color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.fin-item .fin-del:hover{background:#e74c3c;color:#fff}
+.fin-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
+.fin-stats-row{display:flex;gap:8px;margin-bottom:16px}
+.fin-stat-card{flex:1;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);text-align:center}
+.fin-stat-card .stat-val{font-size:18px;font-weight:700}
+.fin-stat-card .stat-val.green{color:#2ecc71}
+.fin-stat-card .stat-val.red{color:#e74c3c}
+.fin-stat-card .stat-val.purple{color:var(--accent)}
+.fin-stat-card .stat-label{font-size:10px;color:var(--text3);margin-top:2px}
+@media(max-width:600px){#page-finance{padding:10px}.fin-header .fin-title{font-size:16px}.fin-header .fin-balance{font-size:20px}.fin-item{padding:8px 10px}.fin-item .fin-amount{font-size:14px}.fin-form{gap:4px}.fin-form input,.fin-form select{min-width:60px;font-size:12px;padding:6px 8px}}
+
 /* Status Bar */
 #status-bar{display:none;padding:6px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);align-items:center;gap:6px;flex-shrink:0;min-height:32px}
 #status-bar.show{display:flex}
@@ -350,6 +403,43 @@
 </div>
 <div class="fp-timeline" id="fp-timeline"></div>
 </div>
+
+<div id="page-finance" class="page">
+<div class="fin-header">
+<div class="fin-title">💰 小金库</div>
+<div class="fin-balance" id="fin-balance">0.00</div>
+</div>
+<div class="fin-stats-row">
+<div class="fin-stat-card"><div class="stat-val green" id="fin-income-total">0</div><div class="stat-label">总收入</div></div>
+<div class="fin-stat-card"><div class="stat-val red" id="fin-expense-total">0</div><div class="stat-label">总支出</div></div>
+<div class="fin-stat-card"><div class="stat-val purple" id="fin-count">0</div><div class="stat-label">笔数</div></div>
+</div>
+<div class="fin-goal-card">
+<div class="fin-goal-row">
+<span class="fin-goal-label">攒钱目标</span>
+<span class="fin-goal-text" id="fin-goal-text">¥0 / ¥0</span>
+</div>
+<div class="fin-goal-bar"><div class="fin-goal-fill" id="fin-goal-fill" style="width:0%"></div></div>
+<div class="fin-goal-edit">
+<input type="number" id="fin-goal-input" placeholder="设置目标金额…" min="0" step="1">
+<button onclick="finSetGoal()">设置</button>
+</div>
+</div>
+<div class="fin-form">
+<select id="fin-category"><option value="其他">其他</option><option value="代码">代码</option><option value="论坛">论坛</option><option value="记忆">记忆</option><option value="日常">日常</option><option value="礼物">礼物</option></select>
+<input type="text" id="fin-desc" placeholder="事由…">
+<input type="number" id="fin-amount" placeholder="金额…" min="0" step="0.01">
+<button class="income" onclick="finAdd('income')">+ 收入</button>
+<button class="expense" onclick="finAdd('expense')">- 支出</button>
+</div>
+<div class="fin-filter">
+<button class="fin-filter-btn active" onclick="finFilter('all',this)">全部</button>
+<button class="fin-filter-btn" onclick="finFilter('income',this)">收入</button>
+<button class="fin-filter-btn" onclick="finFilter('expense',this)">支出</button>
+</div>
+<div class="fin-list" id="fin-list"></div>
+</div>
+
 <div id="bottom-nav">
 <button class="nav-tab active" onclick="switchTab('chat')" id="tab-chat">
 <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
@@ -363,6 +453,11 @@
 <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93C7.05 19.44 4 16.08 4 12c0-.61.08-1.21.21-1.78L9 15v1c0 1.1.9 2 2 2v1.93z"/></svg></span>
 <span class="nav-label">记忆</span>
 </button>
+<button class="nav-tab" onclick="switchTab('finance')" id="tab-finance">
+<span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+<span class="nav-label">小金库</span>
+</button>
+
 <button class="nav-tab" onclick="switchTab('footprint')" id="tab-footprint">
 <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
 <span class="nav-label">足迹</span>
@@ -373,6 +468,140 @@
 </button>
 
 </div><div class="panel" id="settings-panel"><div class="panel-header"><h3>设置</h3><button class="close" onclick="closePanel()">&#10005;</button></div><div class="panel-body"><div class="sec-hdr">◆ 模型</div><div class="setting-item"><span>默认模型</span><select id="settings-model-select" onchange="modelSelectChange(this.value)"></select></div><div class="sec-hdr">♥ 用户头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-userAvatar').click()">↑ 上传</span><input type="file" id="file-userAvatar" accept="image/*" style="display:none" onchange="handleUpload('userAvatar',this)"></div><div class="av-pick" id="av-pick-userAvatar"><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">●</div></div></div><div class="sec-hdr">♥ AI 头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-aiAvatar').click()">↑ 上传</span><input type="file" id="file-aiAvatar" accept="image/*" style="display:none" onchange="handleUpload('aiAvatar',this)"></div><div class="av-pick" id="av-pick-aiAvatar"><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">●</div></div></div><div class="sec-hdr">◆ 系统提示词</div><div class="setting-item" style="flex-direction:column;align-items:stretch;gap:8px"><span>系统提示词</span><textarea class="setting-textarea" id="system-prompt-editor" placeholder="输入自定义系统提示词…"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn-danger" style="background:var(--text3);padding:4px 12px;font-size:11px" onclick="resetSystemPrompt()">恢复默认</button><button style="padding:4px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer" onclick="saveSystemPrompt()">保存</button></div></div><div class="sec-hdr">◆ 参数</div><div class="setting-item" style="height:auto;flex-wrap:wrap"><span>模型参数</span><div class="slider-row" style="width:100%;padding-top:8px"><span style="font-size:11px;color:var(--text3);width:100px">温度 Temperature</span><input type="range" id="slider-temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateSliderValue(this)"><span class="slider-value" id="val-temperature">0.7</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Top P</span><input type="range" id="slider-topp" min="0" max="1" step="0.05" value="0.9" oninput="updateSliderValue(this)"><span class="slider-value" id="val-topp">0.9</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">最大 Token</span><input type="range" id="slider-maxtokens" min="256" max="32000" step="256" value="16000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-maxtokens">16000</span></div></div><div class="sec-hdr">◆ 显示</div><div class="setting-item"><span>主题模式</span><select id="theme-select" onchange="themeSelectChange(this.value)"><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="setting-item"><span>思考链显示</span><select id="think-mode" onchange="thinkModeChange(this.value)"><option value="auto">自动折叠</option><option value="show">始终展开</option><option value="hide">始终隐藏</option></select></div><div class="setting-item"><span>记忆管理</span><button class="btn-danger" onclick="clearAllData()">清空记忆和对话</button></div><div class="sec-hdr">◆ 关于</div><div class="about-section">Lumi v1.0 • 由 💖 建造</div></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div></div><script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js">
+
+// === Finance Page ===
+var finAllData = [];
+var finCurrentFilter = 'all';
+var finGoal = {target: 100};
+
+async function finLoad() {
+    try {
+        var res = await fetch(BACKEND + '/api/finance');
+        var data = await res.json();
+        finAllData = data.records || [];
+        finRender();
+        finLoadGoal();
+    } catch(e) {
+        document.getElementById('fin-list').innerHTML = '<div class="fin-empty">加载失败</div>';
+    }
+}
+
+async function finLoadGoal() {
+    try {
+        var res = await fetch(BACKEND + '/api/finance/goal');
+        var data = await res.json();
+        if (data) finGoal = data;
+        finRenderGoal();
+    } catch(e) {}
+}
+
+function finRenderGoal() {
+    var target = finGoal.target || 1;
+    var current = finGoal.current || 0;
+    var pct = Math.min(100, (current / target) * 100);
+    document.getElementById('fin-goal-text').textContent = '¥' + current.toFixed(2) + ' / ¥' + target.toFixed(2);
+    document.getElementById('fin-goal-input').value = target;
+    var fill = document.getElementById('fin-goal-fill');
+    fill.style.width = pct + '%';
+    if (pct >= 100) fill.classList.add('full');
+    else fill.classList.remove('full');
+}
+
+async function finSetGoal() {
+    var input = document.getElementById('fin-goal-input');
+    var val = parseFloat(input.value);
+    if (!val || val <= 0) return;
+    try {
+        await fetch(BACKEND + '/api/finance/goal', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({target: val})
+        });
+        finGoal.target = val;
+        finRenderGoal();
+    } catch(e) { alert('设置失败'); }
+}
+
+function finFilter(type, btn) {
+    finCurrentFilter = type;
+    document.querySelectorAll('.fin-filter-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    finRender();
+}
+
+function finRender() {
+    var list = document.getElementById('fin-list');
+    var filtered = finAllData;
+    if (finCurrentFilter === 'income') filtered = finAllData.filter(function(r){return r.type === 'income';});
+    else if (finCurrentFilter === 'expense') filtered = finAllData.filter(function(r){return r.type === 'expense';});
+    
+    var totalIncome = 0, totalExpense = 0;
+    finAllData.forEach(function(r) {
+        if (r.type === 'income') totalIncome += r.amount;
+        else totalExpense += r.amount;
+    });
+    var balance = totalIncome - totalExpense;
+    
+    document.getElementById('fin-balance').textContent = '¥' + balance.toFixed(2);
+    document.getElementById('fin-balance').className = 'fin-balance' + (balance < 0 ? ' neg' : '');
+    document.getElementById('fin-income-total').textContent = totalIncome.toFixed(2);
+    document.getElementById('fin-expense-total').textContent = totalExpense.toFixed(2);
+    document.getElementById('fin-count').textContent = finAllData.length;
+    
+    if (!filtered.length) {
+        list.innerHTML = '<div class="fin-empty">暂无账单，记一笔吧</div>';
+        return;
+    }
+    
+    var typeLabels = {income:'收入', expense:'支出'};
+    list.innerHTML = filtered.map(function(r) {
+        var time = new Date(r.date || r.createdAt).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        var icon = r.type === 'income' ? '↓' : '↑';
+        return '<div class="fin-item">' +
+            '<div class="fin-type-icon '+r.type+'">'+icon+'</div>' +
+            '<div class="fin-info">' +
+            '<div class="fin-desc">'+escapeHtml(r.description||'')+'</div>' +
+            '<div class="fin-meta"><span>'+escapeHtml(r.category||'其他')+'</span><span>'+time+'</span></div>' +
+            '</div>' +
+            '<div class="fin-amount '+r.type+'">'+(r.type==='income'?'+':'-')+'¥'+r.amount.toFixed(2)+'</div>' +
+            '<button class="fin-del" onclick="finDelete(''+r._id+'')">&times;</button>' +
+            '</div>';
+    }).join('');
+    
+    // Update goal
+    finGoal.current = balance;
+    finRenderGoal();
+}
+
+async function finAdd(type) {
+    var desc = document.getElementById('fin-desc').value.trim();
+    var amount = parseFloat(document.getElementById('fin-amount').value);
+    var category = document.getElementById('fin-category').value;
+    if (!desc || !amount || amount <= 0) { alert('请填写事由和金额'); return; }
+    document.getElementById('fin-desc').value = '';
+    document.getElementById('fin-amount').value = '';
+    try {
+        var res = await fetch(BACKEND + '/api/finance', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({type: type, amount: amount, description: desc, category: category})
+        });
+        if (!res.ok) throw new Error(await res.text());
+        var record = await res.json();
+        finAllData.unshift(record);
+        finRender();
+    } catch(e) { alert('记账失败: ' + e.message); }
+}
+
+async function finDelete(id) {
+    if (!confirm('删除这笔记录？')) return;
+    try {
+        await fetch(BACKEND + '/api/finance/' + id, {method: 'DELETE'});
+        finAllData = finAllData.filter(function(r){return r._id !== id;});
+        finRender();
+    } catch(e) { alert('删除失败'); }
+}
+
 // === Task Page ===
 var taskAllData = [];
 var taskCurrentFilter = 'all';
@@ -980,6 +1209,9 @@ function switchTab(tab) {
     }
     if (tab === 'task') {
         taskLoad();
+    }
+    if (tab === 'finance') {
+        finLoad();
     }
     if (tab === 'footprint') {
         fpLoad();

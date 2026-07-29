@@ -20,6 +20,7 @@ app.use('/api/tasks', require('./routes/task'));
 app.use('/api/footprints', require('./routes/footprint'));
 app.use('/api', require('./routes/checkin'));
 app.use('/api/memory', require('./routes/memory'));
+app.use('/api/finance', require('./routes/finance'));
 
 const PORT = process.env.PORT || 10000;
 connectDB();
