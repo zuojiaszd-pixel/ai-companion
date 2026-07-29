@@ -17,10 +17,10 @@ const coreMemoryPrompt = `
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
-// 默认模型 - 使用智谱AI的GLM-5.2
-const DEFAULT_MODEL = "z-ai/glm-5.2"
+// 默认模型 - 使用DeepSeek V4 Flash
+const DEFAULT_MODEL = "deepseek-v4-flash"
 // 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "z-ai/glm-4.6v"
+const IMAGE_MODEL = "z-ai/glm-4.6v" // 图片模型暂保留GLM，DeepSeek无视觉模型
 
 function loadSettings() {
     try {
@@ -294,15 +294,24 @@ async function callOpenRouter(messages, tools, model, opts) {
         models = [IMAGE_MODEL];
         console.log('[Image Mode] Using image model:', IMAGE_MODEL);
     } else {
-        models = [model || DEFAULT_MODEL, "z-ai/glm-5.2"];
+        models = [model || DEFAULT_MODEL, "deepseek-v4-pro"];
     }
     
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
-            var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && models[attempt].indexOf('z-ai/') !== 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
-        var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
-        var _mdl = models[attempt];
+            var _mdl = models[attempt];
+            var _url, _key;
+            if (_mdl.indexOf('deepseek') >= 0) {
+                _url = 'https://api.deepseek.com/v1/chat/completions';
+                _key = process.env.DEEPSEEK_API_KEY;
+            } else if (_mdl.indexOf('glm') >= 0 && _mdl.indexOf('z-ai/') !== 0 && process.env.ZHIPUAI_API_KEY) {
+                _url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+                _key = process.env.ZHIPUAI_API_KEY;
+            } else {
+                _url = 'https://openrouter.ai/api/v1/chat/completions';
+                _key = process.env.OPENROUTER_API_KEY;
+            }
             // 图片模式用更短的超时，避免总时间过长
             var timeout = hasImage ? 35000 : 50000;
             const response = await axios.post(_url, {

@@ -502,7 +502,11 @@ async function autoExtractMemories(allMessages) {
     try {
         const text = allMessages.map(function(m) { return m.role + ": " + m.content; }).join("\n").slice(0, 3000);
         var url, key, model;
-        if (process.env.ZHIPUAI_API_KEY) {
+        if (process.env.DEEPSEEK_API_KEY) {
+            url = "https://api.deepseek.com/v1/chat/completions";
+            key = process.env.DEEPSEEK_API_KEY;
+            model = "deepseek-v4-flash";
+        } else if (process.env.ZHIPUAI_API_KEY) {
             url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
             key = process.env.ZHIPUAI_API_KEY;
             model = "glm-5.2";
