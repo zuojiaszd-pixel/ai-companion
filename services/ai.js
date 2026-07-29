@@ -28,7 +28,7 @@ function loadSettings() {
         const data = fs.readFileSync(SETTINGS_FILE, "utf-8");
         return JSON.parse(data);
     } catch (e) {
-        return { temperature: 0.7, topP: 0.9, maxTokens: 4000, systemPrompt: null };
+        return { temperature: 0.7, topP: 0.9, maxTokens: 4000, systemPrompt: null, contextRounds: 15 };
     }
 }
 
@@ -407,7 +407,7 @@ function injectSummary(messages) {
 async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     let toolCallsLog = [];
-    messages = trimContext(messages, 15);
+    messages = trimContext(messages, opts?.contextRounds || 15);
     messages = injectSummary(messages);
     const MAX_TOOL_ROUNDS = 10;
     const MAX_EMPTY_RETRIES = hasImage ? 0 : 2;

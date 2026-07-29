@@ -44,7 +44,7 @@ router.post('/status', (req, res) => {
 // 主聊天接口
 router.post('/chat', async (req, res) => {
     try {
-        const { message, sessionId = 'default', model, temperature, topP, maxTokens, image } = req.body;
+        const { message, sessionId = 'default', model, temperature, topP, maxTokens, contextRounds, image } = req.body;
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
 
         // 1. 存用户消息（去重：30秒内相同内容不重复存储）
@@ -62,7 +62,7 @@ router.post('/chat', async (req, res) => {
 
         // 2. 加载最近对话历史（最近15条，省token）
         const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(15).lean();
+            .sort({ timestamp: -1 }).limit(contextRounds || 15).lean();
         const recentHistory = history.reverse();
 
         // 3. 用最近几条消息拼接做记忆搜索
