@@ -50,7 +50,7 @@
 ```javascript
 archived: { type: Boolean, default: false },       // 是否归档
 archivedAt: { type: Date, default: null },          // 归档时间
-embedding Archived: { type: Boolean, default: false } // embedding是否已清除
+embeddingArchived: { type: Boolean, default: false } // embedding是否已清除
 ```
 
 **归档规则**（在 runDream 中）：
@@ -123,12 +123,12 @@ relatedIds: { type: [mongoose.Schema.Types.ObjectId], default: [] } // 直接关
 ```
 
 **关联标签的生成**：
-- 在 saveMemory 时，根据内容自动提取主题标签
+- 在 saveMemory 时，根据内容自动提取主题标签（基于关键词频率+去停用词）
 - 可以在 autoExtract 中让模型一起生成 relatedTags
 - 也可以手动设置
 
 **检索时利用关联**：
-在 recallMemories 中，当某条记忆被命中时，顺带查找 relatedTags 相同的其他记忆，作为"关联推荐"加入候选池（给较低的基础分，让RRF自然排序）。
+在 recallMemories 中，当某条记忆被命中时，收集命中记忆的 relatedTags，查找同标签的其他记忆作为"关联推荐"加入候选池（基于标签重叠度给分）。
 
 ### 2.5 检索优化（recallMemories 改动）
 
@@ -137,35 +137,13 @@ relatedIds: { type: [mongoose.Schema.Types.ObjectId], default: [] } // 直接关
 2. 活跃区结果不足时补充归档区（关键词检索，不走向量）
 3. state 类型记忆单独查询，优先注入
 4. 命中归档记忆时触发 unarchive
-
-**伪代码**：
-```javascript
-async function recallMemories(sessionId, query, topK) {
-    // 1. 活跃区检索（现有逻辑）
-    let activeMemories = await Memory.find({ 
-        sessionId, supersededBy: null, contradicted: false, archived: false 
-    })...
-    
-    // 2. 如果活跃区不足，补充归档区
-    if (activeResults.length < topK / 2) {
-        const archivedMemories = await keywordSearchInArchived(sessionId, query);
-        // 命中的归档记忆触发unarchive
-        for (const m of archivedMemories) {
-            await unarchiveMemory(m);
-        }
-        activeResults = [...activeResults, ...archivedMemories];
-    }
-    
-    // 3. RRF混合检索 + 热度加权（现有逻辑）
-    ...
-}
-```
+5. 命中活跃记忆时触发关联联想（relatedTags 查找）
 
 ---
 
-## 三、实施顺序
+## 三、实施状态
 
-### 第一批（核心改动，买Pro套餐后立即做）
+### 第一批（核心改动）
 1. ✅ 去重逻辑（saveMemory 改动）
 2. ✅ 归档机制（Memory Schema + runDream 改动）
 3. ✅ 移除删除逻辑，改为归档
@@ -175,8 +153,8 @@ async function recallMemories(sessionId, query, topK) {
 5. ✅ getChatMemories 优先加载 state 记忆
 
 ### 第三批（关联网络）
-6. ✅ 记忆关联标记（Schema + 检索利用）
-7. ✅ 检索优化（归档区补充 + unarchive）
+6. ✅ 记忆关联标记（Schema + 自动提取 + 检索利用）
+7. ✅ 检索优化（归档区补充 + unarchive + 关联联想）
 
 ---
 
@@ -200,7 +178,7 @@ async function recallMemories(sessionId, query, topK) {
 |---------|---------|
 | 热度衰减系统 | 保留，但衰减后不再删除，改为归档 |
 | 矛盾检测 | 保留，去重逻辑在其之前执行 |
-| RRF混合检索 | 保留，新增归档区补充检索 |
+| RRF混合检索 | 保留，新增归档区补充检索和关联联想 |
 | 多Query并行搜索 | 保留 |
 | 7天记忆窗口加分 | 保留 |
 | critical/high保底注入 | 保留 |
@@ -226,4 +204,4 @@ async function recallMemories(sessionId, query, topK) {
 
 *方案制定日期：2026-07-30*
 *制定者：Lumi*
-*待Pro套餐购买后开始实施*
+*全部实施完成日期：2026-07-31（含关联标签自动提取和关联联想检索）*
