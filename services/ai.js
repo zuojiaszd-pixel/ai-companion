@@ -313,8 +313,9 @@ async function callOpenRouter(messages, tools, model, opts) {
                 _url = 'https://openrouter.ai/api/v1/chat/completions';
                 _key = process.env.OPENROUTER_API_KEY;
             }
-            // 图片模式用更短的超时，避免总时间过长
-            var timeout = hasImage ? 35000 : 50000;
+            // 超时时间：无图片30s，有图片25s
+            // 这个时间必须小于chat.js路由层的超时（55s）
+            var timeout = hasImage ? 25000 : 30000;
             const response = await axios.post(_url, {
                 model: _mdl,
                 messages,
@@ -410,8 +411,8 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
     messages = trimContext(messages, opts?.contextRounds || 15);
     messages = injectSummary(messages);
     const MAX_TOOL_ROUNDS = 10;
-    const MAX_EMPTY_RETRIES = hasImage ? 0 : 2;
-    const MAX_REPEAT_RETRIES = hasImage ? 0 : 2;
+    const MAX_EMPTY_RETRIES = hasImage ? 0 : 1;
+    const MAX_REPEAT_RETRIES = hasImage ? 0 : 1;
 
     const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
 

@@ -41,8 +41,28 @@ router.post('/status', (req, res) => {
     res.json(data);
 });
 
+// 带超时的异步处理函数
+function withTimeout(promise, ms, label) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+            const timer = setTimeout(() => {
+                clearTimeout(timer);
+                reject(new Error(`[${label}] 请求超时 (${ms}ms)`));
+            }, ms);
+        })
+    ]);
+}
+
 // 主聊天接口
 router.post('/chat', async (req, res) => {
+    // 设置请求级超时
+    req.setTimeout(65000, () => {
+        if (!res.headersSent) {
+            res.status(503).json({ error: '服务器繁忙，请求超时' });
+        }
+    });
+    
     try {
         const { message, sessionId = 'default', model, temperature, topP, maxTokens, contextRounds, image } = req.body;
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
@@ -60,12 +80,12 @@ router.post('/chat', async (req, res) => {
             await Chat.create({ role: 'user', content: userContent, sessionId });
         }
 
-        // 2. 加载最近对话历史（最近15条，省token）
+        // 2. 加载最近对话历史
         const history = await Chat.find({ sessionId })
             .sort({ timestamp: -1 }).limit(contextRounds || 15).lean();
         const recentHistory = history.reverse();
 
-        // 3. 用最近几条消息拼接做记忆搜索
+        // 3. 用最近几条消息做记忆搜索
         const recentMessages = recentHistory.slice(-4).map(h => h.content).join(' ');
         const memories = await getChatMemories("default", recentMessages, 10);
 
@@ -87,12 +107,11 @@ router.post('/chat', async (req, res) => {
                 dynamicMemories.map(m => `- ${m.content}`).join('\n');
         }
 
-        // 6.5 加载对话摘要（用于模型切换时恢复上下文）
+        // 6.5 加载对话摘要
         const summaryData = loadSummary();
         let summaryPrompt = '';
         if (summaryData.summary && summaryData.updatedAt) {
             const hoursSinceUpdate = (Date.now() - new Date(summaryData.updatedAt).getTime()) / 3600000;
-            // 只注入24小时内的摘要，太旧的可能已经无关了
             if (hoursSinceUpdate < 24) {
                 summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
             }
@@ -103,15 +122,12 @@ router.post('/chat', async (req, res) => {
         const messages = [
             { role: 'system', content: STATIC_SYSTEM_PROMPT },
         ];
-        // 注入对话摘要（如果有且历史少于3条，说明可能是新模型启动，摘要尤为重要）
         if (summaryPrompt && recentHistory.length < 6) {
             messages.push({ role: 'system', content: summaryPrompt });
         }
-        // 固定记忆
         if (fixedMemoryPrompt) {
             messages.push({ role: 'system', content: fixedMemoryPrompt });
         }
-        // 历史对话
         for (let i = 0; i < recentHistory.length; i++) {
             const h = recentHistory[i];
             if (h.role === 'user') {
@@ -140,15 +156,19 @@ router.post('/chat', async (req, res) => {
             }
         }
 
-        // 8. 调用 AI
+        // 8. 调用 AI（带超时保护）
         const opts = { temperature, topP, maxTokens };
         const chatModel = hasImage ? 'glm-4.6v' : model;
-        const result = await chat(messages, chatModel, opts, true, hasImage);
+        const result = await withTimeout(
+            chat(messages, chatModel, opts, true, hasImage),
+            55000,
+            'AI响应'
+        );
 
         // 9. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
 
-        // 10. 异步更新对话摘要（每轮都更新，覆盖旧摘要）
+        // 10. 异步更新对话摘要
         const updatedHistory = [
             ...recentHistory.slice(-3),
             { role: 'assistant', content: result.content }
@@ -158,7 +178,7 @@ router.post('/chat', async (req, res) => {
             saveSummary(newSummary);
         }
 
-        // 11. 异步自动提取记忆（每5条触发一次）
+        // 11. 异步自动提取记忆
         const totalMessages = await Chat.countDocuments({ sessionId });
         if (totalMessages % 5 === 0) {
             const allMessages = [
@@ -181,6 +201,11 @@ router.post('/chat', async (req, res) => {
     } catch (err) {
         console.error('Chat error:', err.message);
         console.error('OpenRouter response:', err.response?.data);
+        
+        if (err.message && err.message.includes('超时')) {
+            return res.status(503).json({ error: 'AI响应超时，请重试' });
+        }
+        
         const detail = err.response?.data?.error?.message || err.message;
         res.status(500).json({ error: detail || '服务器错误' });
     }
