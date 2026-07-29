@@ -9,17 +9,6 @@
 - PWA配置：`frontend/manifest.json`
 - Service Worker：`frontend/service-worker.js`
 
-### 前端已完成的美化
-- 头像放大（桌面56px/手机36px）
-- Lumi头像在左，Rinka头像在右
-- 气泡颜色：Lumi #fef8e0，Rinka #fee0e0
-- 字体颜色改浅褐色
-
-### 前端待改
-- 气泡效果Rinka不满意，下次再调
-- 背景支持上传图片
-- 顶部标题行改TG风格
-
 ## 后端路由 (routes/)
 - `chat.js` — 主聊天逻辑，调用DeepSeek（flash为主，pro回退），带记忆注入和工具调用
 - `checkin.js` — 论坛签到/逛论坛逻辑
