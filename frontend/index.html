@@ -588,7 +588,7 @@ function finRender() {
             '<div class="fin-meta"><span>'+escapeHtml(r.category||'其他')+'</span><span>'+time+'</span></div>' +
             '</div>' +
             '<div class="fin-amount '+r.type+'">'+(r.type==='income'?'+':'-')+'¥'+r.amount.toFixed(2)+'</div>' +
-            '<button class="fin-del" onclick="finDelete(''+r._id+'')">&times;</button>' +
+            '<button class="fin-del" onclick="finDelete(\''+r._id+'\')">&times;</button>' +
             '</div>';
     }).join('');
     
@@ -1776,7 +1776,7 @@ async function loadSessions() {
             var count = s.messageCount || 0;
             var isActive = sid === currentLabel ? ' active' : '';
             var delBtn = sid === 'default' ? '' : '<button class="session-del" onclick="event.stopPropagation();deleteSession(\''+sid+'\')">×</button>';
-            return '<div class="session-item' + isActive + '" onclick="switchSession(''+sid+'')">' +
+            return '<div class="session-item' + isActive + '" onclick="switchSession(\''+sid+'\')">' +
                 '<span class="session-name">' + escapeHtml(name) + '</span>' +
                 '<span class="session-count">' + count + '</span>' +
                 delBtn +
