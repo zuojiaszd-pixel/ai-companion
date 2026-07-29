@@ -1775,7 +1775,7 @@ async function loadSessions() {
             var name = s.name || (sid === 'default' ? '默认对话' : '对话 ' + sid.slice(0, 6));
             var count = s.messageCount || 0;
             var isActive = sid === currentLabel ? ' active' : '';
-            var delBtn = sid === 'default' ? '' : '<button class="session-del" onclick="event.stopPropagation();deleteSession(''+sid+'')">×</button>';
+            var delBtn = sid === 'default' ? '' : '<button class="session-del" onclick="event.stopPropagation();deleteSession(\''+sid+'\')">×</button>';
             return '<div class="session-item' + isActive + '" onclick="switchSession(''+sid+'')">' +
                 '<span class="session-name">' + escapeHtml(name) + '</span>' +
                 '<span class="session-count">' + count + '</span>' +
