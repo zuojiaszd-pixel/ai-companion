@@ -414,66 +414,6 @@ function injectSummary(messages) {
     return [
         messages[0],
         { role: 'system', content: summaryPrompt },
-function compressToolRecords(messages, keepLatest = 1) {
-    // 从消息数组中找出所有工具调用轮次
-    // 每轮 = 1条assistant(tool_calls) + N条tool结果
-    // 保留最新keepLatest轮完整，将更早的轮合并为单条文本消息
-    const roundSpans = [];
-    let i = 1;  // 跳过system prompt (index 0)
-    while (i < messages.length) {
-        const msg = messages[i];
-        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
-            const start = i;
-            i++;
-            while (i < messages.length && messages[i].role === 'tool') {
-                i++;
-            }
-            roundSpans.push({ start, end: i - 1 });
-        } else {
-            i++;
-        }
-    }
-    if (roundSpans.length <= keepLatest) return messages;
-    const toCompress = roundSpans.slice(0, roundSpans.length - keepLatest);
-    const removed = new Set();
-    const inserts = [];  // [{at, content}]
-    for (const span of toCompress) {
-        const asst = messages[span.start];
-        const tools = messages.slice(span.start + 1, span.end + 1);
-        // 构建摘要: [工具调用: fn1(args...), fn2(args...)] → 结果摘要
-        let summary = '[工具调用: ';
-        const calls = asst.tool_calls.map(tc => {
-            const fn = tc.function.name;
-            let brief = '';
-            try {
-                const parsed = JSON.parse(tc.function.arguments);
-                brief = Object.entries(parsed).map(([k, v]) => {
-                    const s = typeof v === 'string' ? v : JSON.stringify(v);
-                    return k + '="' + s.slice(0, 60) + '"';
-                }).join(', ');
-            } catch { brief = tc.function.arguments.slice(0, 120); }
-            return fn + '(' + brief + ')';
-        }).join(', ');
-        summary += calls + ']';
-        if (tools.length > 0) {
-            const resSum = tools.map(t => {
-                const text = typeof t.content === 'string' ? t.content : String(t.content);
-                return text.slice(0, 300) + (text.length > 300 ? '...' : '');
-            }).join(' | ');
-            summary += ' → ' + resSum;
-        }
-        for (let j = span.start; j <= span.end; j++) removed.add(j);
-        inserts.push({ at: span.start, content: summary });
-    }
-    const result = [messages[0]];  // 保留system prompt
-    for (let j = 1; j < messages.length; j++) {
-        const ins = inserts.find(x => x.at === j);
-        if (ins) result.push({ role: 'assistant', content: '[已压缩] ' + ins.content });
-        if (!removed.has(j)) result.push(messages[j]);
-    }
-    return result;
-}
-
         ...messages.slice(1)
     ];
 }
@@ -519,7 +459,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                     } else {
                         messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message });
                     }
-                messages = compressToolRecords(messages, 1);
                     continue;
                 }
                 const result = await executeTool(func.name, args);

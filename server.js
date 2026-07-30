@@ -9,11 +9,15 @@ const { initCheckin } = require('./services/checkin');
 const dreamScheduler = require('./services/dreamScheduler');
 const monitor = require('./services/monitor');
 const goldPot = require('./services/GoldPot');
+const daemon = require('./daemon');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'frontend')));
+
+// === Daemon API（先于鉴权，仅限本机访问） ===
+app.use('/api/daemon', require('./routes/daemon'));
 
 // === 鉴权系统 ===
 const authTokens = new Map();
@@ -47,11 +51,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), pid: process.pid });
 });
 
-// 鉴权中间件：保护所有 /api/* 路由（除 login、logout、health 外）
+// 鉴权中间件：保护所有 /api/* 路由（除 login、logout、health、daemon 外）
 app.use('/api', (req, res, next) => {
     if (req.path === '/login' || req.path === '/logout' || req.path === '/health') {
         return next();
     }
+    // daemon 路由已在前面单独挂载，不会走到这里
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -113,6 +118,9 @@ monitor.start((message) => {
     console.log(`[Monitor通知] ${message}`);
 });
 
+// 启动 Lumi 自主活动守护进程
+daemon.start();
+
 // 启动服务器
 const server = app.listen(PORT, () => {
     console.log(`🚀 服务已启动，端口 ${PORT}`);
@@ -131,6 +139,7 @@ const server = app.listen(PORT, () => {
 // 优雅退出
 process.on('SIGTERM', () => {
     console.log('[Server] 收到SIGTERM，正在关闭...');
+    daemon.stop();
     dreamScheduler.stop();
     server.close(() => {
         console.log('[Server] 已关闭');
@@ -140,6 +149,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
     console.log('[Server] 收到SIGINT，正在关闭...');
+    daemon.stop();
     dreamScheduler.stop();
     server.close(() => {
         console.log('[Server] 已关闭');

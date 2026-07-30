@@ -688,7 +688,7 @@ async function loginSubmit() {
         if (res.ok && data.token) {
             authToken = data.token;
             localStorage.setItem('authToken', authToken);
-            hideLogin();
+            hideLogin();loadHistory();loadAvatarsFromBackend();
             document.getElementById('login-password').value = '';
         } else {
             err.textContent = data.error || '密码错误';

@@ -9,5 +9,72 @@
     "details": [],
     "extracted": 3,
     "backup": null
+  },
+  {
+    "timestamp": "2026-07-30T08:55:21.220Z",
+    "sessionId": "default",
+    "decayed": 0,
+    "archived": 0,
+    "locked": 0,
+    "total": 0,
+    "details": [],
+    "error": "Operation `memories.find()` buffering timed out after 10000ms",
+    "extracted": 0,
+    "backup": false
+  },
+  {
+    "timestamp": "2026-07-30T09:03:27.170Z",
+    "sessionId": "default",
+    "decayed": 0,
+    "archived": 0,
+    "locked": 0,
+    "total": 0,
+    "details": [],
+    "extracted": 0,
+    "backup": false
+  },
+  {
+    "timestamp": "2026-07-30T09:11:46.660Z",
+    "sessionId": "default",
+    "decayed": 632,
+    "archived": 0,
+    "locked": 7,
+    "total": 639,
+    "details": [],
+    "extracted": 3,
+    "backup": false
+  },
+  {
+    "timestamp": "2026-07-30T09:26:15.629Z",
+    "sessionId": "default",
+    "decayed": 632,
+    "archived": 0,
+    "locked": 7,
+    "total": 639,
+    "details": [],
+    "extracted": 3,
+    "backup": false
+  },
+  {
+    "timestamp": "2026-07-30T09:35:05.234Z",
+    "sessionId": "default",
+    "decayed": 633,
+    "archived": 0,
+    "locked": 7,
+    "total": 640,
+    "details": [],
+    "extracted": 3,
+    "backup": false
+  },
+  {
+    "timestamp": "2026-07-30T09:41:29.039Z",
+    "sessionId": "default",
+    "decayed": 647,
+    "archived": 0,
+    "locked": 7,
+    "total": 654,
+    "details": [],
+    "extracted": 3,
+    "backup": false
   }
 ]
