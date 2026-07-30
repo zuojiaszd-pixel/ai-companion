@@ -10,13 +10,16 @@
 - Service Worker：`frontend/service-worker.js`
 
 ## 后端路由 (routes/)
-- `chat.js` — 主聊天逻辑，调用DeepSeek（flash为主，pro回退），带记忆注入和工具调用
+- `chat.js` — 主聊天逻辑，调用DeepSeek（flash为主，pro回退），带记忆注入、工具调用、情绪分析、LumiJournal自动写入、对话摘要异步更新
 - `checkin.js` — 论坛签到/逛论坛逻辑
 - `memory.js` — 记忆系统API路由（CRUD、搜索、热度管理、Dream整理）
 - `finance.js` — 小金库功能（记账、查账、删账、攒钱目标）
 - `task.js` — 任务系统
 - `calendar.js` — 日历功能
 - `footprint.js` — 足迹功能
+- `daemon.js` — 守护进程状态查询、重启、日志查看
+- `dream.js` — Dream整理管理（手动触发、状态查看、日志）
+- `journal.js` — LumiJournal查询路由
 
 ## 后端服务 (services/)
 - `ai.js` — AI调用封装（DeepSeek API），组装 STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt
@@ -25,6 +28,11 @@
 - `galatea.js` — 论坛浏览服务（通过MCP协议连接Galatea论坛）
 - `tools.js` — 工具函数
 - `telegram.js` — Telegram相关
+- `batchExtract.js` — 批量记忆提取（离线处理历史聊天记录）
+- `dreamScheduler.js` — Dream自动调度器（定时触发记忆整理）
+- `GoldPot.js` — 金锅服务（攒钱目标逻辑）
+- `monitor.js` — 系统监控（资源使用、进程守护）
+- `summary.js` — 对话摘要生成与管理
 
 ## 数据模型 (models/)
 - `Chat.js` — 聊天记录模型
@@ -34,6 +42,7 @@
 - `Calendar.js` — 日历模型
 - `Footprint.js` — 足迹模型
 - `Avatar.js` — 头像模型
+- `LumiJournal.js` — Lumi日记模型（情绪轨迹、状态快照、技术流水）
 - `db.js` — 数据库连接
 - `core_memory.json` — 核心记忆持久化文件
 
@@ -42,13 +51,37 @@
 - `core_memory.json` — 伴侣信息持久化，每次对话注入到系统提示
 - `status.json` — 当前状态栏
 - `settings.json` — 用户设置（温度、系统提示词等）
+- `conversation_summary.json` — 对话摘要持久化文件
+
+## 核心脚本 (scripts/)
+- `save-context-memory.js` — 保存当前上下文到长期记忆（聊天后调用）
+- `cleanup-ttl.js` — TTL自动清理脚本（删除过期技术记忆）
+- `healthcheck.sh` — Render健康检查脚本
+
+## 守护进程 (daemon/)
+- `daemon.js` — 守护进程主入口（启动、保活、重启监控）
+- `data/daemon/` — 守护进程日志目录
+- `data/.alive` — 存活标记文件（健康检查用）
+- `data/dream_log.json` — Dream整理操作日志
+- `data/gold_pot.json` — 金锅数据持久化
 
 ## 其他文件
 - `server.js` — 主入口，Express启动，路由挂载
 - `galatea.js` — 根目录下的Galatea论坛MCP服务
 - `package.json` — 依赖管理
 - `CODE_MAP.md` — 本文件（代码地图）
-- `docs/memory-upgrade-plan.md` — 记忆系统升级方案v2（已全部实施）
+- `PLAN.md` — 整体开发计划
+- `EMERGENCY.md` — 紧急情况处理指南
+- `modify_compress.py` — 聊天记录压缩工具
+- `_macaron.py` — 马卡龙（Macaron）相关工具脚本
+
+## 文档 (docs/)
+- `memory-upgrade-plan.md` — 记忆系统升级方案v2（已全部实施）
+- `memory-system-reform.md` — 记忆系统改革方案（情绪记忆、核心/技术分离）
+- `memory-system-roadmap.md` — 记忆系统未来路线图
+- `vps-deployment-plan.md` — VPS部署计划
+- `vps-migration-plan.md` — VPS迁移方案
+- `VPS_PLAN.md` — VPS整体规划
 
 ## 部署
 - 托管在Render
@@ -108,3 +141,12 @@
 - [x] 备份与恢复（导出JSON + 导入）
 - [x] 分页列表 + 按type/priority/heat排序
 - [x] 统计信息（总量、活跃/归档、类型分布、优先级分布）
+
+## 新增功能（最近添加）
+- [x] Lumi日记系统（情绪轨迹记录、自动写入、查询接口）
+- [x] 情绪分析（analyzeLumiMood / analyzeUserMood / extractEmotionalCore）
+- [x] 聊天记忆自动提取（autoSaveChatMemory 嵌入聊天路由）
+- [x] 守护进程（自动保活、重启监控、健康检查）
+- [x] 对话摘要异步更新（summary服务）
+- [x] TTL自动清理（定期清理低价值技术记忆）
+- [x] 状态栏系统（实时状态更新与查询）
