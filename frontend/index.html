@@ -1156,9 +1156,9 @@ async function loadHistory() {
     loadingHistory = true;
     try {
         var res = await fetch(BACKEND + '/api/history?sessionId=' + currentSessionId);
-        if (!res.ok) { loadingHistory = false; return; }
+        if (!res.ok) { loadingHistory = false; loadSettingsFromBackend(); return; }
         var history = await res.json();
-        if (!history || !history.length) { loadingHistory = false; return; }
+        if (!history || !history.length) { loadingHistory = false; loadSettingsFromBackend(); return; }
         var chat = document.getElementById('chat');
         var cur = document.querySelectorAll('.msg-row').length;
         if (cur === 0) {
@@ -1177,6 +1177,7 @@ async function loadHistory() {
         }
     } catch(e) {}
     loadingHistory = false;
+    loadSettingsFromBackend();
     if (document.getElementById('settings-panel').classList.contains('open')) {
         var curTheme = document.documentElement.getAttribute('data-theme') || 'light';
         document.getElementById('theme-select').value = curTheme;
@@ -1184,8 +1185,7 @@ async function loadHistory() {
         var settingsSelect = document.getElementById('settings-model-select');
         settingsSelect.innerHTML = mainSelect.innerHTML;
         settingsSelect.value = mainSelect.value;
-        loadSettingsFromBackend();
-                initAvatars();
+        initAvatars();
     }
 }
 function themeSelectChange(val) {
