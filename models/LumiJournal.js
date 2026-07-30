@@ -9,6 +9,7 @@ const LumiJournalSchema = new mongoose.Schema({
     },
     content: String,
     mood: { type: String, default: null },
+    moodIntensity: { type: Number, default: null, min: 0, max: 1 },
     toRinka: { type: Boolean, default: true },
     relatedMemoryId: { type: mongoose.Schema.Types.ObjectId, default: null },
     createdAt: { type: Date, default: Date.now }
