@@ -2,3 +2,4 @@
 .env
 *.log
 uploads/
+config/conversation_summary.json
