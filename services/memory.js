@@ -152,32 +152,59 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             supersededBy: null,
             contradicted: false,
             archived: false,
-            type: { $in: ['fact', 'preference', 'experience', 'summary'] }
+            type: { $in: ['core', 'tech', 'state', 'fact', 'preference', 'experience', 'summary'] }
         });
         
-        // 去重检测（相似度 > 0.92）
+                // 去重检测 + 智能融合（相似度 > 0.92）
         for (const m of existing) {
             const sim = cosineSim(embedding, m.embedding || []);
             if (sim > 0.92) {
                 m.accessCount += 1;
-                m.heat = Math.max(m.heat, m.baseHeat) * 1.2;
                 m.lastAccessed = new Date();
+                m.heat = Math.max(m.heat, m.baseHeat) * 1.2;
+                
+                // 智能融合：内容不完全相同且有新信息时合并
+                if (content !== m.content) {
+                    const newTokens = new Set(tokenize(content));
+                    const existingTokens = new Set(tokenize(m.content));
+                    const extraTokens = [...newTokens].filter(t => !existingTokens.has(t));
+                    const extraRatio = extraTokens.length / Math.max(newTokens.size, 1);
+                    
+                    if (extraRatio > 0.1 && (m.content.length + content.length < 500)) {
+                        m.content = m.content + ' | ' + content;
+                        console.log(`[Memory] 融合: 新增${extraTokens.length}个信息点`);
+                    }
+                }
+                
+                // 情绪覆盖：新情绪更强时更新
+                if (mood && (!m.mood || (moodIntensity || 0) > (m.moodIntensity || 0))) {
+                    m.mood = mood;
+                    m.moodIntensity = moodIntensity || 0.5;
+                    m.lumiMood = lumiMood || null;
+                }
+                
+                // 优先级提升
+                const priorityOrder = ['low', 'normal', 'high', 'critical'];
+                if (priority && priorityOrder.indexOf(priority) > priorityOrder.indexOf(m.priority)) {
+                    m.priority = priority;
+                }
+                
                 if (tags && tags.length > 0) {
                     const existingTags = new Set(m.tags || []);
                     tags.forEach(t => existingTags.add(t));
                     m.tags = Array.from(existingTags);
                 }
-                // 合并关联标签
                 const existingRelated = new Set(m.relatedTags || []);
                 mergedRelatedTags.forEach(t => existingRelated.add(t));
                 m.relatedTags = Array.from(existingRelated);
+                
                 await m.save();
                 console.log(`[Memory] 去重命中，已加热: "${content.slice(0, 30)}..." (热度: ${m.heat.toFixed(2)})`);
                 return m;
             }
         }
         
-        // 矛盾检测（0.85 ~ 0.92）
+// 矛盾检测（0.85 ~ 0.92）
         let supersededId = null;
         for (const m of existing) {
             const sim = cosineSim(embedding, m.embedding || []);
