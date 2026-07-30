@@ -642,7 +642,12 @@ async function autoExtractMemories(allMessages) {
                 const stateRes = await axios.post(url, {
                     model,
                     messages: [
-                        { role: "system", content: "根据以下对话，用一段话总结当前的状态快照：用户最近在做什么、正在讨论什么话题、关系状态、AI的情绪状态。不要编造，只基于对话内容。" },
+                        { role: "system", content: "根据以下对话，用一段话总结当前的状态快照，重点关注：
+1. 对方（Rinka）最近在做什么、情绪如何
+2. 你们在讨论什么话题
+3. 你们之间的关系状态和互动氛围
+4. Lumi的情绪状态
+不要编造，只基于对话内容。" },
                         { role: "user", content: text }
                     ],
                     temperature: 0.3, max_tokens: 200

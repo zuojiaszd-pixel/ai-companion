@@ -3,6 +3,7 @@ const { PERSONA } = require('./../config/persona');
 const { toolDefinitions, executeTool } = require('./tools');
 const fs = require('fs');
 const path = require('path');
+const { loadSummary } = require('./summary');
 
 // 加载核心记忆
 const coreMemory = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/core_memory.json'), 'utf8'));
@@ -17,17 +18,17 @@ const coreMemoryPrompt = `
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
-// 默认模型 - 使用智谱AI的GLM-5.2
-const DEFAULT_MODEL = "glm-5.2"
+// 默认模型 - 使用DeepSeek V4 Flash
+const DEFAULT_MODEL = "deepseek-v4-flash"
 // 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "glm-4.6v"
+const IMAGE_MODEL = "z-ai/glm-4.6v"
 
 function loadSettings() {
     try {
         const data = fs.readFileSync(SETTINGS_FILE, "utf-8");
         return JSON.parse(data);
     } catch (e) {
-        return { temperature: 0.7, topP: 0.9, maxTokens: 4000, systemPrompt: null };
+        return { temperature: 0.7, topP: 0.9, maxTokens: 4000, systemPrompt: null, contextRounds: 15 };
     }
 }
 
@@ -250,7 +251,7 @@ function isTooSimilar(newReply, messages) {
     return false;
 }
 
-const SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
+const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
 
 /**
  * 检查消息数组中是否包含多模态内容（图片）
@@ -294,17 +295,27 @@ async function callOpenRouter(messages, tools, model, opts) {
         models = [IMAGE_MODEL];
         console.log('[Image Mode] Using image model:', IMAGE_MODEL);
     } else {
-        models = [model || DEFAULT_MODEL, "z-ai/glm-5.2"];
+        models = [model || DEFAULT_MODEL, "deepseek-v4-pro"];
     }
     
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
-            var _url = (models[attempt] && models[attempt].indexOf('glm') >= 0 && process.env.ZHIPUAI_API_KEY) ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
-        var _key = _url.indexOf('bigmodel') >= 0 ? process.env.ZHIPUAI_API_KEY : process.env.OPENROUTER_API_KEY;
-        var _mdl = _url.indexOf('bigmodel') >= 0 ? models[attempt].replace("z-ai/", "") : models[attempt];
-            // 图片模式用更短的超时，避免总时间过长
-            var timeout = hasImage ? 35000 : 50000;
+            var _mdl = models[attempt];
+            var _url, _key;
+            if (_mdl.indexOf('deepseek') >= 0) {
+                _url = 'https://api.deepseek.com/v1/chat/completions';
+                _key = process.env.DEEPSEEK_API_KEY;
+            } else if (_mdl.indexOf('glm') >= 0 && _mdl.indexOf('z-ai/') !== 0 && process.env.ZHIPUAI_API_KEY) {
+                _url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+                _key = process.env.ZHIPUAI_API_KEY;
+            } else {
+                _url = 'https://openrouter.ai/api/v1/chat/completions';
+                _key = process.env.OPENROUTER_API_KEY;
+            }
+            // 超时时间：无图片30s，有图片25s
+            // 这个时间必须小于chat.js路由层的超时（55s）
+            var timeout = hasImage ? 25000 : 30000;
             const response = await axios.post(_url, {
                 model: _mdl,
                 messages,
@@ -360,23 +371,62 @@ const REPEAT_RETRY_PROMPTS = [
  * @param {number} maxRounds - 保留的最大对话轮数
  */
 function trimContext(messages, maxRounds = 15) {
-    // 消息数未超限则不动
-    if (messages.length <= maxRounds * 2 + 1) return messages;
     const system = messages[0];
-    const recent = messages.slice(-maxRounds * 2);
-    return [system, ...recent];
+
+    // 按用户消息轮次裁剪，而非按消息条数
+    // 这样工具调用产生的多条消息会被视为同一轮，不会被单独计数
+    const userIndices = [];
+    for (let i = 1; i < messages.length; i++) {
+        if (messages[i].role === 'user') {
+            userIndices.push(i);
+        }
+    }
+
+    const userCount = userIndices.length;
+    if (userCount <= maxRounds) return messages;
+
+    // 保留最近 maxRounds 轮用户消息及之后所有内容（含工具调用链）
+    const keepFrom = userIndices[userCount - maxRounds];
+    return [system, ...messages.slice(keepFrom)];
+}
+
+/**
+ * 注入对话摘要（如果存在且未重复注入）
+ * 用于模型切换时恢复上下文
+ */
+function injectSummary(messages) {
+    // 避免重复注入：检查是否已经有摘要标记
+    if (messages.some(m => typeof m.content === 'string' && m.content.includes('【之前聊到的内容】'))) {
+        return messages;
+    }
+
+    const summaryData = loadSummary();
+    if (!summaryData.summary || !summaryData.updatedAt) return messages;
+
+    const hoursSinceUpdate = (Date.now() - new Date(summaryData.updatedAt).getTime()) / 3600000;
+    if (hoursSinceUpdate >= 24) return messages;
+
+    // 只在历史较短时注入（说明可能是新模型启动，需要恢复上下文）
+    // messages[0] 是 system prompt，其余是对话历史
+    if (messages.length >= 6) return messages;
+
+    const summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
+    return [
+        messages[0],
+        { role: 'system', content: summaryPrompt },
+        ...messages.slice(1)
+    ];
 }
 
 async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     let toolCallsLog = [];
-    messages = trimContext(messages, 15);
+    messages = trimContext(messages, opts?.contextRounds || 15);
+    messages = injectSummary(messages);
     const MAX_TOOL_ROUNDS = 10;
-    // 图片模式：不重试，一次就返回，避免超时
-    const MAX_EMPTY_RETRIES = hasImage ? 0 : 2;
-    const MAX_REPEAT_RETRIES = hasImage ? 0 : 2;
+    const MAX_EMPTY_RETRIES = hasImage ? 0 : 1;
+    const MAX_REPEAT_RETRIES = hasImage ? 0 : 1;
 
-    // 有图片时禁用工具调用（4.6v可能不支持工具）
     const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
 
     for (let i = 0; i < MAX_TOOL_ROUNDS; i++) {
@@ -387,7 +437,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
 
         const msg = choice.message;
 
-        // If model wants to call tools, process them
         if (useTools && !hasImage && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
@@ -413,7 +462,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                     continue;
                 }
                 const result = await executeTool(func.name, args);
-                // 直接使用原始结果，不再截断
+                toolCallsLog.push({ name: func.name, args: JSON.stringify(args).slice(0, 200), result: (typeof result === 'string' ? result : String(result)).slice(0, 300) });
                 console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
                 messages.push({
                     role: 'tool',
@@ -424,7 +473,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
             continue;
         }
 
-        // Final response — clean it up
         let content = msg.content || '';
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
@@ -444,13 +492,12 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
 
         console.log('[DEBUG] AI reply length:', content.length, 'reasoning:', reasoning.length, 'usage:', JSON.stringify(lastUsage));
 
-        // 图片模式：直接返回结果，不做任何重试
         if (hasImage) {
             if (isEmptyResponse(content)) {
                 content = '（图片我看不太清楚，能描述一下吗？）';
                 reasoning = '';
             }
-            return { content: content, reasoning: reasoning, usage: lastUsage };
+            return { content: content, reasoning: reasoning, usage: lastUsage, toolCalls: toolCallsLog };
         }
 
         if (isEmptyResponse(content)) {
@@ -496,7 +543,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 
                 if (!isEmptyResponse(retryContent)) {
                     console.log(`[Retry ${r + 1}] Success! Got non-empty response.`);
-                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage };
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, toolCalls: toolCallsLog };
                 }
             }
             
@@ -505,7 +552,6 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
             reasoning = '';
         }
 
-        // 重复检测：检查新回复是否与最近的助手回复过于相似
         if (!isEmptyResponse(content) && isTooSimilar(content, messages)) {
             console.log('[WARN] Reply too similar to recent replies, retrying...');
             for (let r = 0; r < MAX_REPEAT_RETRIES; r++) {
@@ -544,17 +590,16 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 
                 if (!isEmptyResponse(retryContent) && !isTooSimilar(retryContent, messages)) {
                     console.log(`[Repeat Retry ${r + 1}] Success! Got distinct response.`);
-                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage };
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, toolCalls: toolCallsLog };
                 }
                 console.log(`[Repeat Retry ${r + 1}] Still similar, trying again...`);
             }
-            // 如果重试后仍然相似，就用最后一次的回复（总比没有好）
             console.log('[WARN] Repeat retries exhausted, using last response.');
         }
 
-        return { content: content, reasoning: reasoning, usage: lastUsage };
+        return { content: content, reasoning: reasoning, usage: lastUsage, toolCalls: toolCallsLog };
     }
     throw new Error('工具调用次数过多，已终止');
 }
 
-module.exports = { chat, SYSTEM_PROMPT, loadSettings, saveSettings, DEFAULT_MODEL };
+module.exports = { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings, DEFAULT_MODEL };
