@@ -6,11 +6,17 @@ const { connectDB } = require('./config/db');
 const telegram = require('./services/telegram');
 const { initCheckin } = require('./services/checkin');
 const { runDream } = require('./services/memory');
+const monitor = require('./services/monitor');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'frontend')));
+
+// 健康检查端点（给监控用）
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
 
 // Telegram Webhook 路由
 app.post('/telegram/webhook', telegram.handleWebhook);
@@ -63,5 +69,12 @@ function initDreamScheduler() {
 }
 
 initDreamScheduler();
+
+// 监控服务：轻量检查每30分钟，完整检查每6小时
+// 只记录日志，异常时通过 notifyCallback 通知
+monitor.start((message) => {
+    console.log(`[Monitor通知] ${message}`);
+    // 后续可以加 Telegram 推送
+});
 
 app.listen(PORT, () => console.log(`🚀 服务已启动，端口 ${PORT}`));
