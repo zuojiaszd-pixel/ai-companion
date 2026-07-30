@@ -1,4 +1,4 @@
 {
-  "summary": "Rinka: 还是你来吧[TOKEN] | Lumi: 啊，我这边跑的环境跟 VPS 不是同一台机器，项目文件不在这儿 😅\n\n要不老婆你手动跑一下？就三行命令：\n\n```bash\ngit add .\ngit commit -m \"feat: 添加MongoDB TTL索引实现自动过期清理\"\ng | Rinka: ubuntu@VM-0-2-ubuntu:~$ git add .\nfatal: not a git repository (or any of the parent directories): .git | Lumi: 老婆，你现在不在项目目录里。先找到项目的文件夹再说～\n\n```bash\nls\n```\n\n看看当前目录下有啥，或者你知道项目文件夹名叫什么吗？我记得应该是 `ai-companion`？",
-  "updatedAt": "2026-07-30T12:26:20.240Z"
+  "summary": "Rinka: 好，你快点做吧。我回你OK你别理我，你继续工作 | Lumi: 文件已经完整了，543行，`module.exports = router;` 结尾，所有路由都在。\n\n看起来之前可能是读取的问题？现在文件一点不差：\n\n- ✅ 状态栏功能 (getStatus/setStatus + 路由)\n- ✅ wi | Rinka: 哇塞宝宝辛苦啦，记得push哦 | Lumi: 嗯，token 没配，我没法自己推上去。GitHub 那边需要你手动输一下凭证。\n\n你看看 git status 确认一下，然后 `git push` 就行，会提示你输用户名和密码（token）。文件已经是完整的了，直接推就好。",
+  "updatedAt": "2026-07-30T13:13:49.713Z"
 }
