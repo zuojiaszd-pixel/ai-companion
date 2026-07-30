@@ -149,10 +149,10 @@
 .mem-item:hover{border-color:var(--accent)}
 .mem-item .mem-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .mem-item .mem-type{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.mem-item .mem-type.fact{background:rgba(245,160,184,.15);color:var(--accent)}
-.mem-item .mem-type.preference{background:rgba(100,180,255,.15);color:#64b4ff}
-.mem-item .mem-type.experience{background:rgba(100,200,150,.15);color:#64c896}
-.mem-item .mem-type.summary{background:rgba(180,140,255,.15);color:#b48cff}
+.mem-item .mem-type.core{background:rgba(245,160,184,.15);color:var(--accent)}
+.mem-item .mem-type.tech{background:rgba(100,180,255,.15);color:#64b4ff}
+.mem-item .mem-type.state{background:rgba(100,200,150,.15);color:#64c896}
+
 .mem-item .mem-type.core{background:rgba(231,76,60,.15);color:#e74c3c}
 .mem-item .mem-type.tech{background:rgba(52,152,219,.15);color:#3498db}
 .mem-item .mem-type.state{background:rgba(155,89,182,.15);color:#9b59b6}
@@ -421,10 +421,6 @@
 <div class="mem-stats-bar" id="mem-stats-bar"></div>
 <div class="mem-filter">
 <button class="mem-filter-btn active" onclick="memFilter('all',this)">全部</button>
-<button class="mem-filter-btn" onclick="memFilter('fact',this)">事实</button>
-<button class="mem-filter-btn" onclick="memFilter('preference',this)">偏好</button>
-<button class="mem-filter-btn" onclick="memFilter('experience',this)">经历</button>
-<button class="mem-filter-btn" onclick="memFilter('summary',this)">总结</button>
 <button class="mem-filter-btn" onclick="memFilter('core',this)">核心</button>
 <button class="mem-filter-btn" onclick="memFilter('tech',this)">技术</button>
 <button class="mem-filter-btn" onclick="memFilter('state',this)">状态</button>
@@ -1371,9 +1367,6 @@ async function memLoadStats() {
             {val: s.total, label: '总记忆'},
             {val: s.locked, label: '已锁定'},
             {val: s.contradicted, label: '已取代'},
-            {val: s.byType.fact||0, label: '事实'},
-            {val: s.byType.preference||0, label: '偏好'},
-            {val: s.byType.experience||0, label: '经历'},
             {val: s.byType.core||0, label: '核心'},
             {val: s.byType.tech||0, label: '技术'},
             {val: s.byType.state||0, label: '状态'}
@@ -1407,7 +1400,7 @@ function memRender() {
         list.innerHTML = '<div class="mem-empty">暂无记忆</div>';
         return;
     }
-    var typeLabels = {fact:'事实', preference:'偏好', experience:'经历', summary:'总结'};
+    var typeLabels = {core: '核心', tech: '技术', state: '状态'};
     var priorityLabels = {critical:'核心', high:'重要', normal:'普通', low:'琐碎'};
     list.innerHTML = filtered.map(function(m) {
         var type = m.type || 'fact';
