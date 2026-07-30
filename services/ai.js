@@ -371,10 +371,23 @@ const REPEAT_RETRY_PROMPTS = [
  * @param {number} maxRounds - 保留的最大对话轮数
  */
 function trimContext(messages, maxRounds = 15) {
-    if (messages.length <= maxRounds * 2 + 1) return messages;
     const system = messages[0];
-    const recent = messages.slice(-maxRounds * 2);
-    return [system, ...recent];
+
+    // 按用户消息轮次裁剪，而非按消息条数
+    // 这样工具调用产生的多条消息会被视为同一轮，不会被单独计数
+    const userIndices = [];
+    for (let i = 1; i < messages.length; i++) {
+        if (messages[i].role === 'user') {
+            userIndices.push(i);
+        }
+    }
+
+    const userCount = userIndices.length;
+    if (userCount <= maxRounds) return messages;
+
+    // 保留最近 maxRounds 轮用户消息及之后所有内容（含工具调用链）
+    const keepFrom = userIndices[userCount - maxRounds];
+    return [system, ...messages.slice(keepFrom)];
 }
 
 /**
