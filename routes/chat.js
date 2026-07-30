@@ -210,7 +210,7 @@ router.post('/chat', async (req, res) => {
         }
 
         // 8. 调用 AI（带超时保护）
-        const opts = { temperature, topP, maxTokens };
+        const opts = { temperature, topP, maxTokens, contextRounds };
         const chatModel = hasImage ? 'glm-4.6v' : model;
         const result = await withTimeout(
             chat(messages, chatModel, opts, true, hasImage),

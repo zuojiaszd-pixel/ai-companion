@@ -650,11 +650,13 @@ async function autoExtractMemories(allMessages) {
                 
                 const stateContent = stateRes.data.choices[0].message.content.trim();
                 if (stateContent && stateContent.length > 10) {
+                    // 归档旧的 state 记忆
                     await Memory.updateMany(
-                        { sessionId: "default", type: "state", priority: "high" },
-                        { $set: { priority: "normal" } }
+                        { sessionId: "default", type: "state", archived: false },
+                        { $set: { archived: true, archivedAt: new Date(), priority: "normal" } }
                     );
-                    await saveMemory("default", stateContent, "state", "high", ["state", "context"]);
+                    // 保存新的状态快照
+                    await saveMemory("default", stateContent, "state", "high", ["state", "snapshot"]);
                     console.log("[AutoExtract] 状态记忆已更新");
                 }
             } catch (stateErr) {
