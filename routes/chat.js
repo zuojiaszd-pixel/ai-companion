@@ -355,9 +355,7 @@ router.post('/chat', async (req, res) => {
             const h = recentHistory[i];
             if (h.role === 'user') {
                 if (i === recentHistory.length - 1) {
-                    const userContent = dynamicMemoryPrompt || moodPrompt
-                        ? `【上下文记忆】${dynamicMemoryPrompt || ''}${moodPrompt || ''}\n\n用户消息：${message || ''}`
-                        : message;
+                    const userContent = message;
                     if (hasImage) {
                         messages.push({
                             role: 'user',
