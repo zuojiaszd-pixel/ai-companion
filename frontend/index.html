@@ -153,6 +153,19 @@
 .mem-item .mem-type.preference{background:rgba(100,180,255,.15);color:#64b4ff}
 .mem-item .mem-type.experience{background:rgba(100,200,150,.15);color:#64c896}
 .mem-item .mem-type.summary{background:rgba(180,140,255,.15);color:#b48cff}
+.mem-item .mem-type.core{background:rgba(231,76,60,.15);color:#e74c3c}
+.mem-item .mem-type.tech{background:rgba(52,152,219,.15);color:#3498db}
+.mem-item .mem-type.state{background:rgba(155,89,182,.15);color:#9b59b6}
+.mem-item .mem-mood-badge{font-size:9px;padding:1px 6px;border-radius:4px;margin-left:4px;font-weight:600}
+.mem-item .mem-mood-badge.happy{background:rgba(46,204,113,.15);color:#2ecc71}
+.mem-item .mem-mood-badge.sad{background:rgba(52,152,219,.15);color:#3498db}
+.mem-item .mem-mood-badge.angry{background:rgba(231,76,60,.15);color:#e74c3c}
+.mem-item .mem-mood-badge.neutral{background:rgba(149,165,166,.15);color:#95a5a6}
+.mem-item .mem-mood-badge.loving{background:rgba(245,160,184,.15);color:var(--accent)}
+.mem-item .mem-mood-badge.anxious{background:rgba(243,156,18,.15);color:#f39c12}
+.mem-item .mem-mood-badge.calm{background:rgba(46,204,113,.15);color:#2ecc71}
+.mem-item .mem-version{font-size:9px;color:var(--text3);margin-left:4px;font-family:monospace}
+
 .mem-item .mem-time{font-size:10px;color:var(--text3)}
 .mem-item .mem-content{font-size:13px;line-height:1.6;color:var(--text);word-wrap:break-word}
 .mem-item .mem-item-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
@@ -412,6 +425,9 @@
 <button class="mem-filter-btn" onclick="memFilter('preference',this)">偏好</button>
 <button class="mem-filter-btn" onclick="memFilter('experience',this)">经历</button>
 <button class="mem-filter-btn" onclick="memFilter('summary',this)">总结</button>
+<button class="mem-filter-btn" onclick="memFilter('core',this)">核心</button>
+<button class="mem-filter-btn" onclick="memFilter('tech',this)">技术</button>
+<button class="mem-filter-btn" onclick="memFilter('state',this)">状态</button>
 </div>
 <div class="mem-sort-row">
 <span style="font-size:11px;color:var(--text3)">排序</span>
@@ -1357,7 +1373,10 @@ async function memLoadStats() {
             {val: s.contradicted, label: '已取代'},
             {val: s.byType.fact||0, label: '事实'},
             {val: s.byType.preference||0, label: '偏好'},
-            {val: s.byType.experience||0, label: '经历'}
+            {val: s.byType.experience||0, label: '经历'},
+            {val: s.byType.core||0, label: '核心'},
+            {val: s.byType.tech||0, label: '技术'},
+            {val: s.byType.state||0, label: '状态'}
         ];
         bar.innerHTML = cards.map(function(c){
             return '<div class="mem-stat-card"><div class="stat-val">'+c.val+'</div><div class="stat-label">'+c.label+'</div></div>';
@@ -1393,6 +1412,10 @@ function memRender() {
     list.innerHTML = filtered.map(function(m) {
         var type = m.type || 'fact';
         var typeLabel = typeLabels[type] || type;
+        var mood = m.mood || '';
+        var moodIntensity = m.moodIntensity || 0;
+        var version = m.version || '';
+        var lumiMood = m.lumiMood || '';
         var priority = m.priority || 'normal';
         var priorityLabel = priorityLabels[priority] || priority;
         var time = new Date(m.createdAt || m.timestamp).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -1421,11 +1444,11 @@ function memRender() {
         // Access info
         var accessCount = m.accessCount || 0;
         var lastAcc = m.lastAccessed ? new Date(m.lastAccessed).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
-        var accessInfo = '<div class="mem-access-info"><span>访问 '+accessCount+' 次</span><span>最后: '+lastAcc+'</span></div>';
+        var accessInfo = '<div class="mem-access-info"><span>访问 '+accessCount+' 次</span><span>最后: '+lastAcc+'</span>'+(lumiMood?'<span>Lumi: '+lumiMood+'</span>':'')+'</div>';
         
         return '<div class="mem-item">' +
             '<div class="mem-item-header">' +
-            '<div><span class="mem-type '+type+'">'+typeLabel+'</span>'+priorityBadge+lockedBadge+'</div>' +
+            '<div><span class="mem-type '+type+'">'+typeLabel+'</span>'+priorityBadge+lockedBadge+(mood?'<span class="mem-mood-badge '+mood+'">'+mood+'</span>':'')+(version?'<span class="mem-version">v'+version+'</span>':'')+'</div>' +
             '<span class="mem-time">'+time+'</span>' +
             '</div>' +
             '<div class="mem-content">'+escapeHtml(m.content||'')+'</div>' +
