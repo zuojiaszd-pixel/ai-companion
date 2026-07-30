@@ -80,6 +80,10 @@ const MemorySchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// ========== TTL 索引：到期自动清理 ==========
+// MongoDB 会自动删除 ttl 时间已到的文档，无需手动跑脚本
+MemorySchema.index({ ttl: 1 }, { expireAfterSeconds: 0 });
+
 // ========== 虚拟字段：主导情绪 ==========
 
 MemorySchema.virtual('dominantMood').get(function() {
