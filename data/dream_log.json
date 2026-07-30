@@ -76,5 +76,16 @@
     "details": [],
     "extracted": 3,
     "backup": false
+  },
+  {
+    "timestamp": "2026-07-30T15:35:57.230Z",
+    "sessionId": "default",
+    "decayed": 24,
+    "archived": 0,
+    "locked": 0,
+    "total": 24,
+    "details": [],
+    "extracted": 3,
+    "backup": true
   }
 ]
