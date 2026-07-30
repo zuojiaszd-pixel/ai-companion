@@ -1,0 +1,13 @@
+[
+  {
+    "timestamp": "2026-07-30T05:42:18.138Z",
+    "sessionId": "default",
+    "decayed": 605,
+    "archived": 0,
+    "locked": 7,
+    "total": 612,
+    "details": [],
+    "extracted": 3,
+    "backup": null
+  }
+]

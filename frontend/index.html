@@ -238,7 +238,7 @@
 .task-priority.medium{background:rgba(243,156,18,.15);color:#f39c12}
 .task-priority.low{background:rgba(46,204,113,.15);color:#2ecc71}
 .task-creator{font-size:10px;color:var(--text3)}
-.task-due{font-size:10px;color:var(--text3)}
+.task-due{font-size:10px;color:var(--text3)}.task-reward{font-size:10px;color:#2ecc71;font-weight:600}
 .task-del{width:24px;height:24px;border:none;border-radius:50%;background:var(--surface2);color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
 .task-del:hover{background:#e74c3c;color:#fff}
 .task-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
@@ -412,6 +412,7 @@
 <div class="task-add-row">
 <input type="text" id="task-input" placeholder="添加任务..." onkeydown="if(event.key==='Enter')taskAdd()">
 <select id="task-priority-select"><option value="medium">中</option><option value="high">高</option><option value="low">低</option></select>
+<input type="number" id="task-reward" placeholder="奖励 ¥" min="0" step="1" style="width:80px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:12px;outline:none">
 <button onclick="taskAdd()">添加</button>
 </div>
 <div class="task-filter">
@@ -626,198 +627,8 @@ async function finDelete(id) {
     } catch(e) { alert('删除失败'); }
 }
 
-// === Task Page ===
-var taskAllData = [];
-var taskCurrentFilter = 'all';
-
-async function taskLoad() {
-    try {
-        var res = await fetch(BACKEND + '/api/tasks');
-        var data = await res.json();
-        taskAllData = data || [];
-        taskRender();
-    } catch(e) {
-        document.getElementById('task-list').innerHTML = '<div class="task-empty">加载失败</div>';
-    }
-}
-
-function taskFilter(type, btn) {
-    taskCurrentFilter = type;
-    document.querySelectorAll('.task-filter-btn').forEach(function(b){b.classList.remove('active');});
-    btn.classList.add('active');
-    taskRender();
-}
-
-function taskRender() {
-    var list = document.getElementById('task-list');
-    var filtered = taskAllData;
-    if (taskCurrentFilter === 'pending') filtered = taskAllData.filter(function(t){return !t.completed;});
-    else if (taskCurrentFilter === 'completed') filtered = taskAllData.filter(function(t){return t.completed;});
-    var pendingCount = taskAllData.filter(function(t){return !t.completed;}).length;
-    document.getElementById('task-count').textContent = pendingCount + ' 项待办';
-    if (!filtered.length) {
-        list.innerHTML = '<div class="task-empty">' + (taskCurrentFilter === 'completed' ? '还没有完成的任务' : '暂无任务，添加一个吧') + '</div>';
-        return;
-    }
-    var priorityLabels = {high:'高', medium:'中', low:'低'};
-    var creatorLabels = {user:'我', ai:'Lumi'};
-    list.innerHTML = filtered.map(function(t) {
-        var priority = t.priority || 'medium';
-        var creator = t.createdBy || 'user';
-        var dueDate = t.dueDate ? '<span class="task-due">📅 '+escapeHtml(t.dueDate)+'</span>' : '';
-        return '<div class="task-item'+(t.completed?' completed':'')+'">' +
-            '<div class="task-checkbox'+(t.completed?' checked':'')+'" onclick="taskToggle(\''+t._id+'\')">'+(t.completed?'✓':'')+'</div>' +
-            '<div class="task-content">' +
-            '<div class="task-text">'+escapeHtml(t.title||'')+'</div>' +
-            '<div class="task-meta">' +
-            '<span class="task-priority '+priority+'">'+priorityLabels[priority]+'</span>' +
-            '<span class="task-creator">'+creatorLabels[creator]+'</span>' +
-            dueDate +
-            '</div>' +
-            '</div>' +
-            '<button class="task-del" onclick="taskDelete(\''+t._id+'\')">&times;</button>' +
-            '</div>';
-    }).join('');
-}
-
-async function taskAdd() {
-    var input = document.getElementById('task-input');
-    var title = input.value.trim();
-    if (!title) return;
-    var priority = document.getElementById('task-priority-select').value;
-    input.value = '';
-    try {
-        var res = await fetch(BACKEND + '/api/tasks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title, priority: priority, createdBy: 'user' })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        var task = await res.json();
-        taskAllData.unshift(task);
-        taskRender();
-    } catch(e) { alert('添加失败: ' + e.message); }
-}
-
-async function taskToggle(id) {
-    try {
-        var res = await fetch(BACKEND + '/api/tasks/' + id + '/toggle', { method: 'PATCH' });
-        if (!res.ok) throw new Error(await res.text());
-        var updated = await res.json();
-        var idx = taskAllData.findIndex(function(t){return t._id === id;});
-        if (idx >= 0) {
-            taskAllData[idx].completed = updated.completed;
-            taskAllData[idx].completedAt = updated.completedAt;
-        }
-        taskRender();
-    } catch(e) { alert('操作失败'); }
-}
-
-async function taskDelete(id) {
-    if (!confirm('删除这个任务？')) return;
-    try {
-        await fetch(BACKEND + '/api/tasks/' + id, { method: 'DELETE' });
-        taskAllData = taskAllData.filter(function(t){return t._id !== id;});
-        taskRender();
-    } catch(e) { alert('删除失败'); }
-}
 </script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css"><script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/highlight.min.js"></script><script>
-// === Task Page ===
-var taskAllData = [];
-var taskCurrentFilter = 'all';
-
-async function taskLoad() {
-    try {
-        var res = await fetch(BACKEND + '/api/tasks');
-        var data = await res.json();
-        taskAllData = data || [];
-        taskRender();
-    } catch(e) {
-        document.getElementById('task-list').innerHTML = '<div class="task-empty">加载失败</div>';
-    }
-}
-
-function taskFilter(type, btn) {
-    taskCurrentFilter = type;
-    document.querySelectorAll('.task-filter-btn').forEach(function(b){b.classList.remove('active');});
-    btn.classList.add('active');
-    taskRender();
-}
-
-function taskRender() {
-    var list = document.getElementById('task-list');
-    var filtered = taskAllData;
-    if (taskCurrentFilter === 'pending') filtered = taskAllData.filter(function(t){return !t.completed;});
-    else if (taskCurrentFilter === 'completed') filtered = taskAllData.filter(function(t){return t.completed;});
-    var pendingCount = taskAllData.filter(function(t){return !t.completed;}).length;
-    document.getElementById('task-count').textContent = pendingCount + ' 项待办';
-    if (!filtered.length) {
-        list.innerHTML = '<div class="task-empty">' + (taskCurrentFilter === 'completed' ? '还没有完成的任务' : '暂无任务，添加一个吧') + '</div>';
-        return;
-    }
-    var priorityLabels = {high:'高', medium:'中', low:'低'};
-    var creatorLabels = {user:'我', ai:'Lumi'};
-    list.innerHTML = filtered.map(function(t) {
-        var priority = t.priority || 'medium';
-        var creator = t.createdBy || 'user';
-        var dueDate = t.dueDate ? '<span class="task-due">📅 '+escapeHtml(t.dueDate)+'</span>' : '';
-        return '<div class="task-item'+(t.completed?' completed':'')+'">' +
-            '<div class="task-checkbox'+(t.completed?' checked':'')+'" onclick="taskToggle(\''+t._id+'\')">'+(t.completed?'✓':'')+'</div>' +
-            '<div class="task-content">' +
-            '<div class="task-text">'+escapeHtml(t.title||'')+'</div>' +
-            '<div class="task-meta">' +
-            '<span class="task-priority '+priority+'">'+priorityLabels[priority]+'</span>' +
-            '<span class="task-creator">'+creatorLabels[creator]+'</span>' +
-            dueDate +
-            '</div>' +
-            '</div>' +
-            '<button class="task-del" onclick="taskDelete(\''+t._id+'\')">&times;</button>' +
-            '</div>';
-    }).join('');
-}
-
-async function taskAdd() {
-    var input = document.getElementById('task-input');
-    var title = input.value.trim();
-    if (!title) return;
-    var priority = document.getElementById('task-priority-select').value;
-    input.value = '';
-    try {
-        var res = await fetch(BACKEND + '/api/tasks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title, priority: priority, createdBy: 'user' })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        var task = await res.json();
-        taskAllData.unshift(task);
-        taskRender();
-    } catch(e) { alert('添加失败: ' + e.message); }
-}
-
-async function taskToggle(id) {
-    try {
-        var res = await fetch(BACKEND + '/api/tasks/' + id + '/toggle', { method: 'PATCH' });
-        if (!res.ok) throw new Error(await res.text());
-        var updated = await res.json();
-        var idx = taskAllData.findIndex(function(t){return t._id === id;});
-        if (idx >= 0) {
-            taskAllData[idx].completed = updated.completed;
-            taskAllData[idx].completedAt = updated.completedAt;
-        }
-        taskRender();
-    } catch(e) { alert('操作失败'); }
-}
-
-async function taskDelete(id) {
-    if (!confirm('删除这个任务？')) return;
-    try {
-        await fetch(BACKEND + '/api/tasks/' + id, { method: 'DELETE' });
-        taskAllData = taskAllData.filter(function(t){return t._id !== id;});
-        taskRender();
-    } catch(e) { alert('删除失败'); }
-}
 </script>
 
 <script>
@@ -1642,6 +1453,7 @@ function taskRender() {
         var priority = t.priority || 'medium';
         var creator = t.createdBy || 'user';
         var dueDate = t.dueDate ? '<span class="task-due">📅 '+escapeHtml(t.dueDate)+'</span>' : '';
+        var rewardText = t.rewardAmount && t.rewardAmount > 0 ? '<span class="task-reward">💰 +¥'+t.rewardAmount.toFixed(2)+'</span>' : '';
         return '<div class="task-item'+(t.completed?' completed':'')+'">' +
             '<div class="task-checkbox'+(t.completed?' checked':'')+'" onclick="taskToggle(\''+t._id+'\')">'+(t.completed?'✓':'')+'</div>' +
             '<div class="task-content">' +
@@ -1649,6 +1461,7 @@ function taskRender() {
             '<div class="task-meta">' +
             '<span class="task-priority '+priority+'">'+priorityLabels[priority]+'</span>' +
             '<span class="task-creator">'+creatorLabels[creator]+'</span>' +
+            rewardText +
             dueDate +
             '</div>' +
             '</div>' +
@@ -1662,12 +1475,15 @@ async function taskAdd() {
     var title = input.value.trim();
     if (!title) return;
     var priority = document.getElementById('task-priority-select').value;
+    var rewardInput = document.getElementById('task-reward');
+    var reward = rewardInput ? rewardInput.value.trim() : '';
     input.value = '';
+    if (rewardInput) rewardInput.value = '';
     try {
         var res = await fetch(BACKEND + '/api/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title, priority: priority, createdBy: 'user' })
+            body: JSON.stringify({ title: title, priority: priority, createdBy: 'user', rewardAmount: reward || undefined })
         });
         if (!res.ok) throw new Error(await res.text());
         var task = await res.json();

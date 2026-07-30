@@ -8,7 +8,9 @@ const TaskSchema = new mongoose.Schema({
   dueDate: { type: String, default: null }, // YYYY-MM-DD, optional
   sessionId: { type: String, default: 'default' },
   createdAt: { type: Date, default: Date.now },
-  completedAt: { type: Date, default: null }
+  completedAt: { type: Date, default: null },
+  rewarded: { type: Boolean, default: false },   // 是否已发放小金库奖励
+  rewardAmount: { type: Number, default: 0 }     // 已奖励金额
 });
 
 module.exports = mongoose.model('Task', TaskSchema);

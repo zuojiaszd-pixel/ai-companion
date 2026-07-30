@@ -5,17 +5,18 @@ const cors = require('cors');
 const { connectDB } = require('./config/db');
 const telegram = require('./services/telegram');
 const { initCheckin } = require('./services/checkin');
-const { runDream } = require('./services/memory');
+const dreamScheduler = require('./services/dreamScheduler');
 const monitor = require('./services/monitor');
+const goldPot = require('./services/GoldPot');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// 健康检查端点（给监控用）
+// 健康检查端点（给监控和系统cron用）
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime() });
+  res.json({ status: 'ok', uptime: process.uptime(), pid: process.pid });
 });
 
 // Telegram Webhook 路由
@@ -29,6 +30,7 @@ app.use('/api', require('./routes/checkin'));
 app.use('/api/memory', require('./routes/memory'));
 app.use('/api/finance', require('./routes/finance'));
 app.use('/api/journal', require('./routes/journal'));
+app.use('/api', require('./routes/dream'));
 
 const PORT = process.env.PORT || 10000;
 connectDB();
@@ -46,35 +48,49 @@ setTimeout(() => {
     }
 }, 5000);
 
-// Dream 整理定时任务：每6小时跑一次，首次延迟10分钟让服务稳定
-const DREAM_INTERVAL = 6 * 60 * 60 * 1000; // 6小时
-function initDreamScheduler() {
-    console.log('[Dream] 调度器已启动，每6小时执行一次整理');
-    
-    const runDreamTask = async () => {
-        try {
-            console.log('[Dream] 开始定时整理...');
-            const result = await runDream('default');
-            console.log(`[Dream] 定时整理完成: 总${result.total}条, 归档${result.archived}条, 衰减${result.decayed}条`);
-        } catch (e) {
-            console.error('[Dream] 定时整理异常:', e.message);
-        }
-    };
-    
-    // 首次延迟10分钟执行
-    setTimeout(() => {
-        runDreamTask();
-        setInterval(runDreamTask, DREAM_INTERVAL);
-    }, 10 * 60 * 1000);
-}
-
-initDreamScheduler();
-
-// 监控服务：轻量检查每30分钟，完整检查每6小时
-// 只记录日志，异常时通过 notifyCallback 通知
-monitor.start((message) => {
-    console.log(`[Monitor通知] ${message}`);
-    // 后续可以加 Telegram 推送
+// Dream 整理定时任务：每6小时全量整理 + 每小时记忆提取 + 每日MongoDB备份
+dreamScheduler.start((message) => {
+    console.log(`[Dream通知] ${message}`);
 });
 
-app.listen(PORT, () => console.log(`🚀 服务已启动，端口 ${PORT}`));
+// 小金库：完成任务自动记账（功能开发2/次，debug 1.5/次，日常 1/次，按优先级浮动）
+console.log(`[GoldPot] 按任务记账模式已启用，当前余额: ${goldPot.getBalance()}`);
+
+// 监控服务
+monitor.start((message) => {
+    console.log(`[Monitor通知] ${message}`);
+});
+
+// 启动服务器
+const server = app.listen(PORT, () => {
+    console.log(`🚀 服务已启动，端口 ${PORT}`);
+    // 写入健康标记文件（用绝对路径，供系统cron检测）
+    const fs = require('fs');
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, '.alive'), JSON.stringify({
+        pid: process.pid,
+        port: PORT,
+        time: new Date().toISOString()
+    }));
+    console.log(`[Server] 健康标记已写入: ${path.join(dataDir, '.alive')} (PID: ${process.pid})`);
+});
+
+// 优雅退出
+process.on('SIGTERM', () => {
+    console.log('[Server] 收到SIGTERM，正在关闭...');
+    dreamScheduler.stop();
+    server.close(() => {
+        console.log('[Server] 已关闭');
+        process.exit(0);
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('[Server] 收到SIGINT，正在关闭...');
+    dreamScheduler.stop();
+    server.close(() => {
+        console.log('[Server] 已关闭');
+        process.exit(0);
+    });
+});

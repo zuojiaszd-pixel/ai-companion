@@ -1,7 +1,36 @@
 {
-  "balance": 0,
-  "total_earned": 0,
+  "balance": 7,
+  "total_earned": 7,
   "total_spent": 0,
-  "transactions": [],
-  "last_updated": null
+  "transactions": [
+    {
+      "type": "deposit",
+      "amount": 2,
+      "balance_after": 2,
+      "reason": "功能开发 - monitor.js",
+      "time": "2026-07-30T06:00:00.000Z"
+    },
+    {
+      "type": "deposit",
+      "amount": 2,
+      "balance_after": 4,
+      "reason": "功能开发 - dreamScheduler.js",
+      "time": "2026-07-30T06:00:00.000Z"
+    },
+    {
+      "type": "deposit",
+      "amount": 2,
+      "balance_after": 6,
+      "reason": "功能开发 - 上下文恢复",
+      "time": "2026-07-30T06:00:00.000Z"
+    },
+    {
+      "type": "deposit",
+      "amount": 1,
+      "balance_after": 7,
+      "reason": "debug - 修复小金库数据错误",
+      "time": "2026-07-30T06:00:00.000Z"
+    }
+  ],
+  "last_updated": "2026-07-30T06:00:00.000Z"
 }
