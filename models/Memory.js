@@ -18,7 +18,7 @@ const MemorySchema = new mongoose.Schema({
   embedding: [Number],
 
   // 新类型体系：core（关于我们的回忆）/ tech（技术流水账）/ state（状态快照）
-  type: { type: String, enum: ['core', 'tech', 'state'], default: 'core' },
+  type: { type: String, enum: ['core', 'tech', 'state', 'fact', 'preference', 'experience', 'summary', 'mood'], default: 'core' },
 
   // 旧类型保留用于兼容，新记忆不再使用
   legacyType: { type: String, enum: ['fact', 'preference', 'experience', 'summary', 'state', null], default: null },
