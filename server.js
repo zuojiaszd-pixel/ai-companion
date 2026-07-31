@@ -14,7 +14,14 @@ const daemon = require('./daemon');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'frontend')));
+app.use(express.static(path.join(__dirname, 'frontend'), {
+    // 禁用缓存：前端更新频繁，保证每次都能拿到最新版
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+    }
+}));
 
 // === Daemon API（先于鉴权，仅限本机访问） ===
 app.use('/api/daemon', require('./routes/daemon'));
