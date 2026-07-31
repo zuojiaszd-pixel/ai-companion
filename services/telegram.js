@@ -16,21 +16,6 @@ let isReady = false;
 const processedUpdates = new Set();
 const MAX_DEDUP_SIZE = 1000;
 
-function isDuplicate(updateId) {
-    if (updateId === undefined || updateId === null) return false;
-    if (processedUpdates.has(updateId)) {
-        console.log(`🔄 跳过重复消息 update_id=${updateId}`);
-        return true;
-    }
-    processedUpdates.add(updateId);
-    // 防止 Set 无限增长
-    if (processedUpdates.size > MAX_DEDUP_SIZE) {
-        const firstItem = processedUpdates.values().next().value;
-        processedUpdates.delete(firstItem);
-    }
-    return false;
-}
-
 function initBot() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
@@ -62,6 +47,46 @@ function initBot() {
     return bot;
 }
 
+function isDuplicate(updateId) {
+    if (updateId === undefined || updateId === null) return false;
+    if (processedUpdates.has(updateId)) {
+        console.log(`🔄 跳过重复消息 update_id=${updateId}`);
+        return true;
+    }
+    processedUpdates.add(updateId);
+    // 防止 Set 无限增长
+    if (processedUpdates.size > MAX_DEDUP_SIZE) {
+        const firstItem = processedUpdates.values().next().value;
+        processedUpdates.delete(firstItem);
+    }
+    return false;
+}
+
+// 安全地发送打字状态：失败只打日志，绝不中断消息处理
+async function safeChatAction(chatId, action = 'typing') {
+    if (!bot) return;
+    try {
+        await bot.sendChatAction(chatId, action);
+    } catch (err) {
+        console.log(`[TG] 发送${action}状态失败（忽略）: ${err.message}`);
+    }
+}
+
+// 从消息里提取媒体类型描述（表情包/语音/图片等）
+function extractMediaType(msg) {
+    if (!msg) return null;
+    if (msg.sticker) return '表情包';
+    if (msg.voice) return '语音消息';
+    if (msg.photo && msg.photo.length > 0) return '图片';
+    if (msg.animation) return '动图';
+    if (msg.video) return '视频';
+    if (msg.video_note) return '视频消息';
+    if (msg.audio) return '音频';
+    if (msg.document) return '文件';
+    if (msg.dice) return '骰子';
+    return null;
+}
+
 // 处理消息的核心逻辑
 async function handleMessage(msg) {
     const chatId = msg.chat.id;
@@ -74,19 +99,42 @@ async function handleMessage(msg) {
         return; // 直接忽略，不回复
     }
 
-    if (!text || text.startsWith('/')) {
-        if (text === '/start') {
+    // /start 命令单独处理
+    if (text === '/start') {
+        try {
             bot.sendMessage(chatId, '嗨~ 我是 Lumi 🌙\n你的夜晚的光，随时都在。');
+        } catch (err) {
+            console.error('[/start] 发送失败:', err.message);
         }
         return;
     }
 
-    // 显示打字状态
-    await bot.sendChatAction(chatId, 'typing');
+    // 普通命令忽略
+    if (text && text.startsWith('/')) return;
+
+    // 媒体消息（表情包/语音/图片等）：提取类型描述，走 AI 流程
+    let content = text;
+    let isMedia = false;
+    if (!content) {
+        const mediaType = extractMediaType(msg);
+        if (mediaType) {
+            content = `[${mediaType}]`;
+            isMedia = true;
+        } else {
+            // 既没文字也没媒体，忽略
+            console.log(`[TG] 忽略空消息 update_id=${msg.update_id}`);
+            return;
+        }
+    }
 
     try {
+        console.log(`[TG] 收到消息 from=${userId} type=${isMedia ? 'media' : 'text'} content="${content.slice(0, 50)}"`);
+
+        // 显示打字状态（安全版，失败不影响流程）
+        await safeChatAction(chatId, 'typing');
+
         // 存用户消息
-        await Chat.create({ role: 'user', content: text, sessionId: 'default' });
+        await Chat.create({ role: 'user', content: content, sessionId: 'default' });
 
         // 加载最近对话历史（最近20条）
         const history = await Chat.find({ sessionId: 'default' })
@@ -136,14 +184,14 @@ async function handleMessage(msg) {
         // 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId: 'default' });
 
-        // 异步自动提取记忆（不阻塞回复）
-        const allMessages = [
-            ...recentHistory.map(h => ({ role: h.role, content: h.content })),
-            { role: 'assistant', content: result.content }
-        ];
-        autoExtractMemories(allMessages).catch(e => {
-            console.error('[自动记忆] Telegram后台提取失败:', e.message);
-        });
+        // 自动记忆已停用（Rinka决定只保留人工选择的记忆，2026-07）
+        // const allMessages = [
+        //     ...recentHistory.map(h => ({ role: h.role, content: h.content })),
+        //     { role: 'assistant', content: result.content }
+        // ];
+        // autoExtractMemories(allMessages).catch(e => {
+        //     console.error('[自动记忆] Telegram后台提取失败:', e.message);
+        // });
 
         // 分条发送
         await sendMultiMessage(chatId, result.content);
@@ -151,7 +199,11 @@ async function handleMessage(msg) {
     } catch (err) {
         console.error('Telegram 消息处理失败:', err.message);
         console.error('错误堆栈:', err.stack);
-        bot.sendMessage(chatId, '呜...我好像走神了，能再说一遍吗？');
+        try {
+            await bot.sendMessage(chatId, '呜...我好像走神了，能再说一遍吗？');
+        } catch (sendErr) {
+            console.error('走神消息也发送失败:', sendErr.message);
+        }
     }
 }
 
@@ -170,8 +222,8 @@ async function sendMultiMessage(chatId, content) {
         
         // 第一条立即发，后续加打字延迟
         if (i > 0) {
-            // 显示打字状态
-            await bot.sendChatAction(chatId, 'typing');
+            // 显示打字状态（安全版）
+            await safeChatAction(chatId, 'typing');
             // 根据消息长度计算延迟时间（模拟打字）
             const delay = Math.min(Math.max(part.length * 80, 800), 3000);
             await sleep(delay);
@@ -194,6 +246,7 @@ function setupMessageHandler() {
 // Webhook 处理函数（供 Express 调用）
 function handleWebhook(req, res) {
     if (!bot) {
+        console.warn('[TG] Webhook 收到请求但 bot 未就绪');
         return res.sendStatus(503);
     }
     
@@ -202,8 +255,20 @@ function handleWebhook(req, res) {
     if (isDuplicate(updateId)) {
         return res.sendStatus(200); // 已处理过，直接返回200，不再重复处理
     }
+
+    // 记录收到的 update 摘要，方便排查丢消息
+    const body = req.body || {};
+    const m = body.message;
+    if (m) {
+        const preview = (m.text || extractMediaType(m) || '未知类型') + '';
+        console.log(`[TG] Webhook 收到 update=${updateId} from=${m.from?.id} preview="${preview.slice(0, 40)}"`);
+    }
     
-    bot.processUpdate(req.body);
+    try {
+        bot.processUpdate(req.body);
+    } catch (err) {
+        console.error('[TG] processUpdate 异常:', err.message);
+    }
     res.sendStatus(200);
 }
 

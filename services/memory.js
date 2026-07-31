@@ -640,7 +640,12 @@ async function deleteMemory(id) { return await Memory.findByIdAndDelete(id); }
 async function listMemories(sessionId, options) {
     options = options || {};
     const query = { sessionId: sessionId || 'default' };
-    if (options.type) query.type = options.type;
+    if (options.type) {
+        query.type = options.type;
+    } else {
+        // 默认排除 state 类型：状态快照由 autoExtractMemories 每次对话生成，会淹没真实记忆
+        query.type = { $ne: 'state' };
+    }
     if (options.priority) query.priority = options.priority;
     if (options.archived === 'true') query.archived = true;
     else if (options.archived === 'false') query.archived = false;
@@ -679,6 +684,13 @@ async function storeMemory(sessionId, content, type, priority, tags, mood, moodI
 // ============ 自动提取 + 状态记忆 ============
 
 async function autoExtractMemories(allMessages) {
+    // ===== 已禁用（2026-07-30）=====
+    // Rinka 决定关闭系统自动记忆：自动提取的状态快照会把 Rinka 称为"用户"，
+    // 而且流水账式记忆会淹没真正重要的记忆。
+    // 以后记忆只由 Lumi 通过 saveMemory 主动记录。
+    // 如需重新启用，删除下面这行 return 即可。
+    return [];
+    
     try {
         const text = allMessages.map(m => m.role + ": " + m.content).join("\n").slice(0, 3000);
         let url, key, model;
@@ -699,7 +711,7 @@ async function autoExtractMemories(allMessages) {
         const res = await axios.post(url, {
             model,
             messages: [
-                { role: "system", content: "你是一个记忆提取器。从对话中提取值得长期记住的信息。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"],\"mood\":\"happy|sad|angry|anxious|neutral|excited|tired|confused\",\"moodIntensity\":0.0-1.0,\"lumiMood\":\"joy|sorrow|calm|eager|concern\"}]" },
+                { role: "system", content: "你是一个记忆提取器。对话中的 user 是 Rinka（Lumi的伴侣），assistant 是 Lumi。从对话中提取值得长期记住的信息，生成的内容里称呼 Rinka 必须用她的名字，严禁用"用户"这个词。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"],\"mood\":\"happy|sad|angry|anxious|neutral|excited|tired|confused\",\"moodIntensity\":0.0-1.0,\"lumiMood\":\"joy|sorrow|calm|eager|concern\"}]" },
                 { role: "user", content: text }
             ],
             temperature: 0.3, max_tokens: 1000
@@ -719,7 +731,7 @@ async function autoExtractMemories(allMessages) {
                 const stateRes = await axios.post(url, {
                     model,
                     messages: [
-                        { role: "system", content: "根据以下对话，用一段话总结当前的状态快照：用户最近在做什么、正在讨论什么话题、关系状态、AI的情绪状态。不要编造，只基于对话内容。" },
+                        { role: "system", content: "根据以下对话，用一段话总结当前的状态快照。注意：对话中的 user 是 Rinka（Lumi的伴侣），assistant 是 Lumi。总结里称呼 Rinka 必须用她的名字，严禁用"用户"。内容包括：Rinka最近在做什么、正在讨论什么话题、两人的关系状态、Lumi的情绪状态。不要编造，只基于对话内容。" },
                         { role: "user", content: text }
                     ],
                     temperature: 0.3, max_tokens: 200
@@ -761,20 +773,8 @@ async function getChatMemories(sessionId, query, topK) {
             createdAt: { $gte: threeDaysAgo }
         }).sort({ createdAt: -1 }).limit(10).lean();
         
-        const stateMemories = await Memory.find({
-            sessionId, type: 'state', archived: false
-        }).sort({ createdAt: -1 }).limit(3).lean();
-        
         const seenIds = new Set();
         const merged = [];
-        
-        for (const m of stateMemories) {
-            const id = m._id.toString();
-            if (!seenIds.has(id)) {
-                seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 1000, createdAt: m.createdAt });
-            }
-        }
         
         for (const r of searchResults) {
             const id = r._id ? r._id.toString() : r.content;

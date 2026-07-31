@@ -48,11 +48,12 @@ async function runAutoExtract() {
     const batchSize = 20;
     let totalExtracted = 0;
 
-    for (let i = 0; i < messages.length; i += batchSize) {
-      const batch = messages.slice(i, i + batchSize);
-      await memoryService.autoExtractMemories(batch);
-      totalExtracted++;
-    }
+    // 自动记忆已停用（Rinka决定只保留人工选择的记忆，2026-07）
+    // for (let i = 0; i < messages.length; i += batchSize) {
+    //   const batch = messages.slice(i, i + batchSize);
+    //   await memoryService.autoExtractMemories(batch);
+    //   totalExtracted++;
+    // }
 
     return { extracted: totalExtracted, messages: messages.length };
   } catch (e) {

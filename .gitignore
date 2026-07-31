@@ -1,5 +1,28 @@
+# 依赖
 node_modules/
 .env
+
+# 运行时文件（daemon 持续写入，不入库）
+data/.alive
+data/dream_log.json
+data/push_queue/
+*.pid
+
+# 排查/调试脚本（用完即弃）
+check_*.js
+clean_*.js
+test_*.js
+fix_user_references.js
+daemon.js.bak-*
+chat.js.bak-*
+scripts/check_sessions.js
+scripts/fix_user_word.js
+scripts/list-memories.js
+scripts/save-context-memory.js.disabled
+
+# 日志
 *.log
+
+# 其他
 uploads/
 config/conversation_summary.json

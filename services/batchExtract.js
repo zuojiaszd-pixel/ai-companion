@@ -72,8 +72,8 @@ async function batchExtractMemories(batchSize = 10, sessionId = 'default') {
             return { processed: 0, message: '消息不足一轮对话' };
         }
         
-        // 调用自动提取
-        await autoExtractMemories(pairedMessages);
+        // 自动记忆已停用（Rinka决定只保留人工选择的记忆，2026-07）
+        // await autoExtractMemories(pairedMessages);
         
         // 更新检查点
         const lastMsg = newMessages[newMessages.length - 1];

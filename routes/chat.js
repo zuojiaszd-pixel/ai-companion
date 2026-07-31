@@ -423,15 +423,16 @@ router.post('/chat', async (req, res) => {
 
         // 11. 异步自动提取记忆
         const totalMessages = await Chat.countDocuments({ sessionId });
-        if (totalMessages % 5 === 0) {
-            const allMessages = [
-                ...recentHistory.map(h => ({ role: h.role, content: h.content })),
-                { role: 'assistant', content: result.content }
-            ];
-            autoExtractMemories(allMessages).catch(e => {
-                console.error('[自动记忆] 后台提取失败:', e.message);
-            });
-        }
+        // 自动记忆已停用（Rinka决定只保留人工选择的记忆，2026-07）
+        // if (totalMessages % 5 === 0) {
+        //     const allMessages = [
+        //         ...recentHistory.map(h => ({ role: h.role, content: h.content })),
+        //         { role: 'assistant', content: result.content }
+        //     ];
+        //     autoExtractMemories(allMessages).catch(e => {
+        //         console.error('[自动记忆] 后台提取失败:', e.message);
+        //     });
+        // }
 
         // 12. 返回
         res.json({
