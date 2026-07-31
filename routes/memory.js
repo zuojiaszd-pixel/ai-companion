@@ -102,8 +102,8 @@ router.post('/', async (req, res) => {
         const memory = await memoryService.saveMemory(
             sessionId || 'default',
             content,
-            // 新类型体系：默认 tech，核心回忆请用 core
-            type || 'tech',
+            // 新类型体系：默认 core（关于 Rinka 的回忆），tech 需主动指定
+            type || 'core',
             priority || 'normal',
             tags || [],
             mood || null,

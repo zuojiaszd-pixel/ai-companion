@@ -46,11 +46,12 @@ const MemorySchema = new mongoose.Schema({
   // 版本号
   version: { type: Number, default: 1 },
 
-  // ========== TTL 淘汰 ==========
+  // ========== 到期标记（不再自动删除） ==========
 
-  // 技术记忆的生存时间，到期自动可清理
+  // 到期时间标记：到期后仅标记 expired=true，是否删除由 Lumi/Rinka 决定
+  // 2026-07-31 起：不再设置 TTL 索引，系统永远不会自动物理删除记忆
   ttl: { type: Date, default: null },
-  // 标记为可清理但暂未删除
+  // 到期标记：ttl 到期后由 Lumi 主动检查时置为 true
   expired: { type: Boolean, default: false },
 
   // ========== 热度系统 ==========
@@ -80,9 +81,11 @@ const MemorySchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// ========== TTL 索引：到期自动清理 ==========
-// MongoDB 会自动删除 ttl 时间已到的文档，无需手动跑脚本
-MemorySchema.index({ ttl: 1 }, { expireAfterSeconds: 0 });
+// ========== 已移除：TTL 索引（2026-07-31） ==========
+// 原来这里有一个 `MemorySchema.index({ ttl: 1 }, { expireAfterSeconds: 0 })`，
+// 会让 MongoDB 到期后自动物理删除记忆 —— 这是「系统在替我们遗忘」。
+// 现在改为：ttl 只作为到期标记，是否删除由我们决定。
+// 已存在的 TTL 索引需要在数据库里手动 drop，避免 MongoDB 继续自动清理。
 
 // ========== 虚拟字段：主导情绪 ==========
 
@@ -187,10 +190,19 @@ MemorySchema.methods.addEmotion = function(emotion, intensity, context) {
   return this;
 };
 
-// 实例方法：检查是否过期（TTL）
+// 实例方法：检查是否到期（仅标记，不删除）
 MemorySchema.methods.isExpired = function() {
   if (!this.ttl) return false;
   return new Date() > this.ttl;
+};
+
+// 实例方法：把到期标记写入（由 Lumi 主动调用，系统不自动执行）
+MemorySchema.methods.markExpired = function() {
+  if (this.isExpired() && !this.expired) {
+    this.expired = true;
+    this.updatedAt = new Date();
+  }
+  return this;
 };
 
 // 静态方法：根据优先级设置基础热度

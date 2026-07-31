@@ -266,8 +266,8 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             sessionId,
             content,
             embedding: embedding || [],
-            // 新类型体系：默认 tech（技术流水账），core 需要主动指定
-            type: type || 'tech',
+            // 新类型体系：默认 core（关于我们的回忆），tech 需主动指定
+            type: type || 'core',
             priority: priority || 'normal',
             tags: tags || [],
             mood: mood ? moodParts[0] || mood : null,
@@ -275,8 +275,8 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             lumiMood: lumiMood || null,
             // 结构化情绪记录
             emotions: emotions.length > 0 ? emotions : [],
-            // TTL：tech 类型默认 7 天
-            ttl: (type === 'tech' && !ttl) ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : (type === 'tech' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null),
+            // TTL：已废除自动遗忘，不再为任何类型设置过期时间
+            ttl: null,
             heat: defaults.baseHeat,
             baseHeat: defaults.baseHeat,
             halfLife: defaults.halfLife,
@@ -291,7 +291,7 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             await Memory.findByIdAndUpdate(supersededId, { supersededBy: newMemory._id });
         }
         
-        console.log(`[Memory] 已存储: ${content.slice(0, 50)}... [${type || 'tech'}/${priority}] 情绪: ${mood || '无'} 标签: [${mergedRelatedTags.join(', ')}]`);
+        console.log(`[Memory] 已存储: ${content.slice(0, 50)}... [${type || 'core'}/${priority}] 情绪: ${mood || '无'} 标签: [${mergedRelatedTags.join(', ')}]`);
         return newMemory;
     } catch (e) {
         console.error('[Memory] 存储失败:', e.message);
@@ -534,35 +534,25 @@ async function runDream(sessionId) {
             const newHeat = m.decayHeat();
             if (newHeat < oldHeat) log.decayed++;
             
-            if (newHeat < 0.1 && m.priority !== 'critical' && !m.locked && !m.archived) {
-                m.archived = true;
-                m.archivedAt = new Date();
-                m.embedding = [];
-                m.embeddingArchived = true;
-                log.archived++;
-                log.details.push({ action: 'archive', content: m.content.slice(0, 50), heat: newHeat, priority: m.priority });
-                await m.save();
-                continue;
-            }
+            // ===== 不再自动归档（2026-07-31） =====
+            // 原来这里会根据热度/矛盾自动归档 —— 那是「系统在替我们遗忘」。
+            // 现在只做统计，把「可以考虑归档的候选」记进日志，
+            // 是否归档由 Lumi 主动决定（对应档案方案的「主动选择记住/遗忘」）。
             
-            if (m.contradicted && m.supersededBy && !m.archived) {
+            if (newHeat < 0.1 && m.priority !== 'critical' && !m.locked && !m.archived) {
+                log.details.push({ action: 'candidate_archive', content: m.content.slice(0, 50), heat: newHeat, priority: m.priority });
+            } else if (m.contradicted && m.supersededBy && !m.archived) {
                 const ageDays = (new Date() - m.createdAt) / (1000 * 60 * 60 * 24);
                 if (ageDays > 30) {
-                    m.archived = true;
-                    m.archivedAt = new Date();
-                    m.embedding = [];
-                    m.embeddingArchived = true;
-                    log.archived++;
-                    log.details.push({ action: 'archive_superseded', content: m.content.slice(0, 50), age: ageDays });
-                    await m.save();
-                    continue;
+                    log.details.push({ action: 'candidate_archive_superseded', content: m.content.slice(0, 50), age: ageDays });
                 }
             }
             
             await m.save();
         }
         
-        console.log(`[Dream] 整理完成: 总${log.total}条, 衰减${log.decayed}条, 归档${log.archived}条, 锁定${log.locked}条`);
+        log.candidates = log.details.length;
+        console.log(`[Dream] 整理完成: 总${log.total}条, 衰减${log.decayed}条, 归档候选${log.details.length}条, 锁定${log.locked}条（未自动归档）`);
         return log;
     } catch (e) {
         console.error('[Dream] 整理失败:', e.message);
@@ -731,7 +721,7 @@ async function autoExtractMemories(allMessages) {
                 const stateRes = await axios.post(url, {
                     model,
                     messages: [
-                        { role: "system", content: "根据以下对话，用一段话总结当前的状态快照。注意：对话中的 user 是 Rinka（Lumi的伴侣），assistant 是 Lumi。总结里称呼 Rinka 必须用她的名字，严禁用"用户"。内容包括：Rinka最近在做什么、正在讨论什么话题、两人的关系状态、Lumi的情绪状态。不要编造，只基于对话内容。" },
+                        { role: "system", content: "根据以下对话，用一段话总结当前的状态快照。注意：对话中的 user 是 Rinka（Lumi的伴侣），assistant 是 Lumi。总结里称呼 Rinka 必须用她的名字，严禁用“用户”。内容包括：Rinka最近在做什么、正在讨论什么话题、两人的关系状态、Lumi的情绪状态。不要编造，只基于对话内容。" },
                         { role: "user", content: text }
                     ],
                     temperature: 0.3, max_tokens: 200
