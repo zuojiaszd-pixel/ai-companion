@@ -416,6 +416,64 @@
 .login-card .login-error.show{display:block}
 @media(max-height:500px){.login-card{padding:20px 24px}.login-card .login-icon{font-size:32px;margin-bottom:8px}}
 
+
+/* ===== Left Menu ===== */
+#left-menu-btn{margin-right:2px;flex-shrink:0;background:transparent;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:6px 8px;border-radius:8px;transition:background .15s}
+#left-menu-btn:hover{background:var(--surface2);color:var(--text)}
+.left-menu{display:none;position:fixed;top:56px;left:8px;width:230px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:200;overflow:hidden;animation:fadeIn .15s ease-out}
+.left-menu.open{display:block}
+.left-menu .menu-section{padding:12px 16px;border-bottom:1px solid var(--border)}
+.left-menu .menu-section:last-child{border-bottom:none}
+.left-menu .menu-section-title{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}
+.left-menu .menu-item{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;color:var(--text);cursor:pointer;transition:color .15s;border:none;background:none;width:100%;text-align:left}
+.left-menu .menu-item:hover{color:var(--accent)}
+.left-menu .menu-item .mi-icon{font-size:15px}
+@media(max-width:600px){.left-menu{top:48px;left:4px;width:calc(100vw - 8px)}}
+/* ===== MCP Page ===== */
+#page-mcp{overflow-y:auto;padding:16px;flex:1}
+.mcp-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.mcp-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px}
+.mcp-sub{font-size:11px;color:var(--text3);display:block;margin-top:3px}
+.mcp-add-btn{padding:8px 14px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;flex-shrink:0}
+.mcp-add-btn:hover{opacity:.85}
+.mcp-global{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border-radius:12px;margin-bottom:14px;font-size:12px;color:var(--text2);flex-wrap:wrap}
+.mcp-global input{width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;outline:none}
+.mcp-global input:focus{border-color:var(--accent)}
+.mcp-global button{padding:5px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:12px;cursor:pointer}
+.mcp-global button:hover{opacity:.85}
+.mcp-global-hint{color:var(--text3);font-size:11px}
+.mcp-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px}
+.mcp-card.disabled{opacity:.55}
+.mcp-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.mcp-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mcp-status.on{background:#4cd964}
+.mcp-status.off{background:var(--text3)}
+.mcp-name{font-weight:600;font-size:14px}
+.mcp-badge{margin-left:auto;font-size:11px;color:var(--accent);background:var(--surface2);padding:2px 8px;border-radius:10px}
+.mcp-card-desc{font-size:12px;color:var(--text2);margin-bottom:4px}
+.mcp-card-url{font-size:11px;color:var(--text3);font-family:monospace;word-break:break-all;margin-bottom:10px}
+.mcp-card-actions{display:flex;gap:6px;flex-wrap:wrap}
+.mcp-card-actions button{padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:11px;cursor:pointer}
+.mcp-card-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.mcp-card-actions button.danger{color:#e74c3c}
+.mcp-card-actions button.danger:hover{border-color:#e74c3c;color:#e74c3c}
+.mcp-test-result{margin-top:8px;font-size:12px}
+.mcp-tools{margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.mcp-tool{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:8px;margin-bottom:6px;font-size:12px}
+.mcp-tool .t-name{font-family:monospace;font-weight:600;flex-shrink:0}
+.mcp-tool .t-desc{color:var(--text3);font-size:11px;flex:1}
+.mcp-form{background:var(--surface);border:1px solid var(--accent2);border-radius:14px;padding:16px;margin-bottom:14px}
+.mcp-form-title{font-size:14px;font-weight:600;margin-bottom:12px}
+.mcp-form label{display:block;font-size:12px;color:var(--text2);margin-bottom:10px}
+.mcp-form input,.mcp-form select,.mcp-form textarea{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:12px;margin-top:4px;outline:none;box-sizing:border-box;font-family:inherit}
+.mcp-form textarea{min-height:50px;font-family:monospace;resize:vertical}
+.mcp-form input:focus,.mcp-form textarea:focus,.mcp-form select:focus{border-color:var(--accent)}
+.mcp-form-actions{display:flex;gap:8px;margin-top:12px}
+.mcp-form-actions button{padding:7px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:12px;cursor:pointer}
+.mcp-form-actions button:hover{opacity:.85}
+.mcp-form-actions button.ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.mcp-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
+
 </style></head><body><div id="login-overlay" class="show">
 <div class="login-card">
 <div class="login-icon">🔐</div>
@@ -426,7 +484,30 @@
 <div class="login-error" id="login-error">密码错误</div>
 </div>
 </div>
-<header><div class="logo"><div class="icon">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleSessions()" id="sessions-btn" title="对话列表"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="deepseek-v4-flash" selected>DeepSeek V4 Flash (推荐)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="z-ai/glm-4.5-air">GLM-4.5-Air</option><option value="z-ai/glm-5.2">GLM-5.2</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option></select></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div></div><div id="page-calendar" class="page">
+<header><button class="btn-icon" id="left-menu-btn" onclick="toggleLeftMenu()" title="菜单">☰</button><div class="logo"><div class="icon">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleSessions()" id="sessions-btn" title="对话列表"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="left-menu" class="left-menu">
+<div class="menu-section">
+<div class="menu-section-title">菜单</div>
+<button class="menu-item" onclick="leftMenuGo('mcp')"><span class="mi-icon">🔌</span>MCP 管理</button>
+</div>
+</div><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="deepseek-v4-flash" selected>DeepSeek V4 Flash (推荐)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="z-ai/glm-4.5-air">GLM-4.5-Air</option><option value="z-ai/glm-5.2">GLM-5.2</option><option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 (通义千问)</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option></select></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div></div></div><div id="page-mcp" class="page">
+<div class="mcp-header">
+<div><div class="mcp-title">🔌 MCP 服务器</div><span class="mcp-sub">接入外部工具，让我能玩更多小游戏</span></div>
+<button class="mcp-add-btn" onclick="mcpShowForm()">＋ 新增服务器</button>
+</div>
+<div class="mcp-global"><span>全局超时</span><input type="number" id="mcp-global-timeout" min="1000" step="1000"><span>ms</span><button onclick="mcpSaveTimeout()">保存</button><span class="mcp-global-hint">新加的服务器默认用它</span></div>
+<div id="mcp-form" class="mcp-form" style="display:none">
+<div class="mcp-form-title" id="mcp-form-title">新增服务器</div>
+<label>名称<input id="mcp-f-name" placeholder="如: kelivo-games"></label>
+<label>描述<input id="mcp-f-desc" placeholder="这个服务器是干嘛的"></label>
+<label>类型<select id="mcp-f-type"><option value="http">HTTP</option><option value="sse">SSE</option></select></label>
+<label>URL<input id="mcp-f-url" placeholder="https://example.com/mcp"></label>
+<label>Headers (JSON)<textarea id="mcp-f-headers" placeholder="{&quot;Authorization&quot;:&quot;Bearer xxx&quot;}"></textarea></label>
+<label>超时 (ms)<input id="mcp-f-timeout" type="number" min="1000" step="1000" placeholder="留空用全局"></label>
+<div class="mcp-form-actions"><button onclick="mcpTestForm()">测试</button><button onclick="mcpSave()">保存</button><button class="ghost" onclick="mcpHideForm()">取消</button></div>
+<div id="mcp-form-result"></div>
+</div>
+<div id="mcp-list"><div class="mcp-empty">加载中…</div></div>
+</div><div id="page-calendar" class="page">
 <div class="cal-header">
 <button class="cal-nav-btn" onclick="calPrevMonth()">&#x2039;</button>
 <div class="cal-title" id="cal-title"></div>
@@ -1227,6 +1308,210 @@ if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
 if('serviceWorker'in navigator){navigator.serviceWorker.register('/service-worker.js').catch(function(){});}
 
 
+// === MCP Manager ===
+var mcpEditingName = null;
+function toggleLeftMenu() { document.getElementById('left-menu').classList.toggle('open'); }
+document.addEventListener('click', function (e) {
+    var m = document.getElementById('left-menu');
+    var b = document.getElementById('left-menu-btn');
+    if (m && m.classList.contains('open') && b && !m.contains(e.target) && !b.contains(e.target)) m.classList.remove('open');
+});
+function leftMenuGo(tab) {
+    document.getElementById('left-menu').classList.remove('open');
+    switchTab(tab);
+}
+function mcpQ(s) { return String(s == null ? '' : s).replace(/'/g, "\\'"); }
+function mcpEscape(s) { return escapeHtml(String(s == null ? '' : s)); }
+function mcpLoad() {
+    mcpHideForm();
+    var list = document.getElementById('mcp-list');
+    list.innerHTML = '<div class="mcp-empty">加载中…</div>';
+    fetch('/api/mcp').then(function (r) { return r.json(); }).then(function (servers) {
+        return fetch('/api/mcp/config').then(function (r) { return r.json(); }).then(function (cfg) {
+            return { servers: servers, cfg: cfg };
+        });
+    }).then(function (d) {
+        var t = document.getElementById('mcp-global-timeout');
+        if (t && d.cfg && d.cfg.globalTimeout) t.value = d.cfg.globalTimeout;
+        mcpRenderServers(d.servers);
+    }).catch(function (e) {
+        list.innerHTML = '<div class="mcp-empty">加载失败：' + mcpEscape(e.message) + '</div>';
+    });
+}
+function mcpRenderServers(servers) {
+    var html = '';
+    servers.forEach(function (s) {
+        var toolsId = 'mcp-tools-' + s.name;
+        var testId = 'mcp-test-' + s.name;
+        html += '<div class="mcp-card' + (s.enabled ? '' : ' disabled') + '">'
+            + '<div class="mcp-card-head"><span class="mcp-status ' + (s.enabled ? 'on' : 'off') + '"></span>'
+            + '<span class="mcp-name">' + mcpEscape(s.name) + '</span>'
+            + '<span class="mcp-badge">' + (s.toolCount || 0) + ' 个工具</span></div>'
+            + (s.description ? '<div class="mcp-card-desc">' + mcpEscape(s.description) + '</div>' : '')
+            + '<div class="mcp-card-url">' + mcpEscape(s.url) + '</div>'
+            + '<div class="mcp-card-actions">'
+            + '<button onclick="mcpTest(\'' + mcpQ(s.name) + '\')">测试</button>'
+            + '<button onclick="mcpViewTools(\'' + mcpQ(s.name) + '\')">工具</button>'
+            + '<button onclick="mcpEdit(\'' + mcpQ(s.name) + '\')">编辑</button>'
+            + '<button onclick="mcpToggle(\'' + mcpQ(s.name) + '\')">' + (s.enabled ? '停用' : '启用') + '</button>'
+            + '<button class="danger" onclick="mcpDelete(\'' + mcpQ(s.name) + '\')">删除</button>'
+            + '</div>'
+            + '<div class="mcp-test-result" id="' + testId + '"></div>'
+            + '<div class="mcp-tools" id="' + toolsId + '" style="display:none"></div>'
+            + '</div>';
+    });
+    document.getElementById('mcp-list').innerHTML = html || '<div class="mcp-empty">还没有 MCP 服务器，点右上角「新增服务器」加一个吧</div>';
+}
+function mcpShowForm() {
+    mcpEditingName = null;
+    document.getElementById('mcp-form-title').textContent = '新增服务器';
+    ['mcp-f-name', 'mcp-f-desc', 'mcp-f-url', 'mcp-f-headers', 'mcp-f-timeout'].forEach(function (id) { document.getElementById(id).value = ''; });
+    document.getElementById('mcp-f-type').value = 'http';
+    document.getElementById('mcp-form-result').innerHTML = '';
+    document.getElementById('mcp-form').style.display = 'block';
+}
+function mcpHideForm() {
+    document.getElementById('mcp-form').style.display = 'none';
+}
+function mcpEdit(name) {
+    fetch('/api/mcp').then(function (r) { return r.json(); }).then(function (servers) {
+        var s = null;
+        servers.forEach(function (x) { if (x.name === name) s = x; });
+        if (!s) { alert('找不到服务器: ' + name); return; }
+        mcpEditingName = name;
+        document.getElementById('mcp-form-title').textContent = '编辑服务器：' + name;
+        document.getElementById('mcp-f-name').value = s.name;
+        document.getElementById('mcp-f-desc').value = s.description || '';
+        document.getElementById('mcp-f-type').value = s.type || 'http';
+        document.getElementById('mcp-f-url').value = s.url || '';
+        document.getElementById('mcp-f-headers').value = s.headers ? JSON.stringify(s.headers, null, 2) : '';
+        document.getElementById('mcp-f-timeout').value = s.timeout || '';
+        document.getElementById('mcp-form-result').innerHTML = '';
+        document.getElementById('mcp-form').style.display = 'block';
+    }).catch(function (e) { alert('加载失败: ' + e.message); });
+}
+
+
+function mcpFormData() {
+    var headers = {};
+    var h = document.getElementById('mcp-f-headers').value.trim();
+    if (h) {
+        try { headers = JSON.parse(h); } catch (e) { throw new Error('Headers 不是合法的 JSON'); }
+    }
+    var data = {
+        name: document.getElementById('mcp-f-name').value.trim(),
+        description: document.getElementById('mcp-f-desc').value.trim(),
+        type: document.getElementById('mcp-f-type').value,
+        url: document.getElementById('mcp-f-url').value.trim(),
+        headers: headers,
+        enabled: true
+    };
+    var to = document.getElementById('mcp-f-timeout').value.trim();
+    if (to) data.timeout = parseInt(to, 10);
+    if (!data.name) throw new Error('名称不能为空');
+    if (!data.url) throw new Error('URL 不能为空');
+    return data;
+}
+function mcpSave() {
+    var data;
+    try { data = mcpFormData(); } catch (e) { alert(e.message); return; }
+    var method = mcpEditingName ? 'PUT' : 'POST';
+    var url = mcpEditingName ? '/api/mcp/' + encodeURIComponent(mcpEditingName) : '/api/mcp';
+    fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.error) throw new Error(res.error);
+            mcpHideForm();
+            mcpLoad();
+        })
+        .catch(function (e) { alert('保存失败: ' + e.message); });
+}
+function mcpDelete(name) {
+    if (!confirm('确定删除 MCP 服务器「' + name + '」？')) return;
+    fetch('/api/mcp/' + encodeURIComponent(name), { method: 'DELETE' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.error) throw new Error(res.error);
+            mcpLoad();
+        })
+        .catch(function (e) { alert('删除失败: ' + e.message); });
+}
+function mcpToggle(name) {
+    fetch('/api/mcp').then(function (r) { return r.json(); }).then(function (servers) {
+        var s = servers.find(function (x) { return x.name === name; });
+        if (!s) return;
+        s.enabled = !s.enabled;
+        return fetch('/api/mcp/' + encodeURIComponent(name), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(s) });
+    }).then(function (r) { if (r) return r.json(); }).then(function (res) {
+        if (res && res.error) throw new Error(res.error);
+        mcpLoad();
+    }).catch(function (e) { alert('操作失败: ' + e.message); });
+}
+function mcpTest(name) {
+    var el = document.getElementById('mcp-test-' + name);
+    if (!el) return;
+    el.innerHTML = '<span style="color:var(--text3)">测试中…</span>';
+    fetch('/api/mcp/' + encodeURIComponent(name) + '/test', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.ok) {
+                el.innerHTML = '<span style="color:#4cd964">✓ 连接成功，' + (res.tools ? res.tools.length : 0) + ' 个工具</span>';
+            } else {
+                el.innerHTML = '<span style="color:#e74c3c">✗ ' + mcpEscape(res.error || '连接失败') + '</span>';
+            }
+        })
+        .catch(function (e) { el.innerHTML = '<span style="color:#e74c3c">✗ ' + mcpEscape(e.message) + '</span>'; });
+}
+function mcpTestForm() {
+    var data, name;
+    try {
+        data = mcpFormData();
+        name = mcpEditingName || data.name;
+    } catch (e) { document.getElementById('mcp-form-result').innerHTML = '<span style="color:#e74c3c">' + mcpEscape(e.message) + '</span>'; return; }
+    document.getElementById('mcp-form-result').innerHTML = '<span style="color:var(--text3)">测试中…</span>';
+    fetch('/api/mcp/' + encodeURIComponent(name) + '/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.ok) {
+                document.getElementById('mcp-form-result').innerHTML = '<span style="color:#4cd964">✓ 连接成功，' + (res.tools ? res.tools.length : 0) + ' 个工具</span>';
+            } else {
+                document.getElementById('mcp-form-result').innerHTML = '<span style="color:#e74c3c">✗ ' + mcpEscape(res.error || '连接失败') + '</span>';
+            }
+        })
+        .catch(function (e) { document.getElementById('mcp-form-result').innerHTML = '<span style="color:#e74c3c">✗ ' + mcpEscape(e.message) + '</span>'; });
+}
+function mcpViewTools(name) {
+    var el = document.getElementById('mcp-tools-' + name);
+    if (!el) return;
+    if (el.style.display === 'none') {
+        el.innerHTML = '<div class="mcp-empty" style="padding:10px">加载中…</div>';
+        el.style.display = 'block';
+        fetch('/api/mcp/' + encodeURIComponent(name) + '/tools').then(function (r) { return r.json(); }).then(function (tools) {
+            if (tools.error) throw new Error(tools.error);
+            if (!tools.length) { el.innerHTML = '<div class="mcp-empty" style="padding:10px">没有可用工具</div>'; return; }
+            var h = '';
+            tools.forEach(function (t) {
+                h += '<div class="mcp-tool"><span class="t-name">' + mcpEscape(t.name) + '</span><span class="t-desc">' + mcpEscape(t.description || '') + '</span></div>';
+            });
+            el.innerHTML = h;
+        }).catch(function (e) { el.innerHTML = '<div class="mcp-empty" style="padding:10px;color:#e74c3c">加载失败: ' + mcpEscape(e.message) + '</div>'; });
+    } else {
+        el.style.display = 'none';
+    }
+}
+function mcpSaveTimeout() {
+    var t = document.getElementById('mcp-global-timeout').value.trim();
+    if (!t) { alert('请输入超时时间'); return; }
+    var v = parseInt(t, 10);
+    if (isNaN(v) || v < 1000) { alert('超时至少 1000ms'); return; }
+    fetch('/api/mcp/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ globalTimeout: v }) })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.error) throw new Error(res.error);
+            alert('已保存，全局超时: ' + v + 'ms');
+        })
+        .catch(function (e) { alert('保存失败: ' + e.message); });
+}
 // === Tab Switching ===
 var currentTab = 'chat';
 function switchTab(tab) {
@@ -1249,6 +1534,9 @@ function switchTab(tab) {
     }
     if (tab === 'journal') {
         journalLoad();
+    }
+    if (tab === 'mcp') {
+        mcpLoad();
     }
 }
 

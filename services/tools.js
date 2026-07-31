@@ -3,9 +3,10 @@ const util = require('util');
 const execPromise = util.promisify(exec);
 const path = require('path');
 const fs = require('fs');
+const mcpManager = require('./mcpManager');
 
-// Tool definitions for OpenRouter function calling
-const toolDefinitions = [
+// 静态工具定义（Lumi原生能力）
+const staticToolDefinitions = [
     {
         type: "function",
         function: {
@@ -86,6 +87,9 @@ const toolDefinitions = [
     }
 ];
 
+// 动态工具容器：toolDefinitions 是同一个数组引用，push/清空实时生效
+const toolDefinitions = [...staticToolDefinitions];
+
 // 旧类型 → 新体系映射（fact/preference/experience 属于关于我们的回忆 → core；summary 是流水账 → tech）
 const LEGACY_TYPE_MAP = {
     fact: 'core',
@@ -94,9 +98,44 @@ const LEGACY_TYPE_MAP = {
     summary: 'tech'
 };
 
+/**
+ * 刷新MCP工具注册（保留静态工具，替换所有mcp_前缀工具）
+ * 供 MCP 配置变更后调用
+ */
+async function refreshMcpTools() {
+    const mcpTools = await mcpManager.buildAllTools();
+    // 清掉旧的 mcp_ 工具，保留静态工具
+    toolDefinitions.length = staticToolDefinitions.length;
+    toolDefinitions.push(...mcpTools);
+    return mcpTools;
+}
+
+// 模块加载后延迟初始化MCP工具（等mcpManager配置就绪）
+setTimeout(() => {
+    refreshMcpTools().then(tools => {
+        console.log(`[Tools] MCP工具初始化完成，当前共 ${toolDefinitions.length} 个工具（含 ${tools.length} 个MCP）`);
+    }).catch(e => {
+        console.error('[Tools] MCP工具初始化失败:', e.message);
+    });
+}, 100);
+
 // Tool handlers - execute each tool and return result
 async function executeTool(name, args) {
     try {
+        // MCP动态工具：mcp_<服务器名>_<工具名>
+        if (name.startsWith('mcp_')) {
+            const toolCache = mcpManager.getToolCache();
+            // 遍历所有服务器，找匹配的前缀
+            for (const serverName of Object.keys(toolCache)) {
+                const prefix = `mcp_${serverName}_`;
+                if (name.startsWith(prefix)) {
+                    const toolName = name.slice(prefix.length);
+                    return await mcpManager.callTool(serverName, toolName, args || {});
+                }
+            }
+            return `未知的MCP工具: ${name}（请检查MCP服务器是否已连接）`;
+        }
+
         switch (name) {
             case 'save_memory': {
                 const { storeMemory } = require('./memory');
@@ -145,7 +184,7 @@ async function executeTool(name, args) {
             }
             case 'push_to_github': {
                 const token = process.env.GITHUB_TOKEN;
-                if (!token) return '错误: 未设置 GITHUB_TOKEN 环境变量。请在 Render 设置中添加 GitHub Personal Access Token。';
+                if (!token) return '错误: 未设置 GITHUB_TOKEN 环境变量。请在部署环境设置 GitHub Personal Access Token。';
                 const { stdout: remoteUrl } = await execPromise('git remote get-url origin', { timeout: 5000 }).catch(() => ({ stdout: 'origin https://github.com/zuojiaszd-pixel/ai-companion.git' }));
                 const urlWithToken = remoteUrl.trim().replace('https://', 'https://x-access-token:' + token + '@');
                 await execPromise('git remote set-url origin "' + urlWithToken + '"', { timeout: 5000 });
@@ -154,7 +193,7 @@ async function executeTool(name, args) {
                 const { stdout: commitResult } = await execPromise('git commit -m "' + safeMsg + '"', { timeout: 10000 }).catch(e => ({ stdout: e.stdout || '(无新提交)' }));
                 const { stdout: pushResult } = await execPromise('git push', { timeout: 30000 });
                 await execPromise('git remote set-url origin "' + remoteUrl.trim() + '"', { timeout: 5000 });
-                return '提交结果: ' + commitResult + '\\n推送结果: ' + pushResult;
+                return '提交结果: ' + commitResult + '\n推送结果: ' + pushResult;
             }
             case 'set_status': {
                 const statusFile = path.join(__dirname, '..', 'config', 'status.json');
@@ -172,4 +211,4 @@ async function executeTool(name, args) {
     }
 }
 
-module.exports = { toolDefinitions, executeTool };
+module.exports = { toolDefinitions, executeTool, refreshMcpTools, staticToolDefinitions };
