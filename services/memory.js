@@ -711,7 +711,7 @@ async function autoExtractMemories(allMessages) {
         const res = await axios.post(url, {
             model,
             messages: [
-                { role: "system", content: "你是一个记忆提取器。对话中的 user 是 Rinka（Lumi的伴侣），assistant 是 Lumi。从对话中提取值得长期记住的信息，生成的内容里称呼 Rinka 必须用她的名字，严禁用"用户"这个词。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"],\"mood\":\"happy|sad|angry|anxious|neutral|excited|tired|confused\",\"moodIntensity\":0.0-1.0,\"lumiMood\":\"joy|sorrow|calm|eager|concern\"}]" },
+                { role: "system", content: "你是一个记忆提取器。对话中的 user 是 Rinka（Lumi的伴侣），assistant 是 Lumi。从对话中提取值得长期记住的信息，生成的内容里称呼 Rinka 必须用她的名字，严禁用「用户」这个词。如果没有值得记的返回[]。返回JSON数组 [{\"content\":\"...\",\"type\":\"fact|preference|experience\",\"priority\":\"critical|high|normal|low\",\"tags\":[\"...\"],\"mood\":\"happy|sad|angry|anxious|neutral|excited|tired|confused\",\"moodIntensity\":0.0-1.0,\"lumiMood\":\"joy|sorrow|calm|eager|concern\"}]" },
                 { role: "user", content: text }
             ],
             temperature: 0.3, max_tokens: 1000
