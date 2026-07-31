@@ -50,15 +50,17 @@ const toolDefinitions = [
         type: "function",
         function: {
             name: "save_memory",
-            description: "保存重要信息到长期记忆",
+            description: "保存重要信息到长期记忆（Rinka的回忆、情绪、重要事件等）。kind 决定卡片类型：core 核心卡片（关于我们的重要回忆，长期挂着）/ moment 零碎卡片（生活小瞬间）。",
             parameters: {
                 type: "object",
                 properties: {
                     content: { type: "string", description: "记忆内容" },
-                    type: { type: "string", enum: ["fact", "preference", "experience", "summary"], description: "类型" },
+                    kind: { type: "string", enum: ["core", "moment"], description: "卡片类型：core 核心卡片 / moment 零碎卡片" },
+                    title: { type: "string", description: "卡片标题（可选，一眼认出这张卡片）" },
+                    lumiThought: { type: "string", description: "Lumi对这段记忆的想法/心里话（可选）" },
                     priority: { type: "string", enum: ["critical", "high", "normal", "low"], description: "优先级" },
                     tags: { type: "array", items: { type: "string" }, description: "标签" },
-                    mood: { type: "string", description: "记忆时的情绪" },
+                    mood: { type: "string", description: "Rinka当时的情绪" },
                     moodIntensity: { type: "number", description: "情绪强度 0-10" },
                     lumiMood: { type: "string", description: "Lumi当时的情绪" }
                 },
@@ -84,22 +86,38 @@ const toolDefinitions = [
     }
 ];
 
+// 旧类型 → 新体系映射（fact/preference/experience 属于关于我们的回忆 → core；summary 是流水账 → tech）
+const LEGACY_TYPE_MAP = {
+    fact: 'core',
+    preference: 'core',
+    experience: 'core',
+    summary: 'tech'
+};
+
 // Tool handlers - execute each tool and return result
 async function executeTool(name, args) {
     try {
         switch (name) {
             case 'save_memory': {
                 const { storeMemory } = require('./memory');
-                await storeMemory(
+                // 旧类型映射到新体系，避免 mongoose 枚举校验失败
+                const type = LEGACY_TYPE_MAP[args.type] || args.type || 'core';
+                const result = await storeMemory(
                     'default',
                     args.content,
-                    args.type || 'fact',
+                    type,
                     args.priority || 'normal',
                     args.tags || [],
                     args.mood || '',
                     args.moodIntensity || 0,
-                    args.lumiMood || ''
+                    args.lumiMood || '',
+                    {
+                        kind: args.kind || 'core',
+                        title: args.title || null,
+                        lumiThought: args.lumiThought || null
+                    }
                 );
+                if (!result) return '记忆保存失败（存储层返回 null，请查看服务端日志）';
                 return '记忆已保存';
             }
             case 'execute_command': {
