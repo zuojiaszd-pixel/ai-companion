@@ -18,15 +18,18 @@
 - AI调用封装在 `services/ai.js`
 
 ## 前端 (frontend/)
-- `index.html` — 所有前端代码都在这一个文件里（聊天UI、设置面板、记忆管理页）
-- `index.html.bak` / `index.html.bak2` — 备份
+- `index.html`（1907行）— 所有前端代码都在这一个文件里（聊天UI、设置面板、记忆管理页、**日记页**）
+  - 原"足迹"页已改造为"日记"页（journal）：展示LumiJournal + 手动写日记入口
+- `index.html.bak` / `index.html.bak2` — 早期备份
+- `index.html.bak-journal` — 日记页改造前的备份
 - `icon.svg` — 图标
 - `manifest.json` — PWA配置
 - `service-worker.js` — Service Worker
 
 ## 后端路由 (routes/) — Express Router
-### `chat.js`（541行）— 主聊天逻辑【核心】
+### `chat.js`（548行）— 主聊天逻辑【核心】
 - `POST /chat`（273行）— 主聊天入口：记忆注入 → 调DeepSeek → 工具调用 → 情绪分析 → LumiJournal自动写入 → 摘要异步更新
+  - LumiJournal写入逻辑（约395行）：`extractEmotionalCore(_lumiReply)` 提取情感核心 → 拼Rinka情绪 → **无情绪内容则跳过写入**（不再fallback到第一句，避免技术碎片进日记）
 - `GET /status`（34行）/ `POST /status`（39行）— 状态栏读写
 - `GET /memories`（458行）/ `DELETE /memories`（466行）— 记忆查询/清空
 - `GET /history`（475行）— 聊天历史
@@ -35,6 +38,7 @@
 - `DELETE /memories/:id`（525行）— 删除单条记忆
 - `GET /debug/env`（532行）— 调试用环境变量
 - 依赖：`services/ai.js`（chat, STATIC_SYSTEM_PROMPT）、`services/memory.js`（searchMemories, storeMemory, autoExtractMemories, getChatMemories, saveMemory）、`services/summary.js`、models: Chat/Memory/Avatar/LumiJournal
+- 备份：`chat.js.bak` / `chat.js.bak-phase4` / `chat.js.bak-journal-fix`
 
 ### `memory.js`（210行）— 记忆系统API路由
 - `GET /`（6行）— 记忆列表（分页、按type/priority/heat排序）
@@ -76,8 +80,9 @@
 ### `calendar.js` — 日历
 - `GET /`（6行）/ `POST /`（22行）/ `DELETE /:id`（32行）
 
-### `footprint.js` — 足迹
+### `footprint.js` — 足迹（旧）
 - `GET /`（6行）/ `POST /`（14行）/ `DELETE /:id`（24行）
+- **注意**：前端足迹页已被日记页取代，此路由保留但前端已不调用。数据迁移见 `scripts/replace_footprint_to_journal.py`
 
 ### `daemon.js` — 守护进程HTTP接口
 - `GET /recent-chat`（28行）— 最近聊天
@@ -98,7 +103,7 @@
 - `loadSettings` / `saveSettings` — 设置读写
 - 备份：`ai.js.bak` / `ai.js.bak2`
 
-### `memory.js`（831行）— 记忆系统核心逻辑【核心】
+### `memory.js`（843行）— 记忆系统核心逻辑【核心】
 **函数清单（按行号）：**
 - `getEmbedding(text)`（8行）— 文本向量化（调embedding API）
 - `cosineSim(a, b)`（21行）— 余弦相似度
@@ -146,7 +151,7 @@
 - `Finance.js` — 小金库账单
 - `Task.js` — 任务
 - `Calendar.js` — 日历
-- `Footprint.js` — 足迹
+- `Footprint.js` — 足迹（前端已不用，保留模型兼容旧数据）
 - `Avatar.js` — 头像
 - `db.js` — 数据库连接
 - `core_memory.json` — 核心记忆持久化
@@ -159,7 +164,8 @@
 - `conversation_summary.json` — 对话摘要持久化
 
 ## 核心脚本 (scripts/)
-- `save-context-memory.js` — 聊天后保存当前上下文到长期记忆
+- `replace_footprint_to_journal.py` — 足迹→日记数据迁移（已执行，历史碎片已清空）
+- `save-context-memory.js` — 聊天后保存当前上下文到长期记忆（已禁用：save-context-memory.js.disabled）
 - `cleanup-ttl.js` — TTL清理（删过期技术记忆）
 - `cleanup-atlas.js` — Atlas清理
 - `check_db.js` — 数据库检查
@@ -238,6 +244,7 @@
 - [x] 情绪轨迹注入聊天（moodTrajectory）
 
 ## 踩坑记录（重要！）
-- **memory.js 曾被截断**：git提交6c08760时文件尾部损坏（377行，最后一行停在`return { _id: entry.item.memory`），已用旧版+新功能合并修复为831行完整版。教训：提交前检查文件完整性。
+- **journal碎片问题（2026-07-31修复）**：extractEmotionalCore 在回复没有情绪词时会 fallback 到第一句话，导致"端口是 10000""JS 函数都在"这种技术碎片被写进LumiJournal。已修复为无情绪内容跳过写入（routes/chat.js 约402行），并用 scripts/replace_footprint_to_journal.py 清空历史碎片。
+- **memory.js 曾被截断**：git提交6c08760时文件尾部损坏（377行，最后一行停在`return { _id: entry.item.memory`），已用旧版+新功能合并修复为831行完整版（现843行）。教训：提交前检查文件完整性。
 - **部署环境曾误记**：旧版codemap写的是Render，实际是腾讯云VPS，已更正。
 - **模型切换失忆**：换模型会丢上下文，靠 persona.js 的【模型切换注意】指令 + core_memory.json 兜底恢复。
