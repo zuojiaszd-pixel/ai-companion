@@ -181,30 +181,21 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
                 m.lastAccessed = new Date();
                 m.heat = Math.max(m.heat, m.baseHeat) * 1.2;
                 
-                // 智能融合：内容不完全相同且有新信息时合并
+                // ====== Phase 3 精简版：融合不再硬拼接 content ======
+                // 主内容保持精炼正文不膨胀，新信息追加为 timeline 事件（完整内容，不丢信息）
+                // version 由 addTimelineEvent 自动递增；relatedTags 由下方公共代码合并
                 if (content !== m.content) {
                     const newTokens = new Set(tokenize(content));
                     const existingTokens = new Set(tokenize(m.content));
                     const extraTokens = [...newTokens].filter(t => !existingTokens.has(t));
                     const extraRatio = extraTokens.length / Math.max(newTokens.size, 1);
                     
-                    if (extraRatio > 0.1 && (m.content.length + content.length < 500)) {
-                        // 融合前记录时间线事件
+                    if (extraRatio > 0.1) {
                         const now = new Date();
                         const dateStr = now.toISOString().split('T')[0];
-                        const eventDesc = content.length > 30 ? content.slice(0, 30) + '…' : content;
-                        m.addTimelineEvent(dateStr, eventDesc);
+                        m.addTimelineEvent(dateStr, content);
                         
-                        m.content = m.content + ' | ' + content;
-                        
-                        // 融合后重新生成 embedding（确保检索准确）
-                        try {
-                            m.embedding = await getEmbedding(m.content);
-                        } catch (embErr) {
-                            console.error('[Memory] 融合后 embedding 生成失败:', embErr.message);
-                        }
-                        
-                        console.log(`[Memory] 融合: ${extraTokens.length}个信息点, 新版本 v${m.version}`);
+                        console.log(`[Memory] 融合(Phase 3): ${extraTokens.length}个信息点追加为时间线, 主内容未膨胀, v${m.version}`);
                     }
                 }
                 
