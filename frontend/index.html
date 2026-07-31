@@ -177,6 +177,15 @@
 @media(max-width:600px){#page-memory{padding:10px}.mem-header .mem-title{font-size:16px}.mem-item{padding:10px 12px}.mem-item .mem-content{font-size:12px}}
 
 
+/* 档案卡片（Phase 2） */
+.mem-item.mem-card{position:relative}
+.mem-item .mem-kind-badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.5px;margin-right:4px}
+.mem-item .mem-kind-badge.core{background:rgba(245,160,184,.18);color:var(--accent)}
+.mem-item .mem-kind-badge.moment{background:rgba(155,89,182,.15);color:#9b59b6}
+.mem-item .mem-card-title{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;margin:2px 0 4px}
+.mem-item .mem-thought{font-size:12px;line-height:1.6;color:var(--text2);background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:8px 12px;margin-top:8px}
+.mem-item .mem-thought .mem-thought-label{font-size:10px;color:var(--accent);font-weight:600;letter-spacing:1px;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+
 /* Memory heat bar */
 .mem-item .mem-heat-row{display:flex;align-items:center;gap:6px;margin-top:6px}
 .mem-item .mem-heat-label{font-size:10px;color:var(--text3);white-space:nowrap}
@@ -421,9 +430,8 @@
 <div class="mem-stats-bar" id="mem-stats-bar"></div>
 <div class="mem-filter">
 <button class="mem-filter-btn active" onclick="memFilter('all',this)">全部</button>
-<button class="mem-filter-btn" onclick="memFilter('core',this)">核心</button>
-<button class="mem-filter-btn" onclick="memFilter('tech',this)">技术</button>
-<button class="mem-filter-btn" onclick="memFilter('state',this)">状态</button>
+<button class="mem-filter-btn" onclick="memFilter('core',this)">✨ 核心卡片</button>
+<button class="mem-filter-btn" onclick="memFilter('moment',this)">🌙 零碎卡片</button>
 </div>
 <div class="mem-sort-row">
 <span style="font-size:11px;color:var(--text3)">排序</span>
@@ -1364,12 +1372,10 @@ async function memLoadStats() {
         var bar = document.getElementById('mem-stats-bar');
         if (!bar) return;
         var cards = [
-            {val: s.total, label: '总记忆'},
-            {val: s.locked, label: '已锁定'},
-            {val: s.contradicted, label: '已取代'},
-            {val: s.byType.core||0, label: '核心'},
-            {val: s.byType.tech||0, label: '技术'},
-            {val: s.byType.state||0, label: '状态'}
+            {val: s.total, label: '总卡片'},
+            {val: (s.byKind && s.byKind.core)||0, label: '✨ 核心'},
+            {val: (s.byKind && s.byKind.moment)||0, label: '🌙 零碎'},
+            {val: s.locked, label: '🔒 锁定'}
         ];
         bar.innerHTML = cards.map(function(c){
             return '<div class="mem-stat-card"><div class="stat-val">'+c.val+'</div><div class="stat-label">'+c.label+'</div></div>';
@@ -1384,46 +1390,27 @@ function memFilter(type, btn) {
     memRender();
 }
 
-function memHeatColor(heat, baseHeat) {
-    var ratio = heat / (baseHeat || 1);
-    if (ratio > 0.7) return '#e74c3c';
-    if (ratio > 0.4) return '#f39c12';
-    if (ratio > 0.15) return '#2ecc71';
-    return '#95a5a6';
-}
-
 function memRender() {
     var list = document.getElementById('mem-page-list');
-    var filtered = memCurrentFilter === 'all' ? memAllData : memAllData.filter(function(m){return m.type === memCurrentFilter;});
+    var filtered = memCurrentFilter === 'all' ? memAllData : memAllData.filter(function(m){return (m.kind || 'core') === memCurrentFilter;});
     document.getElementById('mem-count').textContent = filtered.length + ' 条';
     if (!filtered.length) {
         list.innerHTML = '<div class="mem-empty">暂无记忆</div>';
         return;
     }
+    var kindLabels = {core: '核心卡片', moment: '零碎卡片'};
     var typeLabels = {core: '核心', tech: '技术', state: '状态'};
     var priorityLabels = {critical:'核心', high:'重要', normal:'普通', low:'琐碎'};
     list.innerHTML = filtered.map(function(m) {
-        var type = m.type || 'fact';
+        var kind = m.kind || 'core';
+        var kindLabel = kindLabels[kind] || kind;
+        var type = m.type || 'core';
         var typeLabel = typeLabels[type] || type;
         var mood = m.mood || '';
-        var moodIntensity = m.moodIntensity || 0;
-        var version = m.version || '';
-        var lumiMood = m.lumiMood || '';
         var priority = m.priority || 'normal';
         var priorityLabel = priorityLabels[priority] || priority;
-        var time = new Date(m.createdAt || m.timestamp).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        var time = new Date(m.createdAt || m.timestamp).toLocaleString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
         var tags = (m.tags || []).map(function(t){return '<span class="mem-tag">'+escapeHtml(t)+'</span>';}).join('');
-        
-        // Heat bar
-        var heat = m.heat != null ? m.heat : 1.0;
-        var baseHeat = m.baseHeat != null ? m.baseHeat : 1.0;
-        var heatPct = Math.min(100, Math.max(2, (heat / (baseHeat || 1)) * 100));
-        var heatColor = memHeatColor(heat, baseHeat);
-        var heatBar = '<div class="mem-heat-row">' +
-            '<span class="mem-heat-label">🔥</span>' +
-            '<div class="mem-heat-bar"><div class="mem-heat-fill" style="width:'+heatPct+'%;background:'+heatColor+'"></div></div>' +
-            '<span class="mem-heat-value">'+heat.toFixed(2)+'</span>' +
-            '</div>';
         
         // Lock button
         var locked = m.locked ? ' locked' : '';
@@ -1433,20 +1420,25 @@ function memRender() {
         
         // Priority badge
         var priorityBadge = '<span class="mem-priority-badge '+priority+'">'+priorityLabel+'</span>';
+        var moodBadge = mood ? '<span class="mem-mood-badge '+mood+'">'+mood+'</span>' : '';
         
-        // Access info
-        var accessCount = m.accessCount || 0;
-        var lastAcc = m.lastAccessed ? new Date(m.lastAccessed).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
-        var accessInfo = '<div class="mem-access-info"><span>访问 '+accessCount+' 次</span><span>最后: '+lastAcc+'</span>'+(lumiMood?'<span>Lumi: '+lumiMood+'</span>':'')+'</div>';
+        // 档案卡片：标题、想法（Phase 2）
+        var titleHtml = m.title ? '<div class="mem-card-title">'+escapeHtml(m.title)+'</div>' : '';
+        var thoughtHtml = m.lumiThought ? '<div class="mem-thought"><div class="mem-thought-label">💭 我的想法</div><div>'+escapeHtml(m.lumiThought)+'</div></div>' : '';
         
-        return '<div class="mem-item">' +
+        var kindIcon = kind === 'core' ? '✨' : '🌙';
+        
+        return '<div class="mem-item mem-card">' +
             '<div class="mem-item-header">' +
-            '<div><span class="mem-type '+type+'">'+typeLabel+'</span>'+priorityBadge+lockedBadge+(mood?'<span class="mem-mood-badge '+mood+'">'+mood+'</span>':'')+(version?'<span class="mem-version">v'+version+'</span>':'')+'</div>' +
+            '<div>' +
+            '<span class="mem-kind-badge '+kind+'">'+kindIcon+' '+kindLabel+'</span>' +
+            '<span class="mem-type '+type+'">'+typeLabel+'</span>' + priorityBadge + lockedBadge + moodBadge +
+            '</div>' +
             '<span class="mem-time">'+time+'</span>' +
             '</div>' +
+            titleHtml +
             '<div class="mem-content">'+escapeHtml(m.content||'')+'</div>' +
-            heatBar +
-            accessInfo +
+            thoughtHtml +
             '<div class="mem-item-footer">' +
             '<div class="mem-tags">'+tags+'</div>' +
             '<div style="display:flex;gap:4px">' + lockBtn +
