@@ -1,19 +1,20 @@
-// Lumi PWA - 纯透传模式，不缓存任何内容
-// 每次请求都从网络获取最新版本
-const CACHE_NAME = "lumi-pwa-v1";
+// Lumi PWA - v2 自我清理模式
+// 背景：旧版 SW 缓存了旧页面，导致用户一直看到旧 UI。
+// v2 不缓存任何内容，activate 时清空所有缓存并卸载自己，
+// 让页面彻底走网络，不再有缓存干扰。
+const CACHE_NAME = "lumi-pwa-v2";
 
 self.addEventListener("install", function(e) {
-  // 不预缓存任何文件
   self.skipWaiting();
 });
 
 self.addEventListener("activate", function(e) {
-  // 清理所有旧缓存
   e.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(keys.map(function(k) { return caches.delete(k); }));
     }).then(function() {
-      return self.clients.claim();
+      // 清完缓存后卸载自己，下次刷新页面彻底脱离 SW 控制
+      return self.registration.unregister();
     })
   );
 });
