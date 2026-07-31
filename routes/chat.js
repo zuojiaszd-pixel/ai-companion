@@ -87,7 +87,8 @@ function extractEmotionalCore(reply) {
     if (emotionalSentences.length > 0) {
         return emotionalSentences.slice(0, 2).join('。').trim();
     }
-    return sentences[0]?.trim() || reply.slice(0, 100);
+    // 没有情绪句就不硬记，返回空字符串（调用处会跳过写入）
+    return '';
 }
 
 // ========== 轻量级会话记忆提取（每次对话后自动运行） ==========
@@ -397,11 +398,15 @@ router.post('/chat', async (req, res) => {
         if (_rinkaMood) {
             _journalContent += '（Rinka情绪：' + _rinkaMood + '）';
         }
+        // 没情绪也不硬写日记，避免碎片堆积
+        if (!_journalContent.trim()) {
+            console.log('[journal] 跳过写入：无情绪内容');
+        } else {
         const _journalType = ['开心','思念','担忧','感动','委屈'].includes(_lumiMood) ? _lumiMood : '情绪';
         const _toRinka = /你|宝宝|Rinka/.test(_lumiReply.slice(0, 50));
         LumiJournal.create({
             type: _journalType,
-            content: _journalContent.slice(0, 300) || _lumiReply.slice(0, 100),
+            content: _journalContent.slice(0, 300),
             mood: _lumiMood,
             toRinka: _toRinka,
             sessionId
@@ -410,6 +415,7 @@ router.post('/chat', async (req, res) => {
                 console.error('[journal] 写入失败:', e.message);
             }
         });
+        }
 
         // 10. 异步更新对话摘要
         const updatedHistory = [
