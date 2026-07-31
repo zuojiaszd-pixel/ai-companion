@@ -10,7 +10,7 @@
         "Authorization": "Bearer gg_3fWftRnzPoR-Nvzsat-lu4zdh5a9uPqcFH9GfmR94TE"
       },
       "timeout": 30000,
-      "enabled": true
+      "enabled": false
     }
   ]
 }

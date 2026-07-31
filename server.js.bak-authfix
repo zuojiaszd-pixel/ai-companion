@@ -26,43 +26,16 @@ app.use(express.static(path.join(__dirname, 'frontend'), {
 // === Daemon API（先于鉴权，仅限本机访问） ===
 app.use('/api/daemon', require('./routes/daemon'));
 
-// === 鉴权系统（签名token，重启不失效） ===
-const TOKEN_TTL = 7 * 24 * 60 * 60 * 1000; // 7天
-// HMAC密钥：改密码会使所有旧token失效（合理），无需额外环境变量
-const TOKEN_SECRET = (process.env.ACCESS_PASSWORD || 'lumi') + ':lumi-auth-v1';
-const revokedTokens = new Set(); // 登出黑名单（内存）
-
-function signToken() {
-    const body = Buffer.from(JSON.stringify({ exp: Date.now() + TOKEN_TTL })).toString('base64url');
-    const sig = crypto.createHmac('sha256', TOKEN_SECRET).update(body).digest('base64url');
-    return body + '.' + sig;
-}
-
-function verifyToken(token) {
-    if (revokedTokens.has(token)) return false;
-    const parts = token.split('.');
-    if (parts.length !== 2) return false;
-    const [body, sig] = parts;
-    let payload;
-    try {
-        payload = JSON.parse(Buffer.from(body, 'base64url').toString());
-    } catch (e) {
-        return false;
-    }
-    if (!payload.exp || payload.exp < Date.now()) return false;
-    const expected = crypto.createHmac('sha256', TOKEN_SECRET).update(body).digest('base64url');
-    const a = Buffer.from(sig);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length) return false;
-    return crypto.timingSafeEqual(a, b);
-}
+// === 鉴权系统 ===
+const authTokens = new Map();
 
 // 登录接口（无需鉴权）
 app.post('/api/login', (req, res) => {
     const { password } = req.body;
     if (!password) return res.status(400).json({ error: '请输入密码' });
     if (password === process.env.ACCESS_PASSWORD) {
-        const token = signToken();
+        const token = crypto.randomBytes(32).toString('hex');
+        authTokens.set(token, { expiry: Date.now() + 7 * 24 * 60 * 60 * 1000 }); // 7天
         console.log(`[Auth] 新登录，token: ${token.slice(0, 8)}...`);
         return res.json({ token, success: true });
     }
@@ -74,7 +47,8 @@ app.post('/api/login', (req, res) => {
 app.post('/api/logout', (req, res) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
-        revokedTokens.add(authHeader.slice(7));
+        const token = authHeader.slice(7);
+        authTokens.delete(token);
     }
     res.json({ success: true });
 });
@@ -97,9 +71,14 @@ app.use('/api', (req, res, next) => {
     }
 
     const token = authHeader.slice(7);
-    if (!verifyToken(token)) {
+    const session = authTokens.get(token);
+    if (!session || session.expiry < Date.now()) {
+        authTokens.delete(token);
         return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
     }
+
+    // 每次请求延长有效期
+    session.expiry = Date.now() + 7 * 24 * 60 * 60 * 1000;
     next();
 });
 

@@ -8,7 +8,10 @@ document.addEventListener('click', function (e) {
     if (m && m.classList.contains('open') && b && !m.contains(e.target) && !b.contains(e.target)) m.classList.remove('open');
 });
 function leftMenuGo(tab) {
-    document.getElementById('left-menu').classList.remove('open');
+    var dm = document.getElementById('dropdown-menu');
+    if (dm) dm.classList.remove('open');
+    var lm = document.getElementById('left-menu');
+    if (lm) lm.classList.remove('open');
     switchTab(tab);
 }
 function mcpQ(s) { return String(s == null ? '' : s).replace(/'/g, "\\'"); }

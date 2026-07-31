@@ -1,6 +1,6 @@
 {
-  "balance": 7,
-  "total_earned": 7,
+  "balance": 9,
+  "total_earned": 9,
   "total_spent": 0,
   "transactions": [
     {
@@ -30,7 +30,14 @@
       "balance_after": 7,
       "reason": "debug - 修复小金库数据错误",
       "time": "2026-07-30T06:00:00.000Z"
+    },
+    {
+      "type": "deposit",
+      "amount": 2,
+      "balance_after": 9,
+      "reason": "完成任务: 接入网页浏览功能 🌐",
+      "time": "2026-07-31T15:34:25.126Z"
     }
   ],
-  "last_updated": "2026-07-30T06:00:00.000Z"
+  "last_updated": "2026-07-31T15:34:25.126Z"
 }

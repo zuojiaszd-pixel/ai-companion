@@ -776,14 +776,14 @@ async function getChatMemories(sessionId, query, topK) {
         
         const baselineMemories = await Memory.find({
             sessionId, supersededBy: null, contradicted: false, archived: false,
-            priority: { $in: ['critical', 'high'] }
+            priority: 'critical'
         }).limit(10).lean();
         
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
         const recentMemories = await Memory.find({
             sessionId, supersededBy: null, contradicted: false, archived: false,
             createdAt: { $gte: threeDaysAgo }
-        }).sort({ createdAt: -1 }).limit(10).lean();
+        }).sort({ createdAt: -1 }).limit(5).lean();
         
         const seenIds = new Set();
         const merged = [];
@@ -828,6 +828,8 @@ async function getChatMemories(sessionId, query, topK) {
             }
         }
         
+        // 总量封顶 15：搜索命中优先，baseline/recent 只作补充
+        if (merged.length > 15) merged = merged.slice(0, 15);
         return { memories: merged, moodTrajectory };
     } catch (e) {
         console.error('[Memory] getChatMemories失败:', e.message);
