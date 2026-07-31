@@ -87,5 +87,27 @@
     "details": [],
     "extracted": 3,
     "backup": true
+  },
+  {
+    "timestamp": "2026-07-30T21:35:51.844Z",
+    "sessionId": "default",
+    "decayed": 89,
+    "archived": 0,
+    "locked": 0,
+    "total": 89,
+    "details": [],
+    "extracted": 3,
+    "backup": false
+  },
+  {
+    "timestamp": "2026-07-31T03:36:16.177Z",
+    "sessionId": "default",
+    "decayed": 139,
+    "archived": 0,
+    "locked": 0,
+    "total": 139,
+    "details": [],
+    "extracted": 3,
+    "backup": false
   }
 ]
