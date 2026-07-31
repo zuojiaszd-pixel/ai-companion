@@ -8,6 +8,7 @@ router.get('/', async (req, res) => {
         const sessionId = req.query.sessionId || 'default';
         const options = {
             type: req.query.type,
+            kind: req.query.kind,
             priority: req.query.priority,
             sort: req.query.sort || 'recent',
             page: parseInt(req.query.page) || 1,
@@ -95,7 +96,7 @@ router.post('/dream/run', async (req, res) => {
 // POST /api/memory - 手动添加记忆（支持新类型体系和情绪）
 router.post('/', async (req, res) => {
     try {
-        const { sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood, ttl } = req.body;
+        const { sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood, ttl, kind, title, lumiThought } = req.body;
         if (!content) {
             return res.status(400).json({ success: false, error: '缺少 content' });
         }
@@ -109,7 +110,8 @@ router.post('/', async (req, res) => {
             mood || null,
             moodIntensity != null ? moodIntensity : null,
             lumiMood || null,
-            ttl || null
+            // Phase 2：档案卡片字段
+            { kind: kind || 'core', title: title || null, lumiThought: lumiThought || null, ttl: ttl || null }
         );
         res.json({ success: true, data: memory });
     } catch (e) {
@@ -139,7 +141,7 @@ router.put('/:id', async (req, res) => {
     try {
         const Memory = require('../models/Memory');
         const updates = {};
-        const allowed = ['content', 'type', 'priority', 'tags', 'locked', 'mood', 'moodIntensity', 'lumiMood'];
+        const allowed = ['content', 'type', 'kind', 'title', 'lumiThought', 'priority', 'tags', 'locked', 'mood', 'moodIntensity', 'lumiMood'];
         for (const key of allowed) {
             if (req.body[key] !== undefined) updates[key] = req.body[key];
         }

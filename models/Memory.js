@@ -38,6 +38,14 @@ const MemorySchema = new mongoose.Schema({
   // 新的结构化情绪记录 —— 随时间变化的情绪链
   emotions: { type: [EmotionRecordSchema], default: [] },
 
+  // ========== 档案卡片字段（Phase 2） ==========
+  // kind：core（核心卡片，关于我们的重要回忆，长期挂着）/ moment（零碎卡片，生活小瞬间，可能慢慢淡出但保留）
+  kind: { type: String, enum: ['core', 'moment'], default: 'core' },
+  // title：卡片名字，一眼认出这张卡片是什么
+  title: { type: String, default: null },
+  // lumiThought：Lumi 对这段记忆的想法、心里话（融合时保留）
+  lumiThought: { type: String, default: null },
+
   // ========== 融合更新相关 ==========
 
   // 时间线：用于核心记忆随时间「长大」

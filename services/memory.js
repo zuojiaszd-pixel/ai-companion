@@ -144,8 +144,13 @@ async function findRelatedByTags(sessionId, tagSet, excludeIds) {
 
 // ============ 存储记忆（带去重逻辑 + 自动提取标签） ============
 
-async function saveMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood) {
+async function saveMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood, options) {
     try {
+        // Phase 2：options 携带档案卡片字段（kind/title/lumiThought）
+        options = options || {};
+        const kind = options.kind || 'core';
+        const title = options.title || null;
+        const lumiThought = options.lumiThought || null;
         // 情绪是必要条件：core 类型必须带情绪
         if (type === 'core' && !mood) {
             mood = 'neutral';
@@ -228,6 +233,10 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
                     tags.forEach(t => existingTags.add(t));
                     m.tags = Array.from(existingTags);
                 }
+                
+                // Phase 2：新卡片带了 title/lumiThought 而旧卡片没有，补上（不覆盖已有想法）
+                if (title && !m.title) m.title = title;
+                if (lumiThought && !m.lumiThought) m.lumiThought = lumiThought;
                 const existingRelated = new Set(m.relatedTags || []);
                 mergedRelatedTags.forEach(t => existingRelated.add(t));
                 m.relatedTags = Array.from(existingRelated);
@@ -275,6 +284,10 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             lumiMood: lumiMood || null,
             // 结构化情绪记录
             emotions: emotions.length > 0 ? emotions : [],
+            // 档案卡片字段（Phase 2）
+            kind,
+            title,
+            lumiThought,
             // TTL：已废除自动遗忘，不再为任何类型设置过期时间
             ttl: null,
             heat: defaults.baseHeat,
@@ -376,6 +389,9 @@ async function recallMemories(sessionId, query, topK) {
             return {
                 _id: entry.item.memory._id,
                 content: entry.item.memory.content,
+                kind: entry.item.memory.kind || 'core',
+                title: entry.item.memory.title || null,
+                lumiThought: entry.item.memory.lumiThought || null,
                 type: entry.item.memory.type,
                 priority: entry.item.memory.priority,
                 tags: entry.item.memory.tags,
@@ -409,6 +425,9 @@ async function recallMemories(sessionId, query, topK) {
                 return {
                     _id: m._id,
                     content: m.content,
+                    kind: m.kind || 'core',
+                    title: m.title || null,
+                    lumiThought: m.lumiThought || null,
                     type: m.type,
                     priority: m.priority,
                     tags: m.tags,
@@ -447,6 +466,9 @@ async function recallMemories(sessionId, query, topK) {
                     results.push({
                         _id: unarchived._id,
                         content: unarchived.content,
+                        kind: unarchived.kind || 'core',
+                        title: unarchived.title || null,
+                        lumiThought: unarchived.lumiThought || null,
                         type: unarchived.type,
                         priority: unarchived.priority,
                         tags: unarchived.tags,
@@ -477,15 +499,16 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
     const results = await recallMemories(sessionId, query, 20);
     if (results.length === 0) return '';
     
-    const typeQuota = { fact: 5, preference: 3, experience: 3, summary: 2, state: 2 };
-    const typeCount = { fact: 0, preference: 0, experience: 0, summary: 0, state: 0 };
+    // Phase 2：配额按 kind（core/moment）算 —— 核心卡片优先，零碎卡片次之
+    const kindQuota = { core: 8, moment: 5 };
+    const kindCount = { core: 0, moment: 0 };
     const selected = [];
     
     for (const r of results) {
-        const t = r.type || 'fact';
-        if (typeCount[t] < (typeQuota[t] || 3)) {
+        const k = r.kind || 'core';
+        if (kindCount[k] < (kindQuota[k] || 5)) {
             selected.push(r);
-            typeCount[t]++;
+            kindCount[k]++;
         }
     }
     
@@ -501,7 +524,7 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
     let text = '';
     let tokenEstimate = 0;
     for (const r of selected) {
-        const line = `[${r.type}/${r.priority}] ${r.content}\n`;
+        const line = `[${r.kind || 'core'}/${r.priority}] ${r.content}\n`;
         tokenEstimate += line.length * 0.5;
         if (tokenEstimate > maxTokens) break;
         text += line;
@@ -582,6 +605,11 @@ async function backupMemories(sessionId) {
                 lastAccessed: m.lastAccessed, accessCount: m.accessCount,
                 supersededBy: m.supersededBy, contradicted: m.contradicted, locked: m.locked,
                 archived: m.archived, archivedAt: m.archivedAt, embeddingArchived: m.embeddingArchived,
+                // Phase 2：档案卡片字段 + 情绪层 + 时间线（备份要完整，恢复才不会丢）
+                kind: m.kind || 'core', title: m.title || null, lumiThought: m.lumiThought || null,
+                mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null,
+                emotions: m.emotions || [], timeline: m.timeline || [], version: m.version || 1,
+                expired: m.expired || false,
                 relatedTags: m.relatedTags, relatedIds: m.relatedIds,
                 createdAt: m.createdAt, updatedAt: m.updatedAt
             }))
@@ -636,6 +664,7 @@ async function listMemories(sessionId, options) {
         // 默认排除 state 类型：状态快照由 autoExtractMemories 每次对话生成，会淹没真实记忆
         query.type = { $ne: 'state' };
     }
+    if (options.kind) query.kind = options.kind;
     if (options.priority) query.priority = options.priority;
     if (options.archived === 'true') query.archived = true;
     else if (options.archived === 'false') query.archived = false;
@@ -657,19 +686,21 @@ async function getMemoryStats(sessionId) {
     const archivedCount = await Memory.countDocuments({ sessionId, archived: true });
     const byType = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$type', count: { $sum: 1 } } }]);
     const byPriority = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$priority', count: { $sum: 1 } } }]);
+    const byKind = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$kind', count: { $sum: 1 } } }]);
     const locked = await Memory.countDocuments({ sessionId, locked: true });
     const contradicted = await Memory.countDocuments({ sessionId, contradicted: true });
     
     return {
         total, active, archived: archivedCount, locked, contradicted,
         byType: byType.reduce((acc, item) => { acc[item._id] = item.count; return acc; }, {}),
+        byKind: byKind.reduce((acc, item) => { acc[item._id || 'core'] = item.count; return acc; }, {}),
         byPriority: byPriority.reduce((acc, item) => { acc[item._id] = item.count; return acc; }, {})
     };
 }
 
 // === 向后兼容别名 ===
 async function searchMemories(query, limit) { return recallMemories("default", query, limit || 8); }
-async function storeMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood) { return saveMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood); }
+async function storeMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood, options) { return saveMemory(sessionId, content, type, priority, tags, mood, moodIntensity, lumiMood, options); }
 
 // ============ 自动提取 + 状态记忆 ============
 
@@ -775,7 +806,7 @@ async function getChatMemories(sessionId, query, topK) {
             const id = m._id.toString();
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 999, createdAt: m.createdAt });
+                merged.push({ _id: m._id, content: m.content, kind: m.kind || 'core', title: m.title || null, lumiThought: m.lumiThought || null, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 999, createdAt: m.createdAt });
             }
         }
         
@@ -783,7 +814,7 @@ async function getChatMemories(sessionId, query, topK) {
             const id = m._id.toString();
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 888, createdAt: m.createdAt });
+                merged.push({ _id: m._id, content: m.content, kind: m.kind || 'core', title: m.title || null, lumiThought: m.lumiThought || null, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 888, createdAt: m.createdAt });
             }
         }
         
