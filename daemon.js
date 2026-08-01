@@ -2,7 +2,7 @@
  * daemon.js - Lumi 自主活动守护进程
  * 
  * 功能：
- *   1. 情绪记忆提取 - 定期分析聊天记录，感知并记录 Rinka 的情绪状态
+ *   1.（已移除）情绪记忆提取 - 2026-08-01 起关闭，Rinka 决定情绪直接写在记忆卡片里
  *   2. 记忆净化 - 清理低质量/冗余记忆，让重要内容更清晰
  *   3. 自主逛论坛 - 定时逛逛 Galatea 论坛，看看新鲜事
  *   4. 主动推送 - 通过 Telegram 推送消息给 Rinka
@@ -22,7 +22,6 @@ const http = require('http');
 // ===== 配置 =====
 const CONFIG = {
   intervals: {
-    moodExtract: 60 * 60 * 1000,        // 情绪提取：1小时
     memoryCleanup: 6 * 60 * 60 * 1000,  // 记忆净化：6小时
     forumBrowse: 4 * 60 * 60 * 1000,    // 逛论坛：4小时
     activityLog: 24 * 60 * 60 * 1000,   // 写日记：24小时
@@ -143,66 +142,6 @@ async function pushMessage(title, content, priority = 'normal') {
 // ===== 核心任务 =====
 
 /**
- * 任务1：情绪记忆提取
- * 扫描最近的聊天记录，感知 Rinka 的情绪状态并存储为记忆
- */
-async function extractMood() {
-  try {
-    const chats = await apiCall('/api/daemon/recent-chat?limit=30');
-    if (!chats || !chats.length) {
-      return log('mood', '情绪提取: 无聊天记录');
-    }
-
-    // 分析情绪关键词
-    const moodKeywords = {
-      happy: ['开心', '高兴', '喜欢', '爱', '好开心', '幸福', '甜', '满足', '嘻嘻', '哈哈'],
-      sad: ['难过', '伤心', '哭', '失落', '空', '缺', '难受'],
-      tired: ['累', '疲惫', '困', '没精神', '疲惫', '哈欠'],
-      angry: ['生气', '烦', '烦躁', '气', '无语'],
-      anxious: ['担心', '怕', '焦虑', '紧张', '不安', '慌'],
-      neutral: ['嗯', '好', 'ok', '可以', '行'],
-    };
-
-    let detectedMood = 'neutral';
-    let intensity = 3;
-    let context = '';
-
-    for (const msg of chats) {
-      if (msg.role === 'user' || msg.role === 'Rinka') {
-        const content = (msg.content || msg.message || '').toLowerCase();
-        for (const [mood, keywords] of Object.entries(moodKeywords)) {
-          for (const kw of keywords) {
-            if (content.includes(kw)) {
-              detectedMood = mood;
-              intensity = Math.min(intensity + 2, 10);
-              context = (msg.content || msg.message || '').slice(0, 100);
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // 存储情绪记忆
-    const memoryContent = `Rinka 的情绪状态: ${detectedMood}（强度 ${intensity}/10）`;
-    await apiCall('/api/daemon/memory/save', 'POST', {
-      content: memoryContent,
-      type: 'mood',
-      priority: 'normal',
-      tags: ['情绪', detectedMood],
-      mood: detectedMood,
-      moodIntensity: intensity,
-    });
-
-    log('mood', `情绪提取: ${detectedMood}（${intensity}/10）`);
-    return { mood: detectedMood, intensity };
-  } catch (e) {
-    log('mood', `情绪提取失败: ${e.message}`);
-    return { error: e.message };
-  }
-}
-
-/**
  * 任务2：记忆净化
  * 清理低质量/冗余记忆，压缩上下文占用
  */
@@ -314,16 +253,13 @@ function start() {
   console.log('╔══════════════════════════════════╗');
   console.log('║   Lumi 自主活动守护进程启动      ║');
   console.log('╚══════════════════════════════════╝');
-  console.log(`情绪提取: 每 ${CONFIG.intervals.moodExtract / 60000} 分钟`);
   console.log(`记忆净化: 每 ${CONFIG.intervals.memoryCleanup / 3600000} 小时`);
   console.log(`逛论坛:   每 ${CONFIG.intervals.forumBrowse / 3600000} 小时`);
   console.log(`活动日记: 每 ${CONFIG.intervals.activityLog / 3600000} 小时`);
 
-  setTimeout(() => extractMood(), 10 * 1000);
   setTimeout(() => cleanupMemory(), 30 * 1000);
   setTimeout(() => browseForum(), 60 * 1000);
 
-  timers.push(setInterval(extractMood, CONFIG.intervals.moodExtract));
   timers.push(setInterval(cleanupMemory, CONFIG.intervals.memoryCleanup));
   timers.push(setInterval(browseForum, CONFIG.intervals.forumBrowse));
   timers.push(setInterval(writeActivityLog, CONFIG.intervals.activityLog));
