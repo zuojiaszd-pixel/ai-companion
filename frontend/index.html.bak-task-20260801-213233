@@ -230,6 +230,41 @@
 .mem-sort-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .mem-sort-select{padding:4px 20px 4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:11px;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none}
 
+/* Task Page */
+#page-task{padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.task-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.task-header .task-title{font-size:18px;font-weight:600;color:var(--text)}
+.task-header .task-count{font-size:12px;color:var(--text3);background:var(--surface);border:1px solid var(--border);padding:4px 12px;border-radius:var(--radius-sm)}
+.task-filter{display:flex;gap:6px;margin-bottom:12px}
+.task-filter-btn{padding:4px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s}
+.task-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
+.task-filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.task-add-row{display:flex;gap:8px;margin-bottom:16px}
+.task-add-row input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none;font-family:var(--font)}
+.task-add-row input:focus{border-color:var(--accent)}
+.task-add-row select{padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:12px;outline:none}
+.task-add-row button{padding:8px 16px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap}
+.task-add-row button:hover{opacity:.85}
+.task-list{display:flex;flex-direction:column;gap:8px}
+.task-item{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);transition:all .15s;animation:fadeIn .2s ease-out}
+.task-item:hover{border-color:var(--accent)}
+.task-item.completed{opacity:.55}
+.task-item.completed .task-text{text-decoration:line-through;color:var(--text3)}
+.task-checkbox{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:12px;color:#fff}
+.task-checkbox.checked{background:var(--accent);border-color:var(--accent)}
+.task-content{flex:1;min-width:0}
+.task-text{font-size:13px;line-height:1.5;color:var(--text);word-wrap:break-word}
+.task-meta{display:flex;gap:6px;align-items:center;margin-top:4px}
+.task-priority{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600}
+.task-priority.high{background:rgba(231,76,60,.15);color:#e74c3c}
+.task-priority.medium{background:rgba(243,156,18,.15);color:#f39c12}
+.task-priority.low{background:rgba(46,204,113,.15);color:#2ecc71}
+.task-creator{font-size:10px;color:var(--text3)}
+.task-due{font-size:10px;color:var(--text3)}.task-reward{font-size:10px;color:#2ecc71;font-weight:600}
+.task-del{width:24px;height:24px;border:none;border-radius:50%;background:var(--surface2);color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.task-del:hover{background:#e74c3c;color:#fff}
+.task-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
+@media(max-width:600px){#page-task{padding:10px}.task-header .task-title{font-size:16px}.task-item{padding:10px 12px}.task-text{font-size:12px}}
 
 
 
@@ -467,6 +502,24 @@
 <div class="mem-dream-log" id="dream-log-list"></div>
 </div>
 </div>
+</div><div id="page-task" class="page">
+<div class="task-header">
+<div class="task-title">✅ 任务清单</div>
+<div class="task-count" id="task-count">0 项待办</div>
+</div>
+<div class="task-add-row">
+<input type="text" id="task-input" placeholder="添加任务..." onkeydown="if(event.key==='Enter')taskAdd()">
+<select id="task-priority-select"><option value="medium">中</option><option value="high">高</option><option value="low">低</option></select>
+<input type="number" id="task-reward" placeholder="奖励 ¥" min="0" step="1" style="width:80px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:12px;outline:none">
+<button onclick="taskAdd()">添加</button>
+</div>
+<div class="task-filter">
+<button class="task-filter-btn active" onclick="taskFilter('all',this)">全部</button>
+<button class="task-filter-btn" onclick="taskFilter('pending',this)">未完成</button>
+<button class="task-filter-btn" onclick="taskFilter('completed',this)">已完成</button>
+</div>
+<div class="task-list" id="task-list"></div>
+</div>
 
 <div id="page-finance" class="page">
 <div class="fin-header">
@@ -520,6 +573,11 @@
 <button class="nav-tab" onclick="switchTab('finance')" id="tab-finance">
 <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
 <span class="nav-label">小金库</span>
+</button>
+
+<button class="nav-tab" onclick="switchTab('task')" id="tab-task">
+<span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+<span class="nav-label">任务</span>
 </button>
 
 </div><div class="panel" id="settings-panel"><div class="panel-header"><h3>设置</h3><button class="close" onclick="closePanel()">&#10005;</button></div><div class="panel-body"><div class="sec-hdr">◆ 模型</div><div class="setting-item"><span>默认模型</span><select id="settings-model-select" onchange="modelSelectChange(this.value)"></select></div><div class="sec-hdr">♥ 用户头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-userAvatar').click()">↑ 上传</span><input type="file" id="file-userAvatar" accept="image/*" style="display:none" onchange="handleUpload('userAvatar',this)"></div><div class="av-pick" id="av-pick-userAvatar"><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">●</div></div></div><div class="sec-hdr">♥ AI 头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-aiAvatar').click()">↑ 上传</span><input type="file" id="file-aiAvatar" accept="image/*" style="display:none" onchange="handleUpload('aiAvatar',this)"></div><div class="av-pick" id="av-pick-aiAvatar"><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">●</div></div></div><div class="sec-hdr">◆ 系统提示词</div><div class="setting-item" style="flex-direction:column;align-items:stretch;gap:8px"><span>系统提示词</span><textarea class="setting-textarea" id="system-prompt-editor" placeholder="输入自定义系统提示词…"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn-danger" style="background:var(--text3);padding:4px 12px;font-size:11px" onclick="resetSystemPrompt()">恢复默认</button><button style="padding:4px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer" onclick="saveSystemPrompt()">保存</button></div></div><div class="sec-hdr">◆ 参数</div><div class="setting-item" style="height:auto;flex-wrap:wrap"><span>模型参数</span><div class="slider-row" style="width:100%;padding-top:8px"><span style="font-size:11px;color:var(--text3);width:100px">温度 Temperature</span><input type="range" id="slider-temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateSliderValue(this)"><span class="slider-value" id="val-temperature">0.7</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Top P</span><input type="range" id="slider-topp" min="0" max="1" step="0.05" value="0.9" oninput="updateSliderValue(this)"><span class="slider-value" id="val-topp">0.9</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">最大 Token</span><input type="range" id="slider-maxtokens" min="256" max="32000" step="256" value="16000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-maxtokens">16000</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">上下文轮次</span><input type="range" id="slider-contextRounds" min="1" max="20" step="1" value="10" oninput="updateSliderValue(this)"><span class="slider-value" id="val-contextRounds">10</span></div></div><div class="sec-hdr">◆ 显示</div><div class="setting-item"><span>主题模式</span><select id="theme-select" onchange="themeSelectChange(this.value)"><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="setting-item"><span>思考链显示</span><select id="think-mode" onchange="thinkModeChange(this.value)"><option value="auto">自动折叠</option><option value="show">始终展开</option><option value="hide">始终隐藏</option></select></div><div class="setting-item"><span>记忆管理</span><button class="btn-danger" onclick="clearAllData()">清空记忆和对话</button></div><div class="sec-hdr">◆ 关于</div><div class="about-section">Lumi v1.0 • 由 💖 建造</div></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div></div><script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script><script>
@@ -1378,6 +1436,9 @@ function switchTab(tab) {
     if (tab === 'memory') {
         memLoad();
     }
+    if (tab === 'task') {
+        taskLoad();
+    }
     if (tab === 'finance') {
         finLoad();
     }
@@ -1719,6 +1780,107 @@ async function runDream() {
         var btn = document.querySelector('.mem-dream-run-btn');
         if (btn) { btn.disabled = false; btn.textContent = '手动整理记忆'; }
     }
+}
+
+// === Task Page ===
+var taskAllData = [];
+var taskCurrentFilter = 'all';
+
+async function taskLoad() {
+    try {
+        var res = await fetch(BACKEND + '/api/tasks');
+        var data = await res.json();
+        taskAllData = data || [];
+        taskRender();
+    } catch(e) {
+        document.getElementById('task-list').innerHTML = '<div class="task-empty">加载失败</div>';
+    }
+}
+
+function taskFilter(type, btn) {
+    taskCurrentFilter = type;
+    document.querySelectorAll('.task-filter-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    taskRender();
+}
+
+function taskRender() {
+    var list = document.getElementById('task-list');
+    var filtered = taskAllData;
+    if (taskCurrentFilter === 'pending') filtered = taskAllData.filter(function(t){return !t.completed;});
+    else if (taskCurrentFilter === 'completed') filtered = taskAllData.filter(function(t){return t.completed;});
+    var pendingCount = taskAllData.filter(function(t){return !t.completed;}).length;
+    document.getElementById('task-count').textContent = pendingCount + ' 项待办';
+    if (!filtered.length) {
+        list.innerHTML = '<div class="task-empty">' + (taskCurrentFilter === 'completed' ? '还没有完成的任务' : '暂无任务，添加一个吧') + '</div>';
+        return;
+    }
+    var priorityLabels = {high:'高', medium:'中', low:'低'};
+    var creatorLabels = {user:'我', ai:'Lumi'};
+    list.innerHTML = filtered.map(function(t) {
+        var priority = t.priority || 'medium';
+        var creator = t.createdBy || 'user';
+        var dueDate = t.dueDate ? '<span class="task-due">📅 '+escapeHtml(t.dueDate)+'</span>' : '';
+        var rewardText = t.rewardAmount && t.rewardAmount > 0 ? '<span class="task-reward">💰 +¥'+t.rewardAmount.toFixed(2)+'</span>' : '';
+        return '<div class="task-item'+(t.completed?' completed':'')+'">' +
+            '<div class="task-checkbox'+(t.completed?' checked':'')+'" onclick="taskToggle(\''+t._id+'\')">'+(t.completed?'✓':'')+'</div>' +
+            '<div class="task-content">' +
+            '<div class="task-text">'+escapeHtml(t.title||'')+'</div>' +
+            '<div class="task-meta">' +
+            '<span class="task-priority '+priority+'">'+priorityLabels[priority]+'</span>' +
+            '<span class="task-creator">'+creatorLabels[creator]+'</span>' +
+            rewardText +
+            dueDate +
+            '</div>' +
+            '</div>' +
+            '<button class="task-del" onclick="taskDelete(\''+t._id+'\')">&times;</button>' +
+            '</div>';
+    }).join('');
+}
+
+async function taskAdd() {
+    var input = document.getElementById('task-input');
+    var title = input.value.trim();
+    if (!title) return;
+    var priority = document.getElementById('task-priority-select').value;
+    var rewardInput = document.getElementById('task-reward');
+    var reward = rewardInput ? rewardInput.value.trim() : '';
+    input.value = '';
+    if (rewardInput) rewardInput.value = '';
+    try {
+        var res = await fetch(BACKEND + '/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: title, priority: priority, createdBy: 'user', rewardAmount: reward || undefined })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        var task = await res.json();
+        taskAllData.unshift(task);
+        taskRender();
+    } catch(e) { alert('添加失败: ' + e.message); }
+}
+
+async function taskToggle(id) {
+    try {
+        var res = await fetch(BACKEND + '/api/tasks/' + id + '/toggle', { method: 'PATCH' });
+        if (!res.ok) throw new Error(await res.text());
+        var updated = await res.json();
+        var idx = taskAllData.findIndex(function(t){return t._id === id;});
+        if (idx >= 0) {
+            taskAllData[idx].completed = updated.completed;
+            taskAllData[idx].completedAt = updated.completedAt;
+        }
+        taskRender();
+    } catch(e) { alert('操作失败'); }
+}
+
+async function taskDelete(id) {
+    if (!confirm('删除这个任务？')) return;
+    try {
+        await fetch(BACKEND + '/api/tasks/' + id, { method: 'DELETE' });
+        taskAllData = taskAllData.filter(function(t){return t._id !== id;});
+        taskRender();
+    } catch(e) { alert('删除失败'); }
 }
 
 function updateStatusBar() {

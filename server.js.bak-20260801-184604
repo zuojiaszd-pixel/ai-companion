@@ -106,10 +106,12 @@ app.use('/api', (req, res, next) => {
 // 所有 API 路由
 app.use('/api', require('./routes/chat'));
 app.use('/api/calendar', require('./routes/calendar'));
+app.use('/api/tasks', require('./routes/task'));
 app.use('/api/footprints', require('./routes/footprint'));
 app.use('/api', require('./routes/checkin'));
 app.use('/api/memory', require('./routes/memory'));
 app.use('/api/finance', require('./routes/finance'));
+app.use('/api/journal', require('./routes/journal'));
 app.use('/api', require('./routes/dream'));
 app.use('/api/mcp', require('./routes/mcp'));
 
