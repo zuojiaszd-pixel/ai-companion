@@ -263,8 +263,8 @@ router.post('/chat', async (req, res) => {
         }
 
         // 2. 加载最近对话历史
-        // 硬上限 10 轮：防止前端滑块把 contextRounds 拉到 20 导致 token 翻倍
-        const crClamped = Math.min(parseInt(contextRounds) || 15, 10);
+        // contextRounds 上限 20：和前端滑块一致，Rinka 想让 Lumi 记得更久
+        const crClamped = Math.min(parseInt(contextRounds) || 20, 20);
         const history = await Chat.find({ sessionId })
             .sort({ timestamp: -1 }).limit(crClamped).lean();
         const recentHistory = history.reverse();
