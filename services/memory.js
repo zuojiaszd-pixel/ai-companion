@@ -6,16 +6,22 @@ const path = require('path');
 // ============ 基础工具函数 ============
 
 async function getEmbedding(text) {
-    const res = await axios.post('https://openrouter.ai/api/v1/embeddings', {
-        model: 'text-embedding-3-small',
-        input: text
-    }, {
-        headers: {
-            'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
-            'Content-Type': 'application/json'
-        }
-    });
-    return res.data.data[0].embedding;
+    try {
+        const res = await axios.post('https://openrouter.ai/api/v1/embeddings', {
+            model: 'text-embedding-3-small',
+            input: text
+        }, {
+            headers: {
+                'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            timeout: 4000
+        });
+        return res.data.data[0].embedding;
+    } catch (e) {
+        console.warn('[Memory] embedding 获取失败，降级为关键词检索:', e.message);
+        return null;
+    }
 }
 
 function cosineSim(a, b) {
