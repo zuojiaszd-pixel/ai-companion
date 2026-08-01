@@ -1885,6 +1885,8 @@ async function taskDelete(id) {
 
 function updateStatusBar() {
     fetch(BACKEND + '/api/status').then(function(r){return r.json();}).then(function(data){
+        var bar = document.getElementById('status-bar');
+        var text = document.getElementById('status-text');
         if (data && data.status) {
             text.textContent = data.status;
             bar.classList.add('show');
