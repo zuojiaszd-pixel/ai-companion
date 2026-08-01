@@ -1883,6 +1883,8 @@ async function taskDelete(id) {
     } catch(e) { alert('删除失败'); }
 }
 
+function updateStatusBar() {
+    fetch(BACKEND + '/api/status').then(function(r){return r.json();}).then(function(data){
         if (data && data.status) {
             text.textContent = data.status;
             bar.classList.add('show');
