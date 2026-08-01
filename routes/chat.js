@@ -7,7 +7,7 @@ const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
 const LumiJournal = require('../models/LumiJournal');
 const { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
-const { searchMemories, storeMemory, autoExtractMemories, saveMemory } = require('../services/memory');
+const { searchMemories, storeMemory, autoExtractMemories, saveMemory, getRelevantMemories } = require('../services/memory');
 const { loadSummary, saveSummary, generateSummary } = require('../services/summary');
 
 // === 状态栏 ===
@@ -269,8 +269,22 @@ router.post('/chat', async (req, res) => {
             .sort({ timestamp: -1 }).limit(crClamped).lean();
         const recentHistory = history.reverse();
 
-        // 3. 记忆按需调用：不再自动拼接【核心记忆】/【相关记忆】/【情绪轨迹】
-        //    需要时由 Lumi 自己调 recall_memories 查询，省 token 省上下文
+        // 3. 相关记忆自动注入：根据最近对话检索最相关的记忆，按 token 预算筛选
+        //    不把全部记忆背上，只带当前话题相关的几条，剩下的留在工具里按需查
+        let relevantMemoriesPrompt = '';
+        try {
+            const memQuery = recentHistory.slice(-3).map(h => h.content).join(' ') + ' ' + message;
+            const memText = await withTimeout(
+                getRelevantMemories(sessionId, memQuery, 1200),
+                10000,
+                '记忆检索'
+            );
+            if (memText) {
+                relevantMemoriesPrompt = '\n\n【相关记忆】\n' + memText;
+            }
+        } catch (e) {
+            console.error('[Memory] 自动注入失败（跳过）:', e.message);
+        }
 
         // 6.5 加载对话摘要
         const summaryData = loadSummary();
@@ -285,7 +299,7 @@ router.post('/chat', async (req, res) => {
         // 7. 构建消息数组
         const hasImage = !!image;
         const messages = [
-            { role: 'system', content: STATIC_SYSTEM_PROMPT },
+            { role: 'system', content: STATIC_SYSTEM_PROMPT + relevantMemoriesPrompt },
         ];
         if (summaryPrompt && recentHistory.length < 6) {
             messages.push({ role: 'system', content: summaryPrompt });
