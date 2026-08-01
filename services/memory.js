@@ -516,7 +516,9 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
     let tokenEstimate = 0;
     for (const r of selected) {
         const line = `[${r.kind || 'core'}/${r.priority}] ${r.content}\n`;
-        tokenEstimate += line.length * 0.5;
+        const cjkChars = (line.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+        const otherChars = line.length - cjkChars;
+        tokenEstimate += cjkChars + otherChars * 0.5;
         if (tokenEstimate > maxTokens) break;
         text += line;
     }

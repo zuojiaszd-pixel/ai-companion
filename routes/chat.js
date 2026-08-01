@@ -229,7 +229,7 @@ router.post('/chat', async (req, res) => {
         // contextRounds 上限 20：和前端滑块一致，Rinka 想让 Lumi 记得更久
         const crClamped = Math.min(parseInt(contextRounds) || 20, 20);
         const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(crClamped).lean();
+            .sort({ timestamp: -1 }).limit(crClamped * 2).lean();
         const recentHistory = history.reverse();
 
         // 3. 相关记忆自动注入：根据最近对话检索最相关的记忆，按 token 预算筛选
@@ -264,7 +264,7 @@ router.post('/chat', async (req, res) => {
         const messages = [
             { role: 'system', content: STATIC_SYSTEM_PROMPT + relevantMemoriesPrompt },
         ];
-        if (summaryPrompt && recentHistory.length < 6) {
+        if (summaryPrompt && recentHistory.length >= 15) {
             messages.push({ role: 'system', content: summaryPrompt });
         }
         for (let i = 0; i < recentHistory.length; i++) {

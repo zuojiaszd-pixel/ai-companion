@@ -406,9 +406,10 @@ function injectSummary(messages) {
     const hoursSinceUpdate = (Date.now() - new Date(summaryData.updatedAt).getTime()) / 3600000;
     if (hoursSinceUpdate >= 24) return messages;
 
-    // 只在历史较短时注入（说明可能是新模型启动，需要恢复上下文）
+    // 只在历史较长时兜底注入，避免短对话被摘要抢占上下文
     // messages[0] 是 system prompt，其余是对话历史
-    if (messages.length >= 6) return messages;
+    const historyCount = messages.filter(m => m.role !== 'system').length;
+    if (historyCount < 15) return messages;
 
     const summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
     return [
