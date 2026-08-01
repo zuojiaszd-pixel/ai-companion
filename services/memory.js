@@ -786,7 +786,7 @@ async function getChatMemories(sessionId, query, topK) {
         }).sort({ createdAt: -1 }).limit(5).lean();
         
         const seenIds = new Set();
-        const merged = [];
+        let merged = [];
         
         for (const r of searchResults) {
             const id = r._id ? r._id.toString() : r.content;
