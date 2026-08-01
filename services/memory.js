@@ -5,6 +5,18 @@ const path = require('path');
 
 // ============ 基础工具函数 ============
 
+function withHardTimeout(promise, ms) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+            const timer = setTimeout(() => {
+                clearTimeout(timer);
+                reject(new Error(`timeout ${ms}ms`));
+            }, ms);
+        })
+    ]);
+}
+
 async function getEmbedding(text) {
     try {
         const res = await axios.post('https://openrouter.ai/api/v1/embeddings', {
@@ -315,14 +327,17 @@ async function recallMemories(sessionId, query, topK) {
     topK = topK || 10;
     try {
         const multiQueries = generateMultiQueries(query);
-        const embeddings = await Promise.all(multiQueries.map(q => getEmbedding(q).catch(() => null)));
+        const embeddings = await Promise.all(multiQueries.map(q => withHardTimeout(getEmbedding(q), 3000).catch(() => null)));
         
-        const all = await Memory.find({ 
-            sessionId, 
-            supersededBy: null,
-            contradicted: false,
-            archived: false
-        }).sort({ createdAt: -1 }).limit(100).maxTimeMS(3000);
+        const all = await withHardTimeout(
+            Memory.find({
+                sessionId,
+                supersededBy: null,
+                contradicted: false,
+                archived: false
+            }).sort({ createdAt: -1 }).limit(100).maxTimeMS(3000),
+            3000
+        ).catch(() => []);
         
         if (all.length === 0) return [];
         
