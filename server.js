@@ -111,7 +111,6 @@ app.use('/api/footprints', require('./routes/footprint'));
 app.use('/api', require('./routes/checkin'));
 app.use('/api/memory', require('./routes/memory'));
 app.use('/api/finance', require('./routes/finance'));
-app.use('/api/journal', require('./routes/journal'));
 app.use('/api', require('./routes/dream'));
 app.use('/api/mcp', require('./routes/mcp'));
 
