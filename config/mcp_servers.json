@@ -10,7 +10,16 @@
         "Authorization": "Bearer gg_3fWftRnzPoR-Nvzsat-lu4zdh5a9uPqcFH9GfmR94TE"
       },
       "timeout": 30000,
-      "enabled": false
+      "enabled": true
+    },
+    {
+      "name": "toy",
+      "description": "CEDAR TOY - 小游戏平台",
+      "type": "http",
+      "url": "https://toy.cedarstar.org/mcp",
+      "headers": {},
+      "timeout": 30000,
+      "enabled": true
     }
   ]
 }

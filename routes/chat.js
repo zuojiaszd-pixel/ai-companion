@@ -127,40 +127,6 @@ function extractMemoryCandidates(userMsg, aiReply) {
         }
     }
 
-    // --- 2. 检测用户表达的情绪状态 ---
-    const userMood = analyzeUserMood(userMsg);
-    if (userMood && !/开心|哈哈|嘻嘻|好棒/.test(userMsg)) {
-        // 只记非日常开心的情绪（开心的日常不记，太频繁）
-        // 但开心的"大事"（含"好开心""开心极了"等强烈词）要记
-        const isStrongHappy = /开心极了|太开心|好开心|特别开心/.test(userMsg);
-        if (userMood !== '开心' || isStrongHappy) {
-            const intensity = isStrongHappy ? 8 : (/特别|非常|很|好/.test(userMsg) ? 6 : 4);
-            const moodContent = `Rinka情绪：${userMood}`;
-            // 避免重复保存：检查是否包含具体原因（长度>15字）
-            if (userMsg.length > 15) {
-                const reason = userMsg.replace(/[。，！？\s]/g, ' ').trim().slice(0, 60);
-                candidates.push({
-                    content: `Rinka情绪：${userMood}（${reason}）`,
-                    type: 'core',
-                    priority: 'normal',
-                    tags: ['情绪', userMood],
-                    mood: userMood,
-                    moodIntensity: intensity,
-                    lumiMood: null
-                });
-            } else {
-                candidates.push({
-                    content: moodContent,
-                    type: 'core',
-                    priority: 'low',
-                    tags: ['情绪', userMood],
-                    mood: userMood,
-                    moodIntensity: intensity,
-                    lumiMood: null
-                });
-            }
-        }
-    }
 
     // --- 3. 检测我们之间的重要时刻或决定 ---
     const wePatterns = [
