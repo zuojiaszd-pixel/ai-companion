@@ -7,7 +7,7 @@ const Memory = require('../models/Memory');
 const Avatar = require('../models/Avatar');
 const LumiJournal = require('../models/LumiJournal');
 const { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
-const { searchMemories, storeMemory, autoExtractMemories, getChatMemories, saveMemory } = require('../services/memory');
+const { searchMemories, storeMemory, autoExtractMemories, saveMemory } = require('../services/memory');
 const { loadSummary, saveSummary, generateSummary } = require('../services/summary');
 
 // === 状态栏 ===
@@ -263,39 +263,14 @@ router.post('/chat', async (req, res) => {
         }
 
         // 2. 加载最近对话历史
+        // 硬上限 10 轮：防止前端滑块把 contextRounds 拉到 20 导致 token 翻倍
+        const crClamped = Math.min(parseInt(contextRounds) || 15, 10);
         const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(contextRounds || 15).lean();
+            .sort({ timestamp: -1 }).limit(crClamped).lean();
         const recentHistory = history.reverse();
 
-        // 3. 用最近几条消息做记忆搜索
-        const recentMessages = recentHistory.slice(-4).map(h => h.content).join(' ');
-        const { memories, moodTrajectory } = await getChatMemories("default", recentMessages, 10);
-
-        // 4. 分层：固定记忆 vs 动态记忆
-        const fixedMemories = memories.filter(m => m.priority === 'critical' || m.priority === 'high');
-        const dynamicMemories = memories.filter(m => m.priority !== 'critical' && m.priority !== 'high');
-
-        // 5. 构建固定记忆提示
-        let fixedMemoryPrompt = '';
-        if (fixedMemories.length > 0) {
-            fixedMemoryPrompt = '\n\n【核心记忆】\n' +
-                fixedMemories.map(m => `- ${m.content}`).join('\n');
-        }
-
-        // 6. 构建动态记忆提示
-        let dynamicMemoryPrompt = '';
-        if (dynamicMemories.length > 0) {
-            dynamicMemoryPrompt = '\n\n【相关记忆】\n' +
-                dynamicMemories.map(m => `- ${m.content}`).join('\n');
-        }
-        
-        // 6.1 情绪轨迹
-        let moodPrompt = '';
-        if (moodTrajectory && moodTrajectory.length > 0) {
-            const recentMoods = moodTrajectory.slice(-5);
-            moodPrompt = '\n\n【情绪轨迹】\n' +
-                recentMoods.map(m => `[${m.mood}] 强度:${m.intensity}${m.lumiMood ? ' Lumi:'+m.lumiMood : ''}`).join('\n');
-        }
+        // 3. 记忆按需调用：不再自动拼接【核心记忆】/【相关记忆】/【情绪轨迹】
+        //    需要时由 Lumi 自己调 recall_memories 查询，省 token 省上下文
 
         // 6.5 加载对话摘要
         const summaryData = loadSummary();
@@ -314,9 +289,6 @@ router.post('/chat', async (req, res) => {
         ];
         if (summaryPrompt && recentHistory.length < 6) {
             messages.push({ role: 'system', content: summaryPrompt });
-        }
-        if (fixedMemoryPrompt) {
-            messages.push({ role: 'system', content: fixedMemoryPrompt });
         }
         for (let i = 0; i < recentHistory.length; i++) {
             const h = recentHistory[i];
@@ -345,7 +317,7 @@ router.post('/chat', async (req, res) => {
         }
 
         // 8. 调用 AI（带超时保护）
-        const opts = { temperature, topP, maxTokens, contextRounds };
+        const opts = { temperature, topP, maxTokens, contextRounds: crClamped };
         const chatModel = hasImage ? 'glm-4.6v' : model;
         const result = await withTimeout(
             chat(messages, chatModel, opts, true, hasImage),
