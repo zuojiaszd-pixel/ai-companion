@@ -15,7 +15,7 @@ async function getEmbedding(text) {
                 'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
                 'Content-Type': 'application/json'
             },
-            timeout: 4000
+            timeout: 3000
         });
         return res.data.data[0].embedding;
     } catch (e) {
@@ -322,7 +322,7 @@ async function recallMemories(sessionId, query, topK) {
             supersededBy: null,
             contradicted: false,
             archived: false
-        }).sort({ createdAt: -1 }).limit(100);
+        }).sort({ createdAt: -1 }).limit(100).maxTimeMS(3000);
         
         if (all.length === 0) return [];
         
