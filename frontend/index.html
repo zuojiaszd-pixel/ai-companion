@@ -173,6 +173,24 @@
 .mem-item .mem-tag{font-size:10px;color:var(--text3);background:var(--surface2);padding:2px 6px;border-radius:4px}
 .mem-item .mem-del{width:24px;height:24px;border:none;border-radius:50%;background:var(--surface2);color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
 .mem-item .mem-del:hover{background:#e74c3c;color:#fff}
+.mem-item .mem-edit-btn{height:24px;padding:0 8px;border:none;border-radius:12px;background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11px;display:flex;align-items:center;gap:2px;flex-shrink:0;transition:all .15s}
+.mem-item .mem-edit-btn:hover{background:var(--accent);color:#fff}
+.mem-edit-overlay{position:fixed;inset:0;z-index:200;background:rgba(60,30,40,.35);display:none;align-items:center;justify-content:center;padding:16px}
+.mem-edit-overlay.open{display:flex}
+.mem-edit-panel{width:100%;max-width:420px;max-height:88vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.mem-edit-panel .mem-edit-header{font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px}
+.mem-edit-field{margin-bottom:12px}
+.mem-edit-field label{display:block;font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600}
+.mem-edit-panel input[type=text],.mem-edit-panel textarea,.mem-edit-panel select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;outline:none;box-sizing:border-box;font-family:var(--font)}
+.mem-edit-panel textarea{min-height:80px;resize:vertical}
+.mem-kind-pick,.mem-priority-pick{display:flex;gap:6px;flex-wrap:wrap}
+.mem-kind-pick button,.mem-priority-pick button{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s}
+.mem-kind-pick button.active,.mem-priority-pick button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.mem-edit-hint{font-size:10px;color:var(--text3);margin-top:4px;line-height:1.5}
+.mem-edit-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.mem-edit-actions button{padding:8px 18px;border:none;border-radius:var(--radius-sm);font-size:13px;cursor:pointer}
+.mem-edit-actions .save{background:var(--accent);color:#fff}
+.mem-edit-actions .cancel{background:var(--surface2);color:var(--text2)}
 .mem-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
 @media(max-width:600px){#page-memory{padding:10px}.mem-header .mem-title{font-size:16px}.mem-item{padding:10px 12px}.mem-item .mem-content{font-size:12px}}
 
@@ -1629,7 +1647,8 @@ function memRender() {
             thoughtHtml +
             '<div class="mem-item-footer">' +
             '<div class="mem-tags">'+tags+'</div>' +
-            '<div style="display:flex;gap:4px">' + lockBtn +
+            '<div style="display:flex;gap:4px;align-items:center">' + lockBtn +
+            '<button class="mem-edit-btn" onclick="memEdit(\''+m._id+'\')">✎ 编辑</button>' +
             '<button class="mem-del" onclick="memDelete(\''+m._id+'\')">&times;</button>' +
             '</div>' +
             '</div>' +
@@ -1664,6 +1683,85 @@ async function memDelete(id) {
         memRender();
         memLoadStats();
     } catch(e) { alert('删除失败'); }
+}
+
+var memEditId = null;
+var memEditKind = 'core';
+var memEditPriority = 'normal';
+
+function updateMemPick(cls, val) {
+    var attr = cls === 'mem-kind-pick' ? 'kind' : 'priority';
+    document.querySelectorAll('.' + cls + ' button').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-' + attr) === val);
+    });
+}
+
+function memEdit(id) {
+    var m = memAllData.find(function(x){return x._id === id;});
+    if (!m) return;
+    memEditId = id;
+    memEditKind = m.kind || 'core';
+    memEditPriority = m.priority || 'normal';
+    document.getElementById('mem-edit-type').value = m.type || 'core';
+    document.getElementById('mem-edit-title').value = m.title || '';
+    document.getElementById('mem-edit-content').value = m.content || '';
+    document.getElementById('mem-edit-tags').value = (m.tags || []).join(', ');
+    document.getElementById('mem-edit-mood').value = m.mood || '';
+    updateMemPick('mem-kind-pick', memEditKind);
+    updateMemPick('mem-priority-pick', memEditPriority);
+    document.getElementById('mem-edit-overlay').classList.add('open');
+}
+
+function memCloseEdit() {
+    document.getElementById('mem-edit-overlay').classList.remove('open');
+    memEditId = null;
+}
+
+function memPickKind(k) {
+    memEditKind = k;
+    updateMemPick('mem-kind-pick', k);
+}
+
+function memPickPriority(p) {
+    memEditPriority = p;
+    updateMemPick('mem-priority-pick', p);
+}
+
+async function memSaveEdit() {
+    if (!memEditId) return;
+    var m = memAllData.find(function(x){return x._id === memEditId;});
+    if (!m) return;
+    var body = {};
+    var kind = memEditKind;
+    var priority = memEditPriority;
+    var type = document.getElementById('mem-edit-type').value;
+    var title = document.getElementById('mem-edit-title').value.trim();
+    var content = document.getElementById('mem-edit-content').value;
+    var tags = document.getElementById('mem-edit-tags').value.split(/[,，]/).map(function(s){return s.trim();}).filter(Boolean);
+    var mood = document.getElementById('mem-edit-mood').value.trim() || null;
+    if (kind !== (m.kind || 'core')) body.kind = kind;
+    if (priority !== (m.priority || 'normal')) body.priority = priority;
+    if (type !== (m.type || 'core')) body.type = type;
+    if (title !== (m.title || '')) body.title = title || null;
+    if (content !== (m.content || '')) body.content = content;
+    if (tags.join('|') !== (m.tags || []).join('|')) body.tags = tags;
+    if (mood !== (m.mood || null)) body.mood = mood;
+    if (Object.keys(body).length === 0) { memCloseEdit(); return; }
+    var btn = document.querySelector('.mem-edit-actions .save');
+    if (btn) { btn.disabled = true; btn.textContent = '保存中...'; }
+    try {
+        var res = await fetch(BACKEND + '/api/memory/' + memEditId, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        memCloseEdit();
+        memLoad();
+    } catch(e) {
+        alert('保存失败: ' + e.message);
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '保存'; }
 }
 
 // === Dream ===
@@ -1832,6 +1930,40 @@ async function deleteSession(sessionId) {
 <div class="sessions-body" id="sessions-body"></div>
 <div class="sessions-footer">
 <button onclick="createSession()">+ 新对话</button>
+</div>
+</div>
+<div id="mem-edit-overlay" class="mem-edit-overlay">
+<div class="mem-edit-panel">
+<div class="mem-edit-header">✎ 编辑记忆</div>
+<div class="mem-edit-field">
+<label>卡片类型</label>
+<div class="mem-kind-pick">
+<button data-kind="core" onclick="memPickKind('core')">✨ 核心卡片</button>
+<button data-kind="moment" onclick="memPickKind('moment')">🌙 零碎卡片</button>
+</div>
+</div>
+<div class="mem-edit-field">
+<label>优先级</label>
+<div class="mem-priority-pick">
+<button data-priority="critical" onclick="memPickPriority('critical')">常驻</button>
+<button data-priority="high" onclick="memPickPriority('high')">重要</button>
+<button data-priority="normal" onclick="memPickPriority('normal')">普通</button>
+<button data-priority="low" onclick="memPickPriority('low')">琐碎</button>
+</div>
+<div class="mem-edit-hint">常驻 = 每次对话必带；重要 / 普通 / 琐碎 = 按需回忆</div>
+</div>
+<div class="mem-edit-field">
+<label>类型</label>
+<select id="mem-edit-type"><option value="core">core</option><option value="tech">tech</option><option value="state">state</option></select>
+</div>
+<div class="mem-edit-field"><label>标题</label><input type="text" id="mem-edit-title" placeholder="卡片标题"></div>
+<div class="mem-edit-field"><label>内容</label><textarea id="mem-edit-content" placeholder="记忆内容"></textarea></div>
+<div class="mem-edit-field"><label>标签（逗号分隔）</label><input type="text" id="mem-edit-tags" placeholder="例如: 喜欢, 奶茶"></div>
+<div class="mem-edit-field"><label>情绪</label><input type="text" id="mem-edit-mood" placeholder="例如: happy"></div>
+<div class="mem-edit-actions">
+<button class="cancel" onclick="memCloseEdit()">取消</button>
+<button class="save" onclick="memSaveEdit()">保存</button>
+</div>
 </div>
 </div>
 <script src="js/mcp.js"></script></body></html>

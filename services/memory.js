@@ -323,19 +323,28 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
 
 // ============ 检索记忆（多Query + RRF + 归档补充 + 关联联想） ============
 
-async function recallMemories(sessionId, query, topK) {
+async function recallMemories(sessionId, query, topK, opts = {}) {
     topK = topK || 10;
     try {
         const multiQueries = generateMultiQueries(query);
         const embeddings = await Promise.all(multiQueries.map(q => withHardTimeout(getEmbedding(q), 3000).catch(() => null)));
-        
+
+        const filter = {
+            sessionId,
+            supersededBy: null,
+            contradicted: false,
+            archived: false
+        };
+        if (opts.excludeResident) {
+            // 常驻级卡片（kind=core 且 priority=critical）由 getRelevantMemories 单独加载，按需检索排除它们
+            filter.$or = [
+                { kind: { $ne: 'core' } },
+                { priority: { $ne: 'critical' } }
+            ];
+        }
+
         const all = await withHardTimeout(
-            Memory.find({
-                sessionId,
-                supersededBy: null,
-                contradicted: false,
-                archived: false
-            }).sort({ createdAt: -1 }).limit(100).maxTimeMS(3000),
+            Memory.find(filter).sort({ createdAt: -1 }).limit(100).maxTimeMS(3000),
             3000
         ).catch(() => []);
         
@@ -506,10 +515,36 @@ async function recallMemories(sessionId, query, topK) {
 
 // ============ 分层注入 ============
 
+function estimateTokens(text) {
+    const cjkChars = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+    return cjkChars + (text.length - cjkChars) * 0.5;
+}
+
 async function getRelevantMemories(sessionId, query, maxTokens) {
     maxTokens = maxTokens || 1500;
-    const results = await recallMemories(sessionId, query, 20);
-    if (results.length === 0) return '';
+    const results = await recallMemories(sessionId, query, 20, { excludeResident: true });
+
+    let residentText = '';
+    try {
+        const resident = await withHardTimeout(
+            Memory.find({
+                sessionId,
+                kind: 'core',
+                priority: 'critical',
+                supersededBy: null,
+                contradicted: false,
+                archived: false
+            }).sort({ updatedAt: -1 }).limit(10).maxTimeMS(3000).lean(),
+            3000
+        ).catch(() => []);
+        residentText = resident.map(r => `[常驻/${r.priority}] ${r.content}`).join('\n');
+    } catch (e) {
+        console.warn('[Memory] 常驻记忆加载失败:', e.message);
+    }
+
+    if (results.length === 0) {
+        return residentText ? '【常驻记忆】\n' + residentText : '';
+    }
     
     // Phase 2：配额按 kind（core/moment）算 —— 核心卡片优先，零碎卡片次之
     const kindQuota = { core: 8, moment: 5 };
@@ -534,12 +569,12 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
     }
     
     let text = '';
-    let tokenEstimate = 0;
+    if (residentText) text += '【常驻记忆】\n' + residentText + '\n';
+    if (selected.length) text += '【相关记忆】\n';
+    let tokenEstimate = estimateTokens(text);
     for (const r of selected) {
         const line = `[${r.kind || 'core'}/${r.priority}] ${r.content}\n`;
-        const cjkChars = (line.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
-        const otherChars = line.length - cjkChars;
-        tokenEstimate += cjkChars + otherChars * 0.5;
+        tokenEstimate += estimateTokens(line);
         if (tokenEstimate > maxTokens) break;
         text += line;
     }

@@ -243,7 +243,7 @@ router.post('/chat', async (req, res) => {
                 '记忆检索'
             );
             if (memText) {
-                relevantMemoriesPrompt = '\n\n【相关记忆】\n' + memText;
+                relevantMemoriesPrompt = '\n\n' + memText;
             }
         } catch (e) {
             console.error('[Memory] 自动注入失败（跳过）:', e.message);
