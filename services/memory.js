@@ -131,7 +131,7 @@ async function keywordSearchArchived(sessionId, query, limit) {
         sessionId,
         archived: true,
         supersededBy: null
-    }).limit(100).lean();
+    }).select('-embedding').limit(100).lean();
     
     const scored = archived.map(m => {
         const contentTokens = tokenize(m.content + ' ' + (m.tags || []).join(' '));
@@ -155,7 +155,7 @@ async function findRelatedByTags(sessionId, tagSet, excludeIds) {
         contradicted: false,
         relatedTags: { $in: tagSet },
         _id: { $nin: excludeIds }
-    }).limit(8).lean();
+    }).select('-embedding').limit(8).lean();
     
     return related;
 }
@@ -343,43 +343,62 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
             ];
         }
 
-        const all = await withHardTimeout(
-            Memory.find(filter).sort({ createdAt: -1 }).limit(100).maxTimeMS(3000),
+        const candidates = await withHardTimeout(
+            Memory.find(filter)
+                .select('-embedding')
+                .sort({ createdAt: -1 })
+                .limit(100)
+                .maxTimeMS(3000)
+                .lean(),
             3000
         ).catch(() => []);
-        
-        if (all.length === 0) return [];
-        
+
+        if (candidates.length === 0) return [];
+
+        const poolIds = candidates.map(c => c._id);
+        const embDocs = await withHardTimeout(
+            Memory.find({ _id: { $in: poolIds } })
+                .select('_id embedding')
+                .lean(),
+            3000
+        ).catch(() => []);
+        const embMap = new Map(embDocs.map(d => [d._id.toString(), d.embedding || []]));
+
         const rrfK = 60;
         const rrfScores = new Map();
-        
+
         for (let qi = 0; qi < multiQueries.length; qi++) {
             const queryEmbedding = embeddings[qi];
             const queryTokens = tokenize(multiQueries[qi]);
-            if (!queryEmbedding) continue;
-            
-            const vectorRanked = all.map(m => ({
-                memory: m,
-                vectorScore: cosineSim(queryEmbedding, m.embedding || []),
-                keywordScore: 0
-            }));
-            vectorRanked.sort((a, b) => b.vectorScore - a.vectorScore);
-            
-            for (const item of vectorRanked) {
-                const contentTokens = tokenize(item.memory.content + ' ' + (item.memory.tags || []).join(' '));
+
+            // 关键词 RRF 不依赖 embedding，保证 embedding 失败时仍能召回
+            const keywordRanked = candidates.map(m => {
+                const contentTokens = tokenize(m.content + ' ' + (m.tags || []).join(' '));
                 const matchCount = queryTokens.filter(t => contentTokens.includes(t)).length;
-                item.keywordScore = queryTokens.length > 0 ? matchCount / queryTokens.length : 0;
-            }
-            const keywordRanked = [...vectorRanked].sort((a, b) => b.keywordScore - a.keywordScore);
-            
-            vectorRanked.forEach((item, rank) => {
+                const keywordScore = queryTokens.length > 0 ? matchCount / queryTokens.length : 0;
+                return { memory: m, keywordScore };
+            });
+            keywordRanked.sort((a, b) => b.keywordScore - a.keywordScore);
+
+            keywordRanked.forEach((item, rank) => {
                 const id = item.memory._id.toString();
                 const score = rrfScores.get(id) || { item, score: 0 };
                 score.score += 1 / (rrfK + rank + 1);
                 rrfScores.set(id, score);
             });
-            
-            keywordRanked.forEach((item, rank) => {
+
+            if (!queryEmbedding) continue;
+
+            // 向量 RRF 只对候选池里有 embedding 的成员算
+            const vectorRanked = candidates
+                .filter(m => embMap.has(m._id.toString()) && embMap.get(m._id.toString()).length > 0)
+                .map(m => ({
+                    memory: m,
+                    vectorScore: cosineSim(queryEmbedding, embMap.get(m._id.toString()) || [])
+                }));
+            vectorRanked.sort((a, b) => b.vectorScore - a.vectorScore);
+
+            vectorRanked.forEach((item, rank) => {
                 const id = item.memory._id.toString();
                 const score = rrfScores.get(id) || { item, score: 0 };
                 score.score += 1 / (rrfK + rank + 1);
@@ -393,7 +412,11 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
         
         const ranked = Array.from(rrfScores.values()).map(entry => {
             const m = entry.item.memory;
-            const heat = m.decayHeat ? m.decayHeat() : 1.0;
+            const lastAccess = m.lastAccessed || m.createdAt || now;
+            const daysSinceAccess = (now - new Date(lastAccess)) / 86400000;
+            const heat = m.locked
+                ? (m.baseHeat || 1.0)
+                : (m.baseHeat || 1.0) * Math.pow(0.5, daysSinceAccess / (m.halfLife || 30));
             const priorityBoost = { critical: 0.3, high: 0.15, normal: 0, low: -0.1 }[m.priority] || 0;
             const ageDays = (now - m.createdAt) / (1000 * 60 * 60 * 24);
             const recentBonus = ageDays <= RECENT_WINDOW_DAYS ? RECENT_BONUS * (1 - ageDays / RECENT_WINDOW_DAYS) : 0;
@@ -406,7 +429,6 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
         const topResults = ranked.slice(0, topK);
         
         const results = topResults.map(entry => {
-            entry.item.memory.touch();
             return {
                 _id: entry.item.memory._id,
                 content: entry.item.memory.content,
@@ -424,7 +446,18 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
             };
         });
         
-        await Promise.all(topResults.map(entry => entry.item.memory.save()));
+        await Promise.all(topResults.map(entry => {
+            const id = entry.item.memory._id;
+            return Memory.updateOne(
+                { _id: id },
+                [{ $set: {
+                    accessCount: { $add: ['$accessCount', 1] },
+                    lastAccessed: new Date(),
+                    heat: { $max: ['$heat', '$baseHeat'] },
+                    updatedAt: new Date()
+                } }]
+            ).catch(() => {});
+        }));
         
         // 关联联想：从命中结果中收集标签，找同标签的其他记忆
         const hitTags = new Set();
@@ -534,7 +567,7 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
                 supersededBy: null,
                 contradicted: false,
                 archived: false
-            }).sort({ updatedAt: -1 }).limit(10).maxTimeMS(3000).lean(),
+            }).select('-embedding').sort({ updatedAt: -1 }).limit(10).maxTimeMS(3000).lean(),
             3000
         ).catch(() => []);
         residentText = resident.map(r => `[常驻/${r.priority}] ${r.content}`).join('\n');
@@ -835,13 +868,13 @@ async function getChatMemories(sessionId, query, topK) {
         const baselineMemories = await Memory.find({
             sessionId, supersededBy: null, contradicted: false, archived: false,
             priority: 'critical'
-        }).limit(10).lean();
+        }).select('-embedding').limit(10).lean();
         
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
         const recentMemories = await Memory.find({
             sessionId, supersededBy: null, contradicted: false, archived: false,
             createdAt: { $gte: threeDaysAgo }
-        }).sort({ createdAt: -1 }).limit(5).lean();
+        }).select('-embedding').sort({ createdAt: -1 }).limit(5).lean();
         
         const seenIds = new Set();
         let merged = [];
