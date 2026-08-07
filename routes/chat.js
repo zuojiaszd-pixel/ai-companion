@@ -209,7 +209,7 @@ router.post('/chat', async (req, res) => {
     });
     
     try {
-        const { message, sessionId = 'default', model, temperature, topP, maxTokens, contextRounds, image } = req.body;
+        const { message, sessionId = 'default', model, temperature, topP, maxTokens, contextRounds, contextTokens: bodyContextTokens, image } = req.body;
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
 
         // 1. 存用户消息（去重：30秒内相同内容不重复存储）
@@ -227,9 +227,9 @@ router.post('/chat', async (req, res) => {
 
         // 2. 加载最近对话历史
         // contextRounds 上限 20：和前端滑块一致，Rinka 想让 Lumi 记得更久
-        const crClamped = Math.min(parseInt(contextRounds) || 20, 20);
+        const crClamped = Math.min(parseInt(contextRounds) || 30, 100);
         const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(crClamped * 2).lean();
+            .sort({ timestamp: -1 }).limit(Math.min(crClamped * 2, 200)).lean();
         const recentHistory = history.reverse();
 
         // 3. 相关记忆自动注入：根据最近对话检索最相关的记忆，按 token 预算筛选
@@ -259,18 +259,48 @@ router.post('/chat', async (req, res) => {
             }
         }
 
-        // 7. 构建消息数组
+        // 7. token 预算制：从新到旧回溯历史，保证最新对话一定保留
+        //    预算 = contextTokens - 系统提示 - 相关记忆 - 摘要，剩下的全给历史
+        //    轮数上限（contextRounds）只是硬顶，实际能装多少由 token 量决定
         const hasImage = !!image;
+        const estimateTokens = (str) => {
+            if (!str) return 0;
+            if (typeof str !== 'string') str = String(str);
+            const cjk = (str.match(/[\u3000-\u303f\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+            const other = str.length - cjk;
+            // 中文约 1 token/字，英文约 0.35 token/字符，+4 作为单条消息开销
+            return Math.ceil(cjk * 1.0 + other * 0.35) + 4;
+        };
+
+        const contextTokens = Math.min(
+            parseInt(bodyContextTokens) || parseInt(process.env.CONTEXT_TOKENS) || loadSettings().contextTokens || 12000,
+            24000
+        );
+        const systemTokens = estimateTokens(STATIC_SYSTEM_PROMPT)
+            + (relevantMemoriesPrompt ? estimateTokens(relevantMemoriesPrompt) : 0);
+        const summaryTokens = summaryPrompt ? estimateTokens(summaryPrompt) : 0;
+        const historyBudget = Math.max(contextTokens - systemTokens - summaryTokens, 2000);
+
+        let keptHistory = [];
+        let usedTokens = 0;
+        for (let i = recentHistory.length - 1; i >= 0; i--) {
+            const h = recentHistory[i];
+            const t = estimateTokens(h.content);
+            if (usedTokens + t > historyBudget && keptHistory.length > 0) break;
+            keptHistory.unshift(h);
+            usedTokens += t;
+        }
+
         const messages = [
             { role: 'system', content: STATIC_SYSTEM_PROMPT + relevantMemoriesPrompt },
         ];
-        if (summaryPrompt && recentHistory.length >= 15) {
+        if (summaryPrompt && keptHistory.length >= 15) {
             messages.push({ role: 'system', content: summaryPrompt });
         }
-        for (let i = 0; i < recentHistory.length; i++) {
-            const h = recentHistory[i];
+        for (let i = 0; i < keptHistory.length; i++) {
+            const h = keptHistory[i];
             if (h.role === 'user') {
-                if (i === recentHistory.length - 1) {
+                if (i === keptHistory.length - 1) {
                     const userContent = message;
                     if (hasImage) {
                         messages.push({
@@ -294,8 +324,10 @@ router.post('/chat', async (req, res) => {
         }
 
         // 8. 调用 AI（带超时保护）
-        const opts = { temperature, topP, maxTokens, contextRounds: crClamped };
-        const chatModel = hasImage ? 'glm-4.6v' : model;
+                const keptUserRounds = keptHistory.filter(h => h.role === 'user').length;
+        // 告诉 ai.js 实际保留了多少轮，避免 trimContext 再把装进去的历史砍掉
+        const opts = { temperature, topP, maxTokens, contextRounds: Math.max(keptUserRounds + 1, 3) };
+        const chatModel = hasImage ? 'openai/gpt-5.6-luna' : model;
         const result = await withTimeout(
             chat(messages, chatModel, opts, true, hasImage),
             55000,
@@ -307,7 +339,7 @@ router.post('/chat', async (req, res) => {
 
         // 10. 异步更新对话摘要
         const updatedHistory = [
-            ...recentHistory.slice(-3),
+            ...keptHistory.slice(-3),
             { role: 'assistant', content: result.content }
         ];
         const newSummary = generateSummary(updatedHistory);

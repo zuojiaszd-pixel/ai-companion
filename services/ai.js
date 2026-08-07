@@ -19,9 +19,9 @@ const coreMemoryPrompt = `
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用DeepSeek V4 Flash
-const DEFAULT_MODEL = "deepseek-v4-flash"
+const DEFAULT_MODEL = "openai/gpt-5.6-luna"
 // 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "z-ai/glm-4.6v"
+const IMAGE_MODEL = "openai/gpt-5.6-luna"
 
 function loadSettings() {
     try {
@@ -366,28 +366,73 @@ const REPEAT_RETRY_PROMPTS = [
  */
 
 /**
- * 上下文裁剪：保留系统提示 + 最近 N 轮对话
- * @param {Array} messages - 消息数组
- * @param {number} maxRounds - 保留的最大对话轮数
+ * 粗略估算文本的 token 数（用于上下文预算裁剪）
+ * 中文约 1 字 ≈ 0.6 token，英文约 4 字符 ≈ 1 token
+ * 不需要精确，够用来做预算控制就行
  */
-function trimContext(messages, maxRounds = 15) {
-    const system = messages[0];
+function estimateTokens(text) {
+    if (!text) return 0;
+    let cjk = 0, ascii = 0, other = 0;
+    for (const ch of String(text)) {
+        const code = ch.charCodeAt(0);
+        if (code > 127) cjk++;
+        else if (code >= 32) ascii++;
+        else other++;
+    }
+    return Math.ceil(cjk * 0.6 + ascii * 0.25 + other * 0.5);
+}
 
-    // 按用户消息轮次裁剪，而非按消息条数
-    // 这样工具调用产生的多条消息会被视为同一轮，不会被单独计数
-    const userIndices = [];
+/**
+ * 上下文裁剪：轮数上限 + token 预算双保险
+ * 1. 先按轮数裁：保留最近 maxRounds 轮用户对话（工具调用链整轮保留）
+ * 2. 再按 token 裁：从最旧往新累计，超出预算就丢掉最旧的整轮
+ *    短句能多留几轮、长句自动少留，不浪费额度也不超载
+ * @param {Array} messages - 消息数组
+ * @param {object} opts - { contextRounds, contextTokens }
+ */
+function trimContext(messages, opts = {}) {
+    const system = messages[0];
+    const maxRounds = opts.contextRounds || 15;
+    const maxTokens = opts.contextTokens || 0;
+
+    // 按用户消息轮次分组（工具调用产生的多条消息属于同一轮）
+    const rounds = [];
+    let current = [];
     for (let i = 1; i < messages.length; i++) {
-        if (messages[i].role === 'user') {
-            userIndices.push(i);
+        if (messages[i].role === 'user' && current.length > 0) {
+            rounds.push(current);
+            current = [];
         }
+        current.push(messages[i]);
+    }
+    if (current.length > 0) rounds.push(current);
+    if (rounds.length === 0) return messages;
+
+    // 第 1 步：轮数上限
+    let kept = rounds.slice(-maxRounds);
+
+    // 第 2 步：token 预算（0 表示不限制）
+    if (maxTokens > 0) {
+        const sysTokens = estimateTokens(typeof system.content === 'string' ? system.content : JSON.stringify(system.content || ''));
+        let total = sysTokens;
+        let startIdx = 0;
+        for (let i = 0; i < kept.length; i++) {
+            const roundTokens = kept[i].reduce((sum, m) => {
+                const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '');
+                return sum + estimateTokens(text);
+            }, 0);
+            if (total + roundTokens > maxTokens) {
+                startIdx = i;
+                break;
+            }
+            total += roundTokens;
+        }
+        // 至少保留最后一轮，保证能接上话
+        if (startIdx >= kept.length - 1) startIdx = kept.length - 1;
+        kept = kept.slice(startIdx);
     }
 
-    const userCount = userIndices.length;
-    if (userCount <= maxRounds) return messages;
-
-    // 保留最近 maxRounds 轮用户消息及之后所有内容（含工具调用链）
-    const keepFrom = userIndices[userCount - maxRounds];
-    return [system, ...messages.slice(keepFrom)];
+    return [system, ...kept.flat()];
 }
 
 /**
@@ -422,7 +467,7 @@ function injectSummary(messages) {
 async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     let toolCallsLog = [];
-    messages = trimContext(messages, opts?.contextRounds || 15);
+    messages = trimContext(messages, opts || {});
     messages = injectSummary(messages);
     const MAX_TOOL_ROUNDS = 10;
     const MAX_EMPTY_RETRIES = hasImage ? 0 : 1;
