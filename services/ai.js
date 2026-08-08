@@ -19,9 +19,9 @@ const coreMemoryPrompt = `
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用DeepSeek V4 Flash
-const DEFAULT_MODEL = "openai/gpt-5.6-luna"
+const DEFAULT_MODEL = "openai/gpt-5.6-luna-pro"
 // 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "openai/gpt-5.6-luna"
+const IMAGE_MODEL = "openai/gpt-5.6-luna-pro"
 
 function loadSettings() {
     try {

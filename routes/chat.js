@@ -327,7 +327,7 @@ router.post('/chat', async (req, res) => {
                 const keptUserRounds = keptHistory.filter(h => h.role === 'user').length;
         // 告诉 ai.js 实际保留了多少轮，避免 trimContext 再把装进去的历史砍掉
         const opts = { temperature, topP, maxTokens, contextRounds: Math.max(keptUserRounds + 1, 3) };
-        const chatModel = hasImage ? 'openai/gpt-5.6-luna' : model;
+        const chatModel = hasImage ? 'openai/gpt-5.6-luna-pro' : model;
         const result = await withTimeout(
             chat(messages, chatModel, opts, true, hasImage),
             55000,
