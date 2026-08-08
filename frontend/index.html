@@ -1168,13 +1168,14 @@ function scrollToBottom() {
 
 // Load avatars then history on page load
 var savedModel = localStorage.getItem("selectedModel");
-// 只把旧的千问/GLM选择迁移到 Luna Pro，保留 Luna 5.6 普通版
-if (savedModel && (savedModel.indexOf("qwen/") === 0 || savedModel.indexOf("z-ai/glm") === 0)) {
+// 只把旧的千问选择迁移到 Luna Pro，保留 Luna 5.6 普通版
+if (savedModel && savedModel.indexOf("qwen/") === 0) {
     savedModel = "openai/gpt-5.6-luna-pro";
     localStorage.setItem("selectedModel", savedModel);
 }
 var modelSelect = document.getElementById("model-select");
-if (modelSelect) modelSelect.value = savedModel;
+// 没有历史选择时保留 HTML 里的默认 Luna 5.6；只有旧千问才切到 Pro
+if (modelSelect && savedModel) modelSelect.value = savedModel;
 loadAvatarsFromBackend().then(function(){loadHistory();});
 var savedUsage = localStorage.getItem('lastUsage');
 if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
