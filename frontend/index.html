@@ -826,7 +826,7 @@ function finishLiveToolCall(name, result, id) {
     if (!row) return;
     var state = row.querySelector('.tc-state');
     var resultEl = row.querySelector('.tc-result');
-    if (state) { state.textContent = '已完成'; state.style.color = '#4cd964'; }
+    if (state) { state.textContent = '已完成'; state.style.color = 'var(--accent)'; }
     if (resultEl) resultEl.textContent = String(result || '');
     var details = row.querySelector('details');
     if (details) details.open = false;
