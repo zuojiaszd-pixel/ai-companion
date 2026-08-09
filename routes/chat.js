@@ -326,13 +326,20 @@ router.post('/chat', async (req, res) => {
         // 8. 调用 AI（带超时保护）
                 const keptUserRounds = keptHistory.filter(h => h.role === 'user').length;
         // 告诉 ai.js 实际保留了多少轮，避免 trimContext 再把装进去的历史砍掉
-        const opts = { temperature, topP, maxTokens, contextRounds: Math.max(keptUserRounds + 1, 3) };
+        const opts = {
+            temperature, topP, maxTokens,
+            contextRounds: Math.max(keptUserRounds + 1, 3),
+            onToolStart: (name) => setStatus('调用 ' + name),
+            onToolEnd: (name) => setStatus('已完成 ' + name)
+        };
         const chatModel = hasImage ? 'openai/gpt-5.6-luna' : model;
+        setStatus('思考中…');
         const result = await withTimeout(
             chat(messages, chatModel, opts, true, hasImage),
             55000,
             'AI响应'
         );
+        setStatus('');
 
         // 9. 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId });
@@ -369,6 +376,7 @@ router.post('/chat', async (req, res) => {
         });
 
     } catch (err) {
+        setStatus('');
         console.error('Chat error:', err.message);
         console.error('OpenRouter response:', err.response?.data);
         

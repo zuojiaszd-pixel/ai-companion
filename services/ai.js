@@ -486,35 +486,37 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
         if (useTools && !hasImage && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
-            for (const tc of msg.tool_calls) {
-                var func_ = tc && tc.function;
+            // 同一轮中互不依赖的工具并行执行，等全部结果回来后再交给模型继续判断。
+            // 解析参数仍在本地完成，避免一个坏调用阻塞同批其它工具。
+            const jobs = msg.tool_calls.map(async (tc) => {
+                const func_ = tc && tc.function;
                 if (!func_ || !func_.arguments) {
-                    console.log("Malformed tool call, skipping");
-                    messages.push({ role: "tool", tool_call_id: (tc && tc.id) || "unknown", content: "Error: tool call format error" });
-                    continue;
+                    return { tc, name: 'unknown', args: {}, result: 'Error: tool call format error' };
                 }
-                var func = func_;
                 let args;
                 try {
-                    args = safeJsonParse(func.arguments);
+                    args = safeJsonParse(func_.arguments);
                     console.log('[DEBUG] Tool args parsed OK, keys:', Object.keys(args));
-                } catch(e) {
-                    console.log("JSON parse error:", e.message, "| args length:", func.arguments.length);
-                    if (func.name === 'write_file' && func.arguments.includes('"content"')) {
-                        messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 文件内容过长被截断，请尝试分多次写入或缩短内容。" });
-                    } else {
-                        messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message });
-                    }
-                    continue;
+                } catch (e) {
+                    const result = func_.name === 'write_file' && func_.arguments.includes('\"content\"')
+                        ? 'Error: 文件内容过长被截断，请尝试分多次写入或缩短内容。'
+                        : 'Error: 工具参数JSON格式错误 - ' + e.message;
+                    return { tc, name: func_.name || 'unknown', args: {}, result };
                 }
-                const result = await executeTool(func.name, args);
-                toolCallsLog.push({ name: func.name, args: JSON.stringify(args).slice(0, 200), result: (typeof result === 'string' ? result : String(result)).slice(0, 300) });
-                console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
-                messages.push({
-                    role: 'tool',
-                    tool_call_id: tc.id,
-                    content: result
-                });
+                if (typeof opts?.onToolStart === 'function') {
+                    try { opts.onToolStart(func_.name, args); } catch (_) {}
+                }
+                const result = await executeTool(func_.name, args);
+                return { tc, name: func_.name, args, result: typeof result === 'string' ? result : String(result) };
+            });
+            const results = await Promise.all(jobs);
+            for (const item of results) {
+                toolCallsLog.push({ name: item.name, args: JSON.stringify(item.args).slice(0, 200), result: item.result.slice(0, 300) });
+                console.log('工具结果: ' + item.name + ', 长度: ' + item.result.length);
+                messages.push({ role: 'tool', tool_call_id: (item.tc && item.tc.id) || 'unknown', content: item.result });
+                if (typeof opts?.onToolEnd === 'function') {
+                    try { opts.onToolEnd(item.name, item.result); } catch (_) {}
+                }
             }
             continue;
         }
