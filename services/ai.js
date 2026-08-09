@@ -504,7 +504,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                     return { tc, name: func_.name || 'unknown', args: {}, result };
                 }
                 if (typeof opts?.onToolStart === 'function') {
-                    try { opts.onToolStart(func_.name, args); } catch (_) {}
+                    try { opts.onToolStart(func_.name, args, tc.id); } catch (_) {}
                 }
                 const result = await executeTool(func_.name, args);
                 return { tc, name: func_.name, args, result: typeof result === 'string' ? result : String(result) };
@@ -515,7 +515,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 console.log('工具结果: ' + item.name + ', 长度: ' + item.result.length);
                 messages.push({ role: 'tool', tool_call_id: (item.tc && item.tc.id) || 'unknown', content: item.result });
                 if (typeof opts?.onToolEnd === 'function') {
-                    try { opts.onToolEnd(item.name, item.result); } catch (_) {}
+                    try { opts.onToolEnd(item.name, item.result, item.tc && item.tc.id); } catch (_) {}
                 }
             }
             continue;

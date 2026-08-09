@@ -1,8 +1,8 @@
 {
-  "temperature": 0.7,
+  "temperature": 0.8,
   "topP": 0.9,
-  "maxTokens": 4096,
-  "contextRounds": 30,
+  "maxTokens": 12032,
+  "contextRounds": 50,
   "contextTokens": 12000,
   "systemPrompt": ""
 }

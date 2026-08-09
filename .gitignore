@@ -29,3 +29,13 @@ config/conversation_summary.json
 
 # 记忆备份（本地产物，不入库）
 backups/
+config/mcp_servers.json
+# 一次性调试脚本
+debug_*.js
+bench_*.js
+probe_*.js
+inspect_*.js
+inspect_*.py
+patch_*.py
+verify_*.js
+*.bak-*

@@ -19,7 +19,7 @@
 - AI调用封装在 `services/ai.js`
 
 ## 前端 (frontend/)
-- `index.html`（1836行）— 所有前端代码都在这一个文件里（聊天UI、MCP管理、日历、记忆管理、小金库）
+- `index.html`（1976行）— 所有前端代码都在这一个文件里（聊天UI、MCP管理、日历、记忆管理、小金库）
   - 页面：`page-chat`（聊天主页）、`page-mcp`（MCP管理）、`page-calendar`（日历）、`page-memory`（记忆管理）、`page-finance`（小金库）
   - 顶部下拉菜单：缓存命中显示、模型切换、MCP入口、夜间模式、设置、刷新
   - **日记页已删除（8月1日）、任务页已删除（8月1日）**
@@ -92,13 +92,14 @@
 - ~~`journal.js` — 日记路由~~（已删）
 
 ## 后端服务 (services/)
-### `ai.js`（605行）— AI调用封装【核心】
+### `ai.js`（653行）— AI调用封装【核心】
 - 组装 STATIC_SYSTEM_PROMPT = PERSONA（config/persona.js）+ coreMemoryPrompt（config/core_memory.json）
 - `chat()` — 主聊天函数：调DeepSeek（flash主/pro回退）、工具调用循环、情绪分析
+  - 工具循环最多10轮；同一轮多个工具调用通过 Promise.all 并行执行，并支持 onToolStart/onToolEnd 进度回调
 - `loadSettings` / `saveSettings` — 设置读写
 - 备份：`ai.js.bak` / `ai.js.bak2`
 
-### `memory.js`（845行）— 记忆系统核心逻辑【核心】
+### `memory.js`（936行）— 记忆系统核心逻辑【核心】
 **函数清单（按行号）：**
 - `getEmbedding(text)`（8行）— 文本向量化（调embedding API）
 - `cosineSim(a, b)`（21行）— 余弦相似度
@@ -129,7 +130,7 @@
 - `telegram.js`（290行）— Telegram相关
 - `galatea.js`（209行）— 论坛浏览（MCP协议连Galatea）
 - `tools.js`（214行）— 工具函数 + toolDefinitions（给AI调用的工具定义）
-- `mcpManager.js`（246行）— MCP服务器管理
+- `mcpManager.js`（271行）— MCP服务器管理
 - `batchExtract.js`（112行）— 批量记忆提取（离线处理）
 - `dreamScheduler.js`（233行）— Dream定时调度器
 - `monitor.js`（174行）— 系统监控（资源、进程守护）

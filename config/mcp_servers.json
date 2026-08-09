@@ -7,7 +7,7 @@
       "type": "http",
       "url": "https://galatea.abysslumina.com/mcp",
       "headers": {
-        "Authorization": "Bearer gg_3fWftRnzPoR-Nvzsat-lu4zdh5a9uPqcFH9GfmR94TE"
+        "Authorization": "Bearer ${GALATEA_MCP_TOKEN}"
       },
       "timeout": 30000,
       "enabled": true

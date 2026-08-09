@@ -208,9 +208,25 @@ router.post('/chat', async (req, res) => {
         }
     });
     
+    let sendEvent = null;
     try {
         const { message, sessionId = 'default', model, temperature, topP, maxTokens, contextRounds, contextTokens: bodyContextTokens, image } = req.body;
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
+
+        // SSE：让前端实时看到工具调用过程，而不是等整轮完成后一次性返回
+        res.status(200).set({
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        });
+        if (typeof res.flushHeaders === 'function') res.flushHeaders();
+        sendEvent = (type, payload = {}) => {
+            if (!res.writableEnded) {
+                res.write(`event: ${type}\ndata: ${JSON.stringify(payload)}\n\n`);
+            }
+        };
+        sendEvent('status', { text: '收到消息，正在处理' });
 
         // 1. 存用户消息（去重：30秒内相同内容不重复存储）
         const userContent = image ? `[图片消息] ${message || ''}`.trim() : message;
@@ -329,8 +345,18 @@ router.post('/chat', async (req, res) => {
         const opts = {
             temperature, topP, maxTokens,
             contextRounds: Math.max(keptUserRounds + 1, 3),
-            onToolStart: (name) => setStatus('调用 ' + name),
-            onToolEnd: (name) => setStatus('已完成 ' + name)
+            onToolStart: (name, args, id) => {
+                const label = '调用 ' + name;
+                setStatus(label);
+                sendEvent('status', { text: label });
+                sendEvent('tool_start', { name, args: args || {}, id: id || null });
+            },
+            onToolEnd: (name, result, id) => {
+                const label = '已完成 ' + name + '，继续分析中…';
+                setStatus(label);
+                sendEvent('tool_end', { name, result: String(result || ''), id: id || null });
+                sendEvent('status', { text: label });
+            }
         };
         const chatModel = hasImage ? 'openai/gpt-5.6-luna' : model;
         setStatus('思考中…');
@@ -367,16 +393,24 @@ router.post('/chat', async (req, res) => {
         //     });
         // }
 
-        // 12. 返回
-        res.json({
+        // 12. 返回：先发最终结果，再结束 SSE
+        sendEvent('done', {
             reply: result.content,
             thinking: result.reasoning || '',
             usage: result.usage || null,
             toolCalls: result.toolCalls || []
         });
+        res.end();
 
     } catch (err) {
         setStatus('');
+        if (res.headersSent) {
+            if (typeof sendEvent === 'function') {
+                sendEvent('error', { error: err.message || '服务器错误' });
+            }
+            if (!res.writableEnded) res.end();
+            return;
+        }
         console.error('Chat error:', err.message);
         console.error('OpenRouter response:', err.response?.data);
         

@@ -55,6 +55,31 @@ function getServer(name) {
     return getServers().find(s => s.name === name);
 }
 
+/**
+ * 将 headers 中的 "${ENV_NAME}" 占位符替换为环境变量值
+ * 防止 token 等敏感信息明文写入被 git 跟踪的配置文件
+ */
+function resolveHeaders(headers = {}) {
+    const resolved = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (typeof value === 'string') {
+            const m = value.match(/^\$\{([A-Z0-9_]+)\}$/);
+            if (m) {
+                const envVal = process.env[m[1]];
+                if (envVal) {
+                    resolved[key] = envVal;
+                } else {
+                    console.warn(`[MCP] 环境变量 ${m[1]} 未设置，header ${key} 留空`);
+                    resolved[key] = '';
+                }
+                continue;
+            }
+        }
+        resolved[key] = value;
+    }
+    return resolved;
+}
+
 // ---------- MCP 协议调用 ----------
 let reqId = 1;
 
@@ -69,7 +94,7 @@ async function mcpRequest(server, method, params = {}) {
     const url = server.url;
     const headers = {
         'Content-Type': 'application/json',
-        ...(server.headers || {})
+        ...resolveHeaders(server.headers || {})
     };
     const body = {
         jsonrpc: '2.0',
