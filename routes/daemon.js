@@ -171,3 +171,62 @@ router.delete('/memory/:id', async (req, res) => {
 });
 
 module.exports = router;
+
+// ===== 备忘录/任务（供 Lumi 添加任务 & 督促提醒）=====
+
+// GET /api/daemon/calendar/memos - 查询备忘录（done=false 查未完成）
+router.get('/calendar/memos', async (req, res) => {
+    try {
+        const { done, limit = 50 } = req.query;
+        const Calendar = require('../models/Calendar');
+        const query = { type: 'memo' };
+        if (done === 'true') query.done = true;
+        else if (done === 'false') query.done = false;
+        const memos = await Calendar.find(query)
+            .sort({ done: 1, createdAt: -1 })
+            .limit(parseInt(limit))
+            .lean();
+        res.json(memos);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/daemon/calendar - Lumi 给 Rinka 添加任务/事件
+// body: { title, date?, color?, type? }
+router.post('/calendar', async (req, res) => {
+    try {
+        const { title, date, color, type } = req.body;
+        if (!title) return res.status(400).json({ error: '标题不能为空' });
+        const Calendar = require('../models/Calendar');
+        const kind = type === 'event' ? 'event' : 'memo';
+        const d = date || (kind === 'memo' ? new Date().toISOString().slice(0, 10) : null);
+        if (kind === 'event' && !d) return res.status(400).json({ error: '事件需要日期' });
+        const item = await Calendar.create({
+            date: d, title, color: color || '#f5a0b8', type: kind, done: false, sessionId: 'default'
+        });
+        res.json(item);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// PATCH /api/daemon/calendar/:id - 更新状态（done / title / date）
+router.patch('/calendar/:id', async (req, res) => {
+    try {
+        const Calendar = require('../models/Calendar');
+        const { done, title, date } = req.body;
+        const update = {};
+        if (typeof done === 'boolean') {
+            update.done = done;
+            update.doneAt = done ? new Date() : null;
+        }
+        if (title) update.title = title;
+        if (date) update.date = date;
+        const item = await Calendar.findByIdAndUpdate(req.params.id, update, { new: true });
+        if (!item) return res.status(404).json({ error: '任务不存在' });
+        res.json(item);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});

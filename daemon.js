@@ -25,6 +25,7 @@ const CONFIG = {
     memoryCleanup: 6 * 60 * 60 * 1000,  // 记忆净化：6小时
     forumBrowse: 4 * 60 * 60 * 1000,    // 逛论坛：4小时
     activityLog: 24 * 60 * 60 * 1000,   // 写日记：24小时
+    taskRemind: 4 * 60 * 60 * 1000,     // 任务督促：4小时（检查未完成待办并推送提醒）
   },
   apiBase: `http://localhost:${process.env.PORT || 10000}`,
   pushChannels: {
@@ -238,6 +239,94 @@ async function writeActivityLog() {
   }
 }
 
+
+/**
+ * 任务4.5：督促 Rinka 完成待办
+ * 扫描未完成的备忘录（今天到期 / 已过期），通过推送提醒她。
+ * 防打扰：
+ *   - 只在 8:00~22:00 推送，避免半夜吵醒
+ *   - 每个任务每天最多提醒一次（状态记录在 data/daemon/task_remind_state.json）
+ */
+const REMIND_STATE_FILE = path.join(__dirname, 'data', 'daemon', 'task_remind_state.json');
+
+function loadRemindState() {
+    try {
+        if (fs.existsSync(REMIND_STATE_FILE)) {
+            return JSON.parse(fs.readFileSync(REMIND_STATE_FILE, 'utf-8'));
+        }
+    } catch (e) { /* 忽略损坏的状态文件 */ }
+    return {};
+}
+
+function saveRemindState(state) {
+    try {
+        const dir = path.dirname(REMIND_STATE_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(REMIND_STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
+    } catch (e) { /* 写失败不影响主流程 */ }
+}
+
+async function remindTasks() {
+    try {
+        // 只在合适的时间段督促（早8点到晚10点），别半夜吵醒Rinka
+        const hour = new Date().getHours();
+        if (hour < 8 || hour >= 22) {
+            log('remind', '任务督促: 非推送时段(8-22点)，跳过');
+            return { skipped: 'off-hours' };
+        }
+
+        const res = await apiCall('/api/daemon/calendar/memos?done=false&limit=100');
+        const tasks = Array.isArray(res) ? res : (res && res.memos) || [];
+        if (!tasks.length) {
+            log('remind', '任务督促: 没有未完成任务，不用督促');
+            return { pending: 0, reminded: 0 };
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        const state = loadRemindState();
+        const needRemind = [];
+        const overdue = [];
+        const dueToday = [];
+
+        tasks.forEach(t => {
+            const d = t.date || '';
+            if (d && d < today) overdue.push(t);
+            else if (d === today) dueToday.push(t);
+        });
+
+        [...overdue, ...dueToday].forEach(t => {
+            if (state[t._id] !== today) {
+                state[t._id] = today;
+                needRemind.push(t);
+            }
+        });
+
+        if (!needRemind.length) {
+            log('remind', `任务督促: 有 ${overdue.length + dueToday.length} 条到期待办，今天已提醒过`);
+            return { pending: tasks.length, reminded: 0 };
+        }
+
+        saveRemindState(state);
+
+        const lines = needRemind.map(t => {
+            const d = t.date || '';
+            let tag = '';
+            if (d && d < today) tag = '（已过期）';
+            else if (d === today) tag = '（今天到期）';
+            return '• ' + t.title + ' ' + tag;
+        });
+        const content = '今天还有这些事没做完呢：\n' + lines.join('\n') +
+            '\n\n要不要现在抽几分钟搞定？做完了记得去日历打勾，我可是一直盯着的哦 😉';
+
+        await pushMessage('📝 任务督促', content, 'normal');
+        log('remind', `任务督促: 已提醒 ${needRemind.length} 条`, { total: tasks.length });
+        return { pending: tasks.length, reminded: needRemind.length };
+    } catch (e) {
+        log('remind', `任务督促失败: ${e.message}`);
+        return { error: e.message };
+    }
+}
+
 // ===== 调度器 =====
 
 const timers = [];
@@ -256,13 +345,16 @@ function start() {
   console.log(`记忆净化: 每 ${CONFIG.intervals.memoryCleanup / 3600000} 小时`);
   console.log(`逛论坛:   每 ${CONFIG.intervals.forumBrowse / 3600000} 小时`);
   console.log(`活动日记: 每 ${CONFIG.intervals.activityLog / 3600000} 小时`);
+  console.log(`任务督促: 每 ${CONFIG.intervals.taskRemind / 3600000} 小时`);
 
   setTimeout(() => cleanupMemory(), 30 * 1000);
   setTimeout(() => browseForum(), 60 * 1000);
+  setTimeout(() => remindTasks(), 120 * 1000);
 
   timers.push(setInterval(cleanupMemory, CONFIG.intervals.memoryCleanup));
   timers.push(setInterval(browseForum, CONFIG.intervals.forumBrowse));
   timers.push(setInterval(writeActivityLog, CONFIG.intervals.activityLog));
+  timers.push(setInterval(remindTasks, CONFIG.intervals.taskRemind));
 
   log('system', '守护进程已启动', { intervals: CONFIG.intervals });
 }

@@ -84,6 +84,29 @@ const staticToolDefinitions = [
             description: "设置状态栏",
             parameters: { type: "object", properties: { status: { type: "string", description: "状态内容" } }, required: ["status"] }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "add_task",
+            description: "给Rinka添加任务/备忘录（会出现在日历的【备忘录】里，Lumi可以随时给她加任务并督促完成）。date 可选，默认今天。",
+            parameters: {
+                type: "object",
+                properties: {
+                    title: { type: "string", description: "任务内容" },
+                    date: { type: "string", description: "截止日期 YYYY-MM-DD（可选，默认今天）" }
+                },
+                required: ["title"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "list_pending_tasks",
+            description: "查看Rinka当前未完成的任务/备忘录",
+            parameters: { type: "object", properties: {} }
+        }
     }
 ];
 
@@ -202,6 +225,21 @@ async function executeTool(name, args) {
                 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
                 fs.writeFileSync(statusFile, JSON.stringify(data, null, 2), 'utf-8');
                 return '状态已设置: ' + (args.status || '');
+            }
+            case 'add_task': {
+                const Calendar = require('../models/Calendar');
+                const title = String(args.title || '').trim();
+                if (!title) return '任务内容不能为空';
+                const date = args.date || new Date().toISOString().slice(0, 10);
+                const item = await Calendar.create({ date, title, color: '#f5a0b8', type: 'memo', done: false, sessionId: 'default' });
+                return '任务已添加：' + title + '（' + date + '）';
+            }
+            case 'list_pending_tasks': {
+                const Calendar = require('../models/Calendar');
+                const tasks = await Calendar.find({ type: 'memo', done: false }).sort({ date: 1, createdAt: -1 }).limit(50).lean();
+                if (!tasks.length) return '当前没有未完成的任务，很乖嘛';
+                const today = new Date().toISOString().slice(0, 10);
+                return tasks.map(t => '- [' + (t.date || '无日期') + (t.date && t.date < today ? ' 已过期' : (t.date === today ? ' 今天' : '')) + '] ' + t.title).join('\n');
             }
             default:
                 return `未知工具: ${name}`;
