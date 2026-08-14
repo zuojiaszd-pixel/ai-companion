@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const mcpManager = require('../services/mcpManager');
+const { refreshMcpTools } = require('../services/tools');
 
 // GET /api/mcp — 服务器列表（含工具缓存状态）
 router.get('/', (req, res) => {
@@ -25,7 +26,7 @@ router.post('/', async (req, res) => {
     try {
         const server = mcpManager.addServer(req.body);
         // 后台刷新工具注册（不阻塞响应）
-        mcpManager.reloadMcpTools().catch(e => console.error('[MCP] reload失败:', e.message));
+        refreshMcpTools().catch(e => console.error('[MCP] reload失败:', e.message));
         res.json(server);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -36,7 +37,7 @@ router.post('/', async (req, res) => {
 router.put('/:name', async (req, res) => {
     try {
         const server = mcpManager.updateServer(req.params.name, req.body);
-        mcpManager.reloadMcpTools().catch(e => console.error('[MCP] reload失败:', e.message));
+        refreshMcpTools().catch(e => console.error('[MCP] reload失败:', e.message));
         res.json(server);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -47,7 +48,7 @@ router.put('/:name', async (req, res) => {
 router.delete('/:name', async (req, res) => {
     try {
         mcpManager.removeServer(req.params.name);
-        mcpManager.reloadMcpTools().catch(e => console.error('[MCP] reload失败:', e.message));
+        refreshMcpTools().catch(e => console.error('[MCP] reload失败:', e.message));
         res.json({ ok: true });
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -114,7 +115,8 @@ router.put('/config', (req, res) => {
 // POST /api/mcp/reload — 手动重载工具注册
 router.post('/reload', async (req, res) => {
     try {
-        const tools = await mcpManager.reloadMcpTools();
+        // 必须刷新 tools.js 的 toolDefinitions，AI 才能看到新工具；只调 mcpManager.reloadMcpTools 不生效
+        const tools = await refreshMcpTools();
         res.json({ ok: true, toolCount: tools.length, tools: tools.map(t => t.function.name) });
     } catch (e) {
         res.status(500).json({ error: e.message });

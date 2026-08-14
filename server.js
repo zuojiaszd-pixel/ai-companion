@@ -112,6 +112,8 @@ app.use('/api/memory', require('./routes/memory'));
 app.use('/api/finance', require('./routes/finance'));
 app.use('/api', require('./routes/dream'));
 app.use('/api/mcp', require('./routes/mcp'));
+app.use('/api', require('./routes/push'));
+app.use('/api', require('./routes/sticker'));
 
 // Telegram Webhook 路由（不需要鉴权，走 Telegram 签名验证）
 app.post('/telegram/webhook', telegram.handleWebhook);

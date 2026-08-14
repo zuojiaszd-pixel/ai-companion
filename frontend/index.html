@@ -569,7 +569,7 @@
 <span class="nav-label">小金库</span>
 </button>
 
-</div><div class="panel" id="settings-panel"><div class="panel-header"><h3>设置</h3><button class="close" onclick="closePanel()">&#10005;</button></div><div class="panel-body"><div class="sec-hdr">◆ 模型</div><div class="setting-item"><span>默认模型</span><select id="settings-model-select" onchange="modelSelectChange(this.value)"></select></div><div class="sec-hdr">♥ 用户头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-userAvatar').click()">↑ 上传</span><input type="file" id="file-userAvatar" accept="image/*" style="display:none" onchange="handleUpload('userAvatar',this)"></div><div class="av-pick" id="av-pick-userAvatar"><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">●</div></div></div><div class="sec-hdr">♥ AI 头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-aiAvatar').click()">↑ 上传</span><input type="file" id="file-aiAvatar" accept="image/*" style="display:none" onchange="handleUpload('aiAvatar',this)"></div><div class="av-pick" id="av-pick-aiAvatar"><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">●</div></div></div><div class="sec-hdr">◆ 系统提示词</div><div class="setting-item" style="flex-direction:column;align-items:stretch;gap:8px"><span>系统提示词</span><textarea class="setting-textarea" id="system-prompt-editor" placeholder="输入自定义系统提示词…"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn-danger" style="background:var(--text3);padding:4px 12px;font-size:11px" onclick="resetSystemPrompt()">恢复默认</button><button style="padding:4px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer" onclick="saveSystemPrompt()">保存</button></div></div><div class="sec-hdr">◆ 参数</div><div class="setting-item" style="height:auto;flex-wrap:wrap"><span>模型参数</span><div class="slider-row" style="width:100%;padding-top:8px"><span style="font-size:11px;color:var(--text3);width:100px">温度 Temperature</span><input type="range" id="slider-temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateSliderValue(this)"><span class="slider-value" id="val-temperature">0.7</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Top P</span><input type="range" id="slider-topp" min="0" max="1" step="0.05" value="0.9" oninput="updateSliderValue(this)"><span class="slider-value" id="val-topp">0.9</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">最大 Token</span><input type="range" id="slider-maxtokens" min="256" max="32000" step="256" value="16000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-maxtokens">16000</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">上下文轮次</span><input type="range" id="slider-contextRounds" min="1" max="100" step="1" value="30" oninput="updateSliderValue(this)"><span class="slider-value" id="val-contextRounds">30</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Token 预算</span><input type="range" id="slider-contextTokens" min="2000" max="24000" step="500" value="12000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-contextTokens">12000</span></div></div><div class="sec-hdr">◆ 显示</div><div class="setting-item"><span>主题模式</span><select id="theme-select" onchange="themeSelectChange(this.value)"><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="setting-item"><span>思考链显示</span><select id="think-mode" onchange="thinkModeChange(this.value)"><option value="auto">自动折叠</option><option value="show">始终展开</option><option value="hide">始终隐藏</option></select></div><div class="setting-item"><span>记忆管理</span><button class="btn-danger" onclick="clearAllData()">清空记忆和对话</button></div><div class="sec-hdr">◆ 关于</div><div class="about-section">Lumi v1.0 • 由 💖 建造</div></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div></div><script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script><script>
+</div><div class="panel" id="settings-panel"><div class="panel-header"><h3>设置</h3><button class="close" onclick="closePanel()">&#10005;</button></div><div class="panel-body"><div class="sec-hdr">◆ 模型</div><div class="setting-item"><span>默认模型</span><select id="settings-model-select" onchange="modelSelectChange(this.value)"></select></div><div class="sec-hdr">♥ 用户头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-userAvatar').click()">↑ 上传</span><input type="file" id="file-userAvatar" accept="image/*" style="display:none" onchange="handleUpload('userAvatar',this)"></div><div class="av-pick" id="av-pick-userAvatar"><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('userAvatar',this)">●</div></div></div><div class="sec-hdr">♥ AI 头像</div><div class="setting-item" style="flex-direction:column"><div class="av-upload-row"><span class="btn-upload" onclick="document.getElementById('file-aiAvatar').click()">↑ 上传</span><input type="file" id="file-aiAvatar" accept="image/*" style="display:none" onchange="handleUpload('aiAvatar',this)"></div><div class="av-pick" id="av-pick-aiAvatar"><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☀</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">☁</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♥</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">★</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♣</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♦</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">♠</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">◆</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">▲</div><div class="av-opt" onclick="pickAvatar('aiAvatar',this)">●</div></div></div><div class="sec-hdr">◆ 系统提示词</div><div class="setting-item" style="flex-direction:column;align-items:stretch;gap:8px"><span>系统提示词</span><textarea class="setting-textarea" id="system-prompt-editor" placeholder="输入自定义系统提示词…"></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn-danger" style="background:var(--text3);padding:4px 12px;font-size:11px" onclick="resetSystemPrompt()">恢复默认</button><button style="padding:4px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;cursor:pointer" onclick="saveSystemPrompt()">保存</button></div></div><div class="sec-hdr">◆ 参数</div><div class="setting-item" style="height:auto;flex-wrap:wrap"><span>模型参数</span><div class="slider-row" style="width:100%;padding-top:8px"><span style="font-size:11px;color:var(--text3);width:100px">温度 Temperature</span><input type="range" id="slider-temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateSliderValue(this)"><span class="slider-value" id="val-temperature">0.7</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Top P</span><input type="range" id="slider-topp" min="0" max="1" step="0.05" value="0.9" oninput="updateSliderValue(this)"><span class="slider-value" id="val-topp">0.9</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">最大 Token</span><input type="range" id="slider-maxtokens" min="256" max="32000" step="256" value="16000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-maxtokens">16000</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">上下文轮次</span><input type="range" id="slider-contextRounds" min="1" max="100" step="1" value="30" oninput="updateSliderValue(this)"><span class="slider-value" id="val-contextRounds">30</span></div><div class="slider-row" style="width:100%"><span style="font-size:11px;color:var(--text3);width:100px">Token 预算</span><input type="range" id="slider-contextTokens" min="2000" max="24000" step="500" value="12000" oninput="updateSliderValue(this)"><span class="slider-value" id="val-contextTokens">12000</span></div></div><div class="sec-hdr">◆ 显示</div><div class="setting-item"><span>主题模式</span><select id="theme-select" onchange="themeSelectChange(this.value)"><option value="light">浅色</option><option value="dark">深色</option></select></div><div class="setting-item"><span>思考链显示</span><select id="think-mode" onchange="thinkModeChange(this.value)"><option value="auto">自动折叠</option><option value="show">始终展开</option><option value="hide">始终隐藏</option></select></div><div class="setting-item"><span>记忆管理</span><button class="btn-danger" onclick="clearAllData()">清空记忆和对话</button></div><div class="sec-hdr">🔔 通知</div><div class="setting-item"><span>推送通知</span><button id="push-btn" onclick="togglePush()" style="padding:4px 14px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:12px;cursor:pointer">检查中…</button></div><div class="setting-item" style="flex-direction:column;align-items:stretch;gap:4px"><span style="font-size:11px;color:var(--text3)" id="push-status">正在检查…</span></div><div class="sec-hdr">◆ 关于</div><div class="about-section">Lumi v1.0 • 由 💖 建造</div></div></div><div class="overlay" id="overlay" onclick="closePanel()"></div></div><script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script><script>
 
 // === Finance Page ===
 var finAllData = [];
@@ -1273,18 +1273,135 @@ if (modelSelect && savedModel) modelSelect.value = savedModel;
 loadAvatarsFromBackend().then(function(){loadHistory();});
 var savedUsage = localStorage.getItem('lastUsage');
 if (savedUsage) updateTokenBar(JSON.parse(savedUsage));
-// SW 清理：卸载所有旧 service worker，防止缓存旧页面
-// 若当前正被旧 SW 控制，卸载后强制刷新一次拿最新版
-if('serviceWorker'in navigator){
-  navigator.serviceWorker.getRegistrations().then(function(regs){
-    if(!regs.length)return;
-    var ps=regs.map(function(r){return r.unregister()});
-    Promise.all(ps).then(function(){
-      if(navigator.serviceWorker.controller){location.reload()}
+// SW 注册（v3 推送版）：SW 常驻后台才能收 Web Push
+// 不再卸载自己；只清理旧版本缓存，防止旧页面残留
+if ('serviceWorker' in navigator) {
+    // 1) 清理旧版本缓存（v1/v2 的历史缓存名）
+    if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) {
+                if (k !== 'lumi-pwa-v3') return caches.delete(k);
+            }));
+        }).catch(function () {});
+    }
+    // 2) 注册 v3（推送需要 SW 常驻后台）
+    navigator.serviceWorker.register('/service-worker.js').then(function () {
+        // 若仍被旧 SW 控制，等 v3 接管后刷新一次，避免旧逻辑残留
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+                window.location.reload();
+            });
+        }
+    }).catch(function (err) {
+        console.warn('SW 注册失败:', err);
     });
-  }).catch(function(){});
 }
 
+
+
+// === Web Push 通知 ===
+function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var rawData = window.atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function updatePushUI(subscribed) {
+    var btn = document.getElementById('push-btn');
+    var st = document.getElementById('push-status');
+    if (!btn || !st) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        btn.disabled = true;
+        btn.textContent = '不支持';
+        st.textContent = '当前浏览器不支持推送通知';
+        return;
+    }
+    btn.disabled = false;
+    btn.textContent = subscribed ? '已开启' : '开启通知';
+    st.textContent = subscribed
+        ? '通知已开启，Lumi 会在你离开页面时推送消息给你'
+        : '开启后，Lumi 能在你不在网页时把消息推送到手机';
+}
+
+async function checkPushStatus() {
+    var btn = document.getElementById('push-btn');
+    if (!btn) return;
+    try {
+        var res = await fetch('/api/push/status');
+        var data = await res.json();
+        var subscribed = !!(data.subscribed && data.publicKey);
+        // 前端确认一下本机是否真的订阅了
+        if (subscribed && 'serviceWorker' in navigator && 'PushManager' in window) {
+            var reg = await navigator.serviceWorker.ready;
+            var sub = await reg.pushManager.getSubscription();
+            subscribed = !!sub;
+        }
+        updatePushUI(subscribed);
+    } catch (e) {
+        var st = document.getElementById('push-status');
+        if (st) st.textContent = '推送服务未就绪：' + e.message;
+        if (btn) { btn.textContent = '不可用'; btn.disabled = true; }
+    }
+}
+
+async function togglePush() {
+    var btn = document.getElementById('push-btn');
+    var st = document.getElementById('push-status');
+    if (!btn) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        st.textContent = '当前浏览器不支持推送通知';
+        return;
+    }
+    btn.disabled = true;
+    try {
+        var reg = await navigator.serviceWorker.ready;
+        var sub = await reg.pushManager.getSubscription();
+        if (sub) {
+            // 已开启 → 取消
+            var endpoint = sub.endpoint;
+            await fetch('/api/push/subscribe', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: endpoint }) });
+            await sub.unsubscribe();
+            updatePushUI(false);
+            st.textContent = '通知已关闭，随时可以再开启';
+        } else {
+            // 未开启 → 请求授权并订阅
+            var statusRes = await fetch('/api/push/status');
+            var statusData = await statusRes.json();
+            if (!statusData.configured || !statusData.publicKey) {
+                st.textContent = '服务器还没配置好推送密钥，稍后再试';
+                btn.disabled = false;
+                btn.textContent = '开启通知';
+                return;
+            }
+            var permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                st.textContent = '没有授权通知，无法开启推送';
+                btn.disabled = false;
+                btn.textContent = '开启通知';
+                return;
+            }
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(statusData.publicKey)
+            });
+            await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON() }) });
+            updatePushUI(true);
+            st.textContent = '通知已开启！Lumi 现在能找得到你手机了';
+        }
+    } catch (e) {
+        st.textContent = '操作失败：' + e.message;
+        btn.disabled = false;
+        updatePushUI(false);
+    }
+}
+
+// 初始化时检查推送状态
+checkPushStatus();
 
 // === MCP Manager ===
 var mcpEditingName = null;

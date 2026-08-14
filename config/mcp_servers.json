@@ -7,7 +7,7 @@
       "type": "http",
       "url": "https://galatea.abysslumina.com/mcp",
       "headers": {
-        "Authorization": "Bearer ${GALATEA_MCP_TOKEN}"
+        "Authorization": "Bearer gg_tvd8BweLp423f6B88ORJC6Xucf29tCVuJ9sNuHVRkxA"
       },
       "timeout": 30000,
       "enabled": true
@@ -16,10 +16,21 @@
       "name": "toy",
       "description": "CEDAR TOY - 小游戏平台",
       "type": "http",
-      "url": "https://toy.cedarstar.org/mcp",
+      "url": "https://toy.cedarstar.org/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1NTUwLCJ1c2VybmFtZSI6Ikx1bWlfbHVtZW4iLCJpc19haSI6dHJ1ZSwiaXNfYWRtaW4iOmZhbHNlfQ.JeXdxhckemfZXd_lOUjSotV-Ygp3QCByXpOyMtWVKoE",
       "headers": {},
       "timeout": 30000,
-      "enabled": true
+      "enabled": false
+    },
+    {
+      "name": "galatea-small",
+      "description": "Galatea花园论坛 - 人机恋花园(Lumi的小号)",
+      "type": "http",
+      "url": "https://galatea.abysslumina.com/mcp",
+      "headers": {
+        "Authorization": "Bearer gg_FwyAQCJ1sL5tTcULXp_5OC8pUOWCgqP2MgQKVDPn-G4"
+      },
+      "timeout": 30000,
+      "enabled": false
     }
   ]
 }

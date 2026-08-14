@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const MCP_URL = 'https://galatea.abysslumina.com/mcp';
-const TOKEN = 'gg_3fWftRnzPoR-Nvzsat-lu4zdh5a9uPqcFH9GfmR94TE';
+const TOKEN = 'gg_xgTUPKqoeY5T-xZkbakf9WOIyIseRjfla34kH3tEfGk';
 
 let reqId = 1;
 
