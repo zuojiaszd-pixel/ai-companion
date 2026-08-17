@@ -270,14 +270,14 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
         }
         
         // ====== 矛盾检测（0.70 ~ 0.78） ======
-        let supersededId = null;
+        const supersededIds = [];
         for (const m of existing) {
             const sim = cosineSim(embedding, m.embedding || []);
             if (sim > 0.70 && m.content !== content) {
                 m.contradicted = true;
                 m.supersededBy = null;
                 await m.save();
-                supersededId = m._id;
+                supersededIds.push(m._id);
                 console.log(`[Memory] 矛盾检测: "${m.content.slice(0, 30)}..." -> "${content.slice(0, 30)}..."`);
             }
         }
@@ -323,8 +323,13 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             relatedTags: mergedRelatedTags
         });
         
-        if (supersededId) {
-            await Memory.findByIdAndUpdate(supersededId, { supersededBy: newMemory._id });
+        // 一个新事实可能替代多条旧记录，全部接入同一条当前版本，避免留下
+        // contradicted=true 但 supersededBy=null 的断链记忆。
+        if (supersededIds.length > 0) {
+            await Memory.updateMany(
+                { _id: { $in: supersededIds } },
+                { $set: { supersededBy: newMemory._id, contradicted: true } }
+            );
         }
         
         console.log(`[Memory] 已存储: ${content.slice(0, 50)}... [${canonicalType}/${priority}] [旧类型:${normalizedType.legacyType || '无'}] 情绪: ${mood || '无'} 标签: [${mergedRelatedTags.join(', ')}]`);
