@@ -4,7 +4,8 @@ const {
     normalizeMemoryType,
     buildContentHistoryUpdate,
     extractTagsFromContent,
-    parseCompoundMood
+    parseCompoundMood,
+    hasSharedMemoryTopic
 } = require('../services/memory');
 
 assert.deepStrictEqual(normalizeMemoryType('fact'), { type: 'core', legacyType: 'fact' });
@@ -37,3 +38,7 @@ assert.strictEqual(duplicate.version, 2);
 assert.strictEqual(duplicate.timeline.length, 1);
 
 console.log('memory-history tests passed');
+
+// 高向量相似但没有共同主题词时，不应自动合并，避免不同事情被误融合
+assert.strictEqual(hasSharedMemoryTopic('外贸询盘邮件练习', '跑步训练计划'), false);
+assert.strictEqual(hasSharedMemoryTopic('外贸询盘邮件练习', '外贸英文邮件练习'), true);

@@ -36,6 +36,22 @@ async function getEmbedding(text) {
     }
 }
 
+function hasSharedMemoryTopic(contentA, contentB) {
+    const tokensA = new Set(tokenize(contentA || ''));
+    const tokensB = new Set(tokenize(contentB || ''));
+    if (tokensA.size === 0 || tokensB.size === 0) return false;
+
+    let overlap = 0;
+    for (const token of tokensA) {
+        if (tokensB.has(token)) overlap++;
+    }
+    const smallerSize = Math.min(tokensA.size, tokensB.size);
+    // 向量很相似但没有共同主题词时，不自动合并/判定矛盾，避免把两件事混成一条记忆。
+    // 短内容要求更严格；较长内容允许共享一个以上主题词。
+    if (smallerSize <= 2) return overlap === smallerSize;
+    return overlap >= 2 || overlap / smallerSize >= 0.25;
+}
+
 function cosineSim(a, b) {
     if (!a || !b || a.length === 0 || b.length === 0) return 0;
     let dot = 0, normA = 0, normB = 0;
@@ -49,10 +65,20 @@ function cosineSim(a, b) {
 }
 
 function tokenize(text) {
-    return text.toLowerCase()
-        .replace(/[^\w\u4e00-\u9fff]/g, ' ')
-        .split(/\s+/)
-        .filter(t => t.length > 0);
+    // 中文通常没有空格，按连续汉字生成二元词，避免整句被当成一个 token，
+    // 也让“外贸询盘”和“外贸英文询盘”能够共享“外贸/询盘”等主题词。
+    const normalized = String(text || '').toLowerCase();
+    const tokens = [];
+    const chunks = normalized.match(/[a-z0-9_]+|[\u4e00-\u9fff]+/g) || [];
+    for (const chunk of chunks) {
+        if (/^[\u4e00-\u9fff]+$/.test(chunk)) {
+            if (chunk.length === 1) tokens.push(chunk);
+            else for (let i = 0; i < chunk.length - 1; i++) tokens.push(chunk.slice(i, i + 2));
+        } else {
+            tokens.push(chunk);
+        }
+    }
+    return tokens;
 }
 
 // 从内容中提取主题标签（关键词）
@@ -207,7 +233,7 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
                 // ====== 融合更新（相似度 > 0.78 触发合并） ======
         for (const m of existing) {
             const sim = cosineSim(embedding, m.embedding || []);
-            if (sim > 0.78) {
+            if (sim > 0.78 && (content === m.content || hasSharedMemoryTopic(content, m.content))) {
                 m.accessCount += 1;
                 m.lastAccessed = new Date();
                 m.heat = Math.max(m.heat, m.baseHeat) * 1.2;
@@ -273,7 +299,7 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
         const supersededIds = [];
         for (const m of existing) {
             const sim = cosineSim(embedding, m.embedding || []);
-            if (sim > 0.70 && m.content !== content) {
+            if (sim > 0.70 && m.content !== content && hasSharedMemoryTopic(content, m.content)) {
                 m.contradicted = true;
                 m.supersededBy = null;
                 await m.save();
@@ -1191,5 +1217,5 @@ module.exports = {
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
     getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory,
     normalizeMemoryType, buildContentHistoryUpdate, buildSupersededUpdate, getMemoryHistory, restoreMemoryVersion,
-    extractTagsFromContent, parseCompoundMood
+    extractTagsFromContent, parseCompoundMood, hasSharedMemoryTopic
 };
