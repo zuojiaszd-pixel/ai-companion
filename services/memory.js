@@ -815,15 +815,73 @@ async function getMemoryHistory(id) {
             version: memory.version || 1,
             updatedAt: memory.updatedAt
         },
-        history: timeline.map((entry, index) => ({
-            version: Math.max(1, (memory.version || 1) - timeline.length + index),
-            date: entry.date,
-            event: entry.event
-        })),
+        history: timeline
+            .map(entry => {
+                const match = String(entry.event || '').match(/^编辑前版本 v(\d+)：/);
+                return match ? { version: Number(match[1]), date: entry.date, event: entry.event } : null;
+            })
+            .filter(Boolean),
         createdAt: memory.createdAt,
         supersededBy: memory.supersededBy || null,
         contradicted: Boolean(memory.contradicted)
     };
+}
+
+async function restoreMemoryVersion(id, targetVersion) {
+    const requestedVersion = Number(targetVersion);
+    if (!Number.isInteger(requestedVersion) || requestedVersion < 1) {
+        const error = new Error('历史版本号无效');
+        error.code = 'INVALID_VERSION';
+        throw error;
+    }
+
+    const memory = await Memory.findById(id);
+    if (!memory) return null;
+
+    const timeline = Array.isArray(memory.timeline) ? memory.timeline : [];
+    const currentVersion = memory.version || 1;
+    const historyEntry = timeline.find(entry => {
+        const match = String(entry.event || '').match(/^编辑前版本 v(\d+)：/);
+        return match && Number(match[1]) === requestedVersion;
+    });
+    if (!historyEntry) {
+        const error = new Error('找不到该历史版本');
+        error.code = 'VERSION_NOT_FOUND';
+        throw error;
+    }
+
+    const prefix = /^编辑前版本 v\d+：/;
+    if (!prefix.test(historyEntry.event || '')) {
+        const error = new Error('该时间线事件不是可恢复的内容版本');
+        error.code = 'VERSION_NOT_RESTORABLE';
+        throw error;
+    }
+    const restoredContent = historyEntry.event.replace(prefix, '');
+    if (restoredContent === memory.content) return memory;
+
+    // 恢复也必须留下当前内容，避免恢复操作本身抹掉最新版本。
+    const date = new Date().toISOString().split('T')[0];
+    const beforeEvent = `恢复前版本 v${currentVersion}：${String(memory.content || '')}`;
+    const nextTimeline = timeline.some(item => item.date === date && item.event === beforeEvent)
+        ? timeline.slice()
+        : timeline.concat({ date, event: beforeEvent });
+    const nextVersion = currentVersion + 1;
+    const embedding = await getEmbedding(restoredContent);
+    const setFields = { content: restoredContent, timeline: nextTimeline, version: nextVersion, updatedAt: new Date() };
+    if (embedding) setFields.embedding = embedding;
+
+    // 用版本条件更新，避免两个恢复请求互相覆盖。
+    const restored = await Memory.findOneAndUpdate(
+        { _id: id, version: currentVersion },
+        { $set: setFields },
+        { new: true, runValidators: true }
+    );
+    if (!restored) {
+        const error = new Error('记忆已被其他操作更新，请重新读取后再恢复');
+        error.code = 'VERSION_CONFLICT';
+        throw error;
+    }
+    return restored;
 }
 
 async function updateMemory(id, updates = {}) {
@@ -1115,5 +1173,5 @@ module.exports = {
     getRelevantMemories, runDream, lockMemory, unlockMemory, deleteMemory,
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
     getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory,
-    normalizeMemoryType, buildContentHistoryUpdate, getMemoryHistory
+    normalizeMemoryType, buildContentHistoryUpdate, getMemoryHistory, restoreMemoryVersion
 };

@@ -166,6 +166,19 @@ router.get('/:id/history', async (req, res) => {
     }
 });
 
+// POST /api/memory/:id/history/restore - 安全恢复历史内容版本
+router.post('/:id/history/restore', async (req, res) => {
+    try {
+        const memory = await memoryService.restoreMemoryVersion(req.params.id, req.body?.version);
+        if (!memory) return res.status(404).json({ success: false, error: '记忆不存在' });
+        res.json({ success: true, data: memory });
+    } catch (e) {
+        const status = ['INVALID_VERSION', 'VERSION_NOT_FOUND', 'VERSION_NOT_RESTORABLE'].includes(e.code) ? 400
+            : e.code === 'VERSION_CONFLICT' ? 409 : 500;
+        res.status(status).json({ success: false, error: e.message });
+    }
+});
+
 // PUT /api/memory/:id - 编辑记忆
 router.put('/:id', async (req, res) => {
     try {
