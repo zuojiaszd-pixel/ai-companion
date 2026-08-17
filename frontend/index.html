@@ -157,6 +157,7 @@
 .mem-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
 .mem-filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .mem-list{display:flex;flex-direction:column;gap:8px}
+.mem-history-overlay{position:fixed;inset:0;z-index:210;background:rgba(60,30,40,.35);display:none;align-items:center;justify-content:center;padding:16px}.mem-history-overlay.open{display:flex}.mem-history-panel{width:100%;max-width:500px;max-height:88vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.mem-history-header{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:12px}.mem-history-close{border:0;background:none;color:var(--text3);font-size:20px;cursor:pointer}.mem-history-current{padding:9px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;line-height:1.6;margin-bottom:10px}.mem-history-item{border-top:1px solid var(--border);padding:10px 0}.mem-history-item>div:first-child{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}.mem-history-item span{color:var(--text3)}.mem-history-content{font-size:12px;line-height:1.5;margin:6px 0;color:var(--text)}.mem-history-item button{border:0;border-radius:5px;padding:4px 9px;background:var(--surface2);color:var(--accent);cursor:pointer;font-size:11px}.mem-history-empty,.mem-history-loading{font-size:12px;color:var(--text3);padding:18px;text-align:center}
 .mem-item{padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);transition:all .15s;animation:fadeIn .2s ease-out}
 .mem-item:hover{border-color:var(--accent)}
 .mem-item .mem-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
@@ -2006,6 +2007,7 @@ function memRender() {
             '<div class="mem-tags">'+tags+'</div>' +
             '<div style="display:flex;gap:4px;align-items:center">' + lockBtn +
             '<button class="mem-edit-btn" onclick="memEdit(\''+m._id+'\')">✎ 编辑</button>' +
+            '<button class="mem-edit-btn" onclick="memShowHistory(\''+m._id+'\')">↶ 历史</button>' +
             '<button class="mem-del" onclick="memDelete(\''+m._id+'\')">&times;</button>' +
             '</div>' +
             '</div>' +
@@ -2030,6 +2032,55 @@ async function memToggleLock(id, btn) {
         var item = memAllData.find(function(m){return m._id === id;});
         if (item) item.locked = !isLocked;
     } catch(e) { alert('操作失败'); }
+}
+
+async function memShowHistory(id) {
+    var modal = document.getElementById('mem-history-overlay');
+    var list = document.getElementById('mem-history-list');
+    if (!modal || !list) return;
+    list.innerHTML = '<div class="mem-history-loading">读取历史中…</div>';
+    modal.classList.add('open');
+    try {
+        var res = await fetch(BACKEND + '/api/memory/' + id + '/history');
+        var payload = await res.json();
+        if (!res.ok) throw new Error(payload.error || '读取失败');
+        var data = payload.data || {};
+        var current = data.current || {};
+        var entries = (data.history || []).slice().sort(function(a,b){return b.version - a.version;});
+        if (!entries.length) {
+            list.innerHTML = '<div class="mem-history-empty">这条记忆还没有可恢复的历史版本</div>';
+            return;
+        }
+        list.innerHTML = '<div class="mem-history-current">当前版本 v'+(current.version || 1)+'：'+escapeHtml(current.content || '')+'</div>' +
+            entries.map(function(entry) {
+                var text = String(entry.event || '').replace(/^编辑前版本 v\d+：/, '');
+                return '<div class="mem-history-item"><div><b>版本 v'+entry.version+'</b><span>'+escapeHtml(entry.date || '')+'</span></div>' +
+                    '<div class="mem-history-content">'+escapeHtml(text)+'</div>' +
+                    '<button onclick="memRestoreHistory(\''+id+'\','+entry.version+')">恢复此版本</button></div>';
+            }).join('');
+    } catch (e) {
+        list.innerHTML = '<div class="mem-history-empty">读取失败：'+escapeHtml(e.message)+'</div>';
+    }
+}
+
+function memCloseHistory() {
+    var modal = document.getElementById('mem-history-overlay');
+    if (modal) modal.classList.remove('open');
+}
+
+async function memRestoreHistory(id, version) {
+    if (!confirm('恢复版本 v' + version + '？当前内容会保留在历史记录里。')) return;
+    try {
+        var res = await fetch(BACKEND + '/api/memory/' + id + '/history/restore', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({version: version})
+        });
+        var payload = await res.json();
+        if (!res.ok) throw new Error(payload.error || '恢复失败');
+        memCloseHistory();
+        await memLoad();
+        alert('已恢复到版本 v' + version);
+    } catch (e) { alert('恢复失败：' + e.message); }
 }
 
 async function memDelete(id) {
@@ -2323,4 +2374,5 @@ async function deleteSession(sessionId) {
 </div>
 </div>
 </div>
+<div id="mem-history-overlay" class="mem-history-overlay" onclick="if(event.target===this)memCloseHistory()"><div class="mem-history-panel"><div class="mem-history-header">↶ 记忆历史 <button class="mem-history-close" onclick="memCloseHistory()">×</button></div><div id="mem-history-list"></div></div></div>
 <script src="js/mcp.js"></script></body></html>
