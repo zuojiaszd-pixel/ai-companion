@@ -1183,5 +1183,6 @@ module.exports = {
     getRelevantMemories, runDream, lockMemory, unlockMemory, deleteMemory,
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
     getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory,
-    normalizeMemoryType, buildContentHistoryUpdate, getMemoryHistory, restoreMemoryVersion
+    normalizeMemoryType, buildContentHistoryUpdate, getMemoryHistory, restoreMemoryVersion,
+    extractTagsFromContent, parseCompoundMood
 };
