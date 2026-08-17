@@ -41,6 +41,19 @@ router.get('/search', async (req, res) => {
     }
 });
 
+// POST /api/memory/migrate-types - 迁移旧记忆类型
+// 默认只预览；必须显式传 dryRun=false 才会写库。
+router.post('/migrate-types', async (req, res) => {
+    try {
+        const result = await memoryService.migrateLegacyMemoryTypes(req.body.sessionId || 'default', {
+            dryRun: req.body.dryRun !== false, limit: req.body.limit
+        });
+        res.json({ success: true, data: result });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // GET /api/memory/stats - 统计信息
 router.get('/stats', async (req, res) => {
     try {

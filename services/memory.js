@@ -767,6 +767,32 @@ async function lockMemory(id) { return await Memory.findByIdAndUpdate(id, { lock
 async function unlockMemory(id) { return await Memory.findByIdAndUpdate(id, { locked: false }, { new: true }); }
 async function deleteMemory(id) { return await Memory.findByIdAndDelete(id); }
 
+// ============ 旧类型迁移（显式、可预览，不自动执行） ============
+// 旧数据仍可能把 fact/preference/experience/summary 存在 type 里。
+// 新数据统一使用 core/tech/state；legacyType 只保留原始类型，方便追溯。
+async function migrateLegacyMemoryTypes(sessionId, options = {}) {
+    sessionId = sessionId || 'default';
+    const dryRun = options.dryRun !== false;
+    const limit = Math.min(Math.max(Number(options.limit) || 500, 1), 5000);
+    const legacyTypes = ['fact', 'preference', 'experience', 'summary'];
+    const candidates = await Memory.find({ sessionId, type: { $in: legacyTypes } })
+        .select('_id type legacyType content')
+        .sort({ createdAt: 1 })
+        .limit(limit)
+        .lean();
+    const counts = {};
+    const operations = candidates.map(memory => {
+        counts[memory.type] = (counts[memory.type] || 0) + 1;
+        return { updateOne: { filter: { _id: memory._id, type: memory.type }, update: { $set: {
+            type: 'core', legacyType: memory.legacyType || memory.type, updatedAt: new Date()
+        } } } };
+    });
+    if (!dryRun && operations.length > 0) await Memory.bulkWrite(operations, { ordered: false });
+    return { sessionId, dryRun, scanned: candidates.length, migrated: dryRun ? 0 : operations.length,
+        remainingEstimate: candidates.length === limit ? 'more' : 0, counts,
+        types: { from: legacyTypes, to: 'core' } };
+}
+
 async function listMemories(sessionId, options) {
     options = options || {};
     const query = { sessionId: sessionId || 'default' };
@@ -962,5 +988,5 @@ module.exports = {
     searchMemories, storeMemory, autoExtractMemories, saveMemory, recallMemories,
     getRelevantMemories, runDream, lockMemory, unlockMemory, deleteMemory,
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
-    getChatMemories, unarchiveMemory
+    getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes
 };
