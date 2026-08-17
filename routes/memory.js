@@ -187,20 +187,6 @@ router.put('/:id', async (req, res) => {
         for (const key of allowed) {
             if (req.body[key] !== undefined) updates[key] = req.body[key];
         }
-        if (updates.content) {
-            const axios = require('axios');
-            const res2 = await axios.post('https://open.bigmodel.cn/api/paas/v4/embeddings', {
-                model: 'embedding-3',
-                input: updates.content
-            }, {
-                headers: {
-                    'Authorization': 'Bearer ' + process.env.ZHIPUAI_API_KEY,
-                    'Content-Type': 'application/json'
-                }
-            });
-            updates.embedding = res2.data.data[0].embedding;
-        }
-        
         const memory = await memoryService.updateMemory(req.params.id, updates);
         if (!memory) {
             return res.status(404).json({ success: false, error: '记忆不存在' });

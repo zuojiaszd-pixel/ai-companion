@@ -899,7 +899,17 @@ async function updateMemory(id, updates = {}) {
 
     // 内容编辑也属于一次记忆更新：先把编辑前的完整内容留在时间线，
     // 再写入新内容。这样 version 和历史不会因为走管理接口而断掉。
+    const contentChanged = Object.prototype.hasOwnProperty.call(normalized, 'content')
+        && normalized.content !== memory.content;
     normalized = buildContentHistoryUpdate(memory, normalized);
+
+    // 所有写入路径统一使用这里的 embedding provider。路由层不再各自调用
+    // 智谱，恢复路径也复用同一个 getEmbedding，避免同一条记忆出现不同维度/模型。
+    if (contentChanged) {
+        const embedding = await getEmbedding(normalized.content);
+        if (embedding) normalized.embedding = embedding;
+    }
+
     normalized.updatedAt = new Date();
     return await Memory.findByIdAndUpdate(id, normalized, { new: true, runValidators: true });
 }
