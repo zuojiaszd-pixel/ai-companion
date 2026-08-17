@@ -778,6 +778,39 @@ async function lockMemory(id) { return await Memory.findByIdAndUpdate(id, { lock
 async function unlockMemory(id) { return await Memory.findByIdAndUpdate(id, { locked: false }, { new: true }); }
 async function deleteMemory(id) { return await Memory.findByIdAndDelete(id); }
 
+async function updateMemory(id, updates = {}) {
+    const memory = await Memory.findById(id);
+    if (!memory) return null;
+
+    const normalized = { ...updates };
+    if (Object.prototype.hasOwnProperty.call(normalized, 'type')) {
+        const typeInfo = normalizeMemoryType(normalized.type);
+        normalized.type = typeInfo.type;
+        // 编辑旧类型时把来源保存到 legacyType；编辑成新类型时保留已有来源，避免丢失历史。
+        if (typeInfo.legacyType) normalized.legacyType = typeInfo.legacyType;
+        else if (!memory.legacyType) normalized.legacyType = null;
+    }
+
+    // 内容编辑也属于一次记忆更新：先把编辑前的完整内容留在时间线，
+    // 再写入新内容。这样 version 和历史不会因为走管理接口而断掉。
+    const contentChanged = Object.prototype.hasOwnProperty.call(normalized, 'content')
+        && normalized.content !== memory.content;
+    if (contentChanged) {
+        const date = new Date().toISOString().split('T')[0];
+        const previousVersion = memory.version || 1;
+        const previousContent = String(memory.content || '');
+        const historyEvent = `编辑前版本 v${previousVersion}：${previousContent}`;
+        const timeline = Array.isArray(memory.timeline) ? memory.timeline.slice() : [];
+        const alreadyRecorded = timeline.some(item => item.date === date && item.event === historyEvent);
+        if (!alreadyRecorded) timeline.push({ date, event: historyEvent });
+        normalized.timeline = timeline;
+        normalized.version = previousVersion + (alreadyRecorded ? 0 : 1);
+    }
+
+    normalized.updatedAt = new Date();
+    return await Memory.findByIdAndUpdate(id, normalized, { new: true, runValidators: true });
+}
+
 // ============ 旧类型迁移（显式、可预览，不自动执行） ============
 // 旧数据仍可能把 fact/preference/experience/summary 存在 type 里。
 // 新数据统一使用 core/tech/state；legacyType 只保留原始类型，方便追溯。
@@ -1046,5 +1079,5 @@ module.exports = {
     searchMemories, storeMemory, autoExtractMemories, saveMemory, recallMemories,
     getRelevantMemories, runDream, lockMemory, unlockMemory, deleteMemory,
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
-    getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes
+    getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory
 };
