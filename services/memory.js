@@ -778,11 +778,29 @@ async function lockMemory(id) { return await Memory.findByIdAndUpdate(id, { lock
 async function unlockMemory(id) { return await Memory.findByIdAndUpdate(id, { locked: false }, { new: true }); }
 async function deleteMemory(id) { return await Memory.findByIdAndDelete(id); }
 
+function buildContentHistoryUpdate(memory, updates = {}, now = new Date()) {
+    const normalized = { ...updates };
+    const contentChanged = Object.prototype.hasOwnProperty.call(normalized, 'content')
+        && normalized.content !== memory.content;
+    if (!contentChanged) return normalized;
+
+    const date = now.toISOString().split('T')[0];
+    const previousVersion = memory.version || 1;
+    const previousContent = String(memory.content || '');
+    const historyEvent = `编辑前版本 v${previousVersion}：${previousContent}`;
+    const timeline = Array.isArray(memory.timeline) ? memory.timeline.slice() : [];
+    const alreadyRecorded = timeline.some(item => item.date === date && item.event === historyEvent);
+    if (!alreadyRecorded) timeline.push({ date, event: historyEvent });
+    normalized.timeline = timeline;
+    normalized.version = previousVersion + (alreadyRecorded ? 0 : 1);
+    return normalized;
+}
+
 async function updateMemory(id, updates = {}) {
     const memory = await Memory.findById(id);
     if (!memory) return null;
 
-    const normalized = { ...updates };
+    let normalized = { ...updates };
     if (Object.prototype.hasOwnProperty.call(normalized, 'type')) {
         const typeInfo = normalizeMemoryType(normalized.type);
         normalized.type = typeInfo.type;
@@ -793,20 +811,7 @@ async function updateMemory(id, updates = {}) {
 
     // 内容编辑也属于一次记忆更新：先把编辑前的完整内容留在时间线，
     // 再写入新内容。这样 version 和历史不会因为走管理接口而断掉。
-    const contentChanged = Object.prototype.hasOwnProperty.call(normalized, 'content')
-        && normalized.content !== memory.content;
-    if (contentChanged) {
-        const date = new Date().toISOString().split('T')[0];
-        const previousVersion = memory.version || 1;
-        const previousContent = String(memory.content || '');
-        const historyEvent = `编辑前版本 v${previousVersion}：${previousContent}`;
-        const timeline = Array.isArray(memory.timeline) ? memory.timeline.slice() : [];
-        const alreadyRecorded = timeline.some(item => item.date === date && item.event === historyEvent);
-        if (!alreadyRecorded) timeline.push({ date, event: historyEvent });
-        normalized.timeline = timeline;
-        normalized.version = previousVersion + (alreadyRecorded ? 0 : 1);
-    }
-
+    normalized = buildContentHistoryUpdate(memory, normalized);
     normalized.updatedAt = new Date();
     return await Memory.findByIdAndUpdate(id, normalized, { new: true, runValidators: true });
 }
@@ -1079,5 +1084,6 @@ module.exports = {
     searchMemories, storeMemory, autoExtractMemories, saveMemory, recallMemories,
     getRelevantMemories, runDream, lockMemory, unlockMemory, deleteMemory,
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
-    getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory
+    getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory,
+    normalizeMemoryType, buildContentHistoryUpdate
 };
