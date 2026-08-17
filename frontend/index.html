@@ -181,8 +181,8 @@
 
 .mem-item .mem-time{font-size:10px;color:var(--text3)}
 .mem-item .mem-content{font-size:13px;line-height:1.6;color:var(--text);word-wrap:break-word}
-.mem-item .mem-item-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
-.mem-item .mem-tags{display:flex;gap:4px;flex-wrap:wrap}
+.mem-item .mem-item-footer{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-top:8px}.mem-item .mem-tags{flex:1 1 auto;min-width:0}.mem-item .mem-actions{display:flex;gap:4px;align-items:center;justify-content:flex-end;flex:0 0 auto;flex-wrap:wrap}
+.mem-item .mem-tags{display:flex;gap:4px;flex-wrap:wrap;overflow-wrap:anywhere;word-break:break-word}
 .mem-item .mem-tag{font-size:10px;color:var(--text3);background:var(--surface2);padding:2px 6px;border-radius:4px}
 .mem-item .mem-del{width:24px;height:24px;border:none;border-radius:50%;background:var(--surface2);color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
 .mem-item .mem-del:hover{background:#e74c3c;color:#fff}
@@ -205,7 +205,7 @@
 .mem-edit-actions .save{background:var(--accent);color:#fff}
 .mem-edit-actions .cancel{background:var(--surface2);color:var(--text2)}
 .mem-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
-@media(max-width:600px){#page-memory{padding:10px}.mem-header .mem-title{font-size:16px}.mem-item{padding:10px 12px}.mem-item .mem-content{font-size:12px}}
+@media(max-width:600px){#page-memory{padding:10px}.mem-header .mem-title{font-size:16px}.mem-item{padding:10px 12px}.mem-item .mem-content{font-size:12px}.mem-item .mem-item-footer{flex-direction:column}.mem-item .mem-actions{width:100%;justify-content:flex-end}.mem-item .mem-tags{width:100%}}
 
 
 /* 档案卡片（Phase 2） */
@@ -2005,7 +2005,7 @@ function memRender() {
             thoughtHtml +
             '<div class="mem-item-footer">' +
             '<div class="mem-tags">'+tags+'</div>' +
-            '<div style="display:flex;gap:4px;align-items:center">' + lockBtn +
+            '<div class="mem-actions">' + lockBtn +
             '<button class="mem-edit-btn" onclick="memEdit(\''+m._id+'\')">✎ 编辑</button>' +
             '<button class="mem-edit-btn" onclick="memShowHistory(\''+m._id+'\')">↶ 历史</button>' +
             '<button class="mem-del" onclick="memDelete(\''+m._id+'\')">&times;</button>' +
@@ -2041,9 +2041,15 @@ async function memShowHistory(id) {
     list.innerHTML = '<div class="mem-history-loading">读取历史中…</div>';
     modal.classList.add('open');
     try {
-        var res = await fetch(BACKEND + '/api/memory/' + id + '/history');
-        var payload = await res.json();
-        if (!res.ok) throw new Error(payload.error || '读取失败');
+        var res = await fetch(BACKEND + '/api/memory/' + encodeURIComponent(id) + '/history');
+        var contentType = res.headers.get('content-type') || '';
+        var raw = await res.text();
+        var payload;
+        if (contentType.indexOf('application/json') === -1) {
+            throw new Error('历史接口返回了非 JSON（HTTP ' + res.status + '），请刷新页面或重启服务');
+        }
+        try { payload = JSON.parse(raw); } catch (_) { throw new Error('历史接口返回的数据格式不正确'); }
+        if (!res.ok) throw new Error(payload.error || '读取失败（HTTP ' + res.status + '）');
         var data = payload.data || {};
         var current = data.current || {};
         var entries = (data.history || []).slice().sort(function(a,b){return b.version - a.version;});
@@ -2071,12 +2077,18 @@ function memCloseHistory() {
 async function memRestoreHistory(id, version) {
     if (!confirm('恢复版本 v' + version + '？当前内容会保留在历史记录里。')) return;
     try {
-        var res = await fetch(BACKEND + '/api/memory/' + id + '/history/restore', {
+        var res = await fetch(BACKEND + '/api/memory/' + encodeURIComponent(id) + '/history/restore', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({version: version})
         });
-        var payload = await res.json();
-        if (!res.ok) throw new Error(payload.error || '恢复失败');
+        var contentType = res.headers.get('content-type') || '';
+        var raw = await res.text();
+        var payload;
+        if (contentType.indexOf('application/json') === -1) {
+            throw new Error('恢复接口返回了非 JSON（HTTP ' + res.status + '），请刷新页面或重启服务');
+        }
+        try { payload = JSON.parse(raw); } catch (_) { throw new Error('恢复接口返回的数据格式不正确'); }
+        if (!res.ok) throw new Error(payload.error || '恢复失败（HTTP ' + res.status + '）');
         memCloseHistory();
         await memLoad();
         alert('已恢复到版本 v' + version);
