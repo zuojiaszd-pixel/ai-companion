@@ -1186,7 +1186,11 @@ async function getChatMemories(sessionId, query, topK) {
         // 情绪轨迹：从最新记忆中按时间排序提取情绪变化
         const moodTrajectory = [];
         const moodMemories = await Memory.find({
-            sessionId, archived: false,
+            sessionId,
+            // 情绪轨迹也只使用当前有效版本，不能让已被新记忆替代的旧情绪回流。
+            supersededBy: null,
+            contradicted: false,
+            archived: false,
             mood: { $ne: null }
         }).sort({ createdAt: -1 }).limit(20).lean();
         
