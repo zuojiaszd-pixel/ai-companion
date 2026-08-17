@@ -326,10 +326,8 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
         // 一个新事实可能替代多条旧记录，全部接入同一条当前版本，避免留下
         // contradicted=true 但 supersededBy=null 的断链记忆。
         if (supersededIds.length > 0) {
-            await Memory.updateMany(
-                { _id: { $in: supersededIds } },
-                { $set: { supersededBy: newMemory._id, contradicted: true } }
-            );
+            const supersededUpdate = buildSupersededUpdate(supersededIds, newMemory._id);
+            await Memory.updateMany(supersededUpdate.filter, supersededUpdate.update);
         }
         
         console.log(`[Memory] 已存储: ${content.slice(0, 50)}... [${canonicalType}/${priority}] [旧类型:${normalizedType.legacyType || '无'}] 情绪: ${mood || '无'} 标签: [${mergedRelatedTags.join(', ')}]`);
@@ -783,6 +781,15 @@ async function lockMemory(id) { return await Memory.findByIdAndUpdate(id, { lock
 async function unlockMemory(id) { return await Memory.findByIdAndUpdate(id, { locked: false }, { new: true }); }
 async function deleteMemory(id) { return await Memory.findByIdAndDelete(id); }
 
+function buildSupersededUpdate(memoryIds, replacementId) {
+    const ids = Array.from(new Set((memoryIds || []).filter(Boolean).map(String)));
+    if (!replacementId || ids.length === 0) return null;
+    return {
+        filter: { _id: { $in: ids } },
+        update: { $set: { supersededBy: replacementId, contradicted: true } }
+    };
+}
+
 function buildContentHistoryUpdate(memory, updates = {}, now = new Date()) {
     const normalized = { ...updates };
     const contentChanged = Object.prototype.hasOwnProperty.call(normalized, 'content')
@@ -1183,6 +1190,6 @@ module.exports = {
     getRelevantMemories, runDream, lockMemory, unlockMemory, deleteMemory,
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
     getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory,
-    normalizeMemoryType, buildContentHistoryUpdate, getMemoryHistory, restoreMemoryVersion,
+    normalizeMemoryType, buildContentHistoryUpdate, buildSupersededUpdate, getMemoryHistory, restoreMemoryVersion,
     extractTagsFromContent, parseCompoundMood
 };
