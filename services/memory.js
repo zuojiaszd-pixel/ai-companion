@@ -801,6 +801,31 @@ function buildContentHistoryUpdate(memory, updates = {}, now = new Date()) {
     return normalized;
 }
 
+async function getMemoryHistory(id) {
+    const memory = await Memory.findById(id)
+        .select('_id content version timeline createdAt updatedAt supersededBy contradicted')
+        .lean();
+    if (!memory) return null;
+
+    const timeline = Array.isArray(memory.timeline) ? memory.timeline : [];
+    return {
+        _id: memory._id,
+        current: {
+            content: memory.content,
+            version: memory.version || 1,
+            updatedAt: memory.updatedAt
+        },
+        history: timeline.map((entry, index) => ({
+            version: Math.max(1, (memory.version || 1) - timeline.length + index),
+            date: entry.date,
+            event: entry.event
+        })),
+        createdAt: memory.createdAt,
+        supersededBy: memory.supersededBy || null,
+        contradicted: Boolean(memory.contradicted)
+    };
+}
+
 async function updateMemory(id, updates = {}) {
     const memory = await Memory.findById(id);
     if (!memory) return null;
@@ -1090,5 +1115,5 @@ module.exports = {
     getRelevantMemories, runDream, lockMemory, unlockMemory, deleteMemory,
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
     getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory,
-    normalizeMemoryType, buildContentHistoryUpdate
+    normalizeMemoryType, buildContentHistoryUpdate, getMemoryHistory
 };

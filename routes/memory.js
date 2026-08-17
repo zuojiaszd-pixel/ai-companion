@@ -42,12 +42,16 @@ router.get('/search', async (req, res) => {
 });
 
 // POST /api/memory/migrate-types - 迁移旧记忆类型
-// 默认只预览；必须显式传 dryRun=false 才会写库。
+// 默认只预览；必须显式传 dryRun=false 才会写库，避免误改历史记忆。
 router.post('/migrate-types', async (req, res) => {
     try {
-        const result = await memoryService.migrateLegacyMemoryTypes(req.body.sessionId || 'default', {
-            dryRun: req.body.dryRun !== false, limit: req.body.limit
-        });
+        const result = await memoryService.migrateLegacyMemoryTypes(
+            req.body.sessionId || 'default',
+            {
+                dryRun: req.body.dryRun !== false,
+                limit: req.body.limit
+            }
+        );
         res.json({ success: true, data: result });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
@@ -149,17 +153,27 @@ router.post('/promote', async (req, res) => {
     }
 });
 
+// GET /api/memory/:id/history - 查看记忆历史（只读）
+router.get('/:id/history', async (req, res) => {
+    try {
+        const history = await memoryService.getMemoryHistory(req.params.id);
+        if (!history) {
+            return res.status(404).json({ success: false, error: '记忆不存在' });
+        }
+        res.json({ success: true, data: history });
+    } catch (e) {
+        res.status(400).json({ success: false, error: '记忆id无效' });
+    }
+});
+
 // PUT /api/memory/:id - 编辑记忆
 router.put('/:id', async (req, res) => {
     try {
-        const Memory = require('../models/Memory');
         const updates = {};
         const allowed = ['content', 'type', 'kind', 'title', 'lumiThought', 'priority', 'tags', 'locked', 'mood', 'moodIntensity', 'lumiMood'];
         for (const key of allowed) {
             if (req.body[key] !== undefined) updates[key] = req.body[key];
         }
-        updates.updatedAt = new Date();
-        
         if (updates.content) {
             const axios = require('axios');
             const res2 = await axios.post('https://open.bigmodel.cn/api/paas/v4/embeddings', {
@@ -174,7 +188,7 @@ router.put('/:id', async (req, res) => {
             updates.embedding = res2.data.data[0].embedding;
         }
         
-        const memory = await Memory.findByIdAndUpdate(req.params.id, updates, { new: true });
+        const memory = await memoryService.updateMemory(req.params.id, updates);
         if (!memory) {
             return res.status(404).json({ success: false, error: '记忆不存在' });
         }
