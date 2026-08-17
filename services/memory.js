@@ -52,6 +52,27 @@ function hasSharedMemoryTopic(contentA, contentB) {
     return overlap >= 2 || overlap / smallerSize >= 0.25;
 }
 
+function buildActiveMemoryFilter(sessionId, opts = {}) {
+    const filter = {
+        sessionId,
+        supersededBy: null,
+        contradicted: false,
+        archived: false
+    };
+    if (opts.excludeResident) {
+        filter.$or = [
+            { kind: { $ne: 'core' } },
+            { priority: { $ne: 'critical' } }
+        ];
+    }
+    if (opts.priority) filter.priority = opts.priority;
+    return filter;
+}
+
+function getPriorityBoost(priority) {
+    return { critical: 0.3, high: 0.15, normal: 0, low: -0.1 }[priority] ?? 0;
+}
+
 function cosineSim(a, b) {
     if (!a || !b || a.length === 0 || b.length === 0) return 0;
     let dot = 0, normA = 0, normB = 0;
@@ -372,19 +393,8 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
         const multiQueries = generateMultiQueries(query);
         const embeddings = await Promise.all(multiQueries.map(q => withHardTimeout(getEmbedding(q), 3000).catch(() => null)));
 
-        const filter = {
-            sessionId,
-            supersededBy: null,
-            contradicted: false,
-            archived: false
-        };
-        if (opts.excludeResident) {
-            // 常驻级卡片（kind=core 且 priority=critical）由 getRelevantMemories 单独加载，按需检索排除它们
-            filter.$or = [
-                { kind: { $ne: 'core' } },
-                { priority: { $ne: 'critical' } }
-            ];
-        }
+        // 只检索当前有效版本，避免旧版本再次进入候选池。
+        const filter = buildActiveMemoryFilter(sessionId, opts);
 
         const candidates = await withHardTimeout(
             Memory.find(filter)
@@ -460,7 +470,7 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
             const heat = m.locked
                 ? (m.baseHeat || 1.0)
                 : (m.baseHeat || 1.0) * Math.pow(0.5, daysSinceAccess / (m.halfLife || 30));
-            const priorityBoost = { critical: 0.3, high: 0.15, normal: 0, low: -0.1 }[m.priority] || 0;
+            const priorityBoost = getPriorityBoost(m.priority);
             const ageDays = (now - m.createdAt) / (1000 * 60 * 60 * 24);
             const recentBonus = ageDays <= RECENT_WINDOW_DAYS ? RECENT_BONUS * (1 - ageDays / RECENT_WINDOW_DAYS) : 0;
             entry.finalScore = entry.score + heat * 0.05 + priorityBoost + recentBonus;
@@ -1148,14 +1158,13 @@ async function getChatMemories(sessionId, query, topK) {
     try {
         const searchResults = await recallMemories(sessionId, query, topK);
         
-        const baselineMemories = await Memory.find({
-            sessionId, supersededBy: null, contradicted: false, archived: false,
-            priority: 'critical'
-        }).select('-embedding').limit(10).lean();
+        const baselineMemories = await Memory.find(
+            buildActiveMemoryFilter(sessionId, { priority: 'critical' })
+        ).select('-embedding').limit(10).lean();
         
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
         const recentMemories = await Memory.find({
-            sessionId, supersededBy: null, contradicted: false, archived: false,
+            ...buildActiveMemoryFilter(sessionId),
             createdAt: { $gte: threeDaysAgo }
         }).select('-embedding').sort({ createdAt: -1 }).limit(5).lean();
         
@@ -1221,5 +1230,6 @@ module.exports = {
     listMemories, getMemoryStats, backupMemories, restoreMemories, listBackups,
     getChatMemories, unarchiveMemory, migrateLegacyMemoryTypes, updateMemory,
     normalizeMemoryType, buildContentHistoryUpdate, buildSupersededUpdate, getMemoryHistory, restoreMemoryVersion,
-    extractTagsFromContent, parseCompoundMood, hasSharedMemoryTopic
+    extractTagsFromContent, parseCompoundMood, hasSharedMemoryTopic,
+    buildActiveMemoryFilter, getPriorityBoost
 };
