@@ -493,6 +493,15 @@
 <button class="mem-filter-btn active" onclick="memFilter('all',this)">全部</button>
 <button class="mem-filter-btn" onclick="memFilter('core',this)">✨ 核心卡片</button>
 <button class="mem-filter-btn" onclick="memFilter('moment',this)">🌙 零碎卡片</button>
+<select class="mem-sort-select" id="mem-type-filter" onchange="memApplyFilters()">
+<option value="all">全部类型</option><option value="core">核心</option><option value="tech">技术</option><option value="state">状态</option>
+</select>
+<select class="mem-sort-select" id="mem-mood-filter" onchange="memApplyFilters()">
+<option value="all">全部情绪</option><option value="happy">开心</option><option value="loving">眷恋</option><option value="sad">难过</option><option value="anxious">焦虑</option><option value="neutral">平静</option>
+</select>
+<select class="mem-sort-select" id="mem-time-filter" onchange="memApplyFilters()">
+<option value="all">全部时间</option><option value="7">最近7天</option><option value="30">最近30天</option><option value="365">最近一年</option>
+</select>
 </div>
 <div class="mem-sort-row">
 <span style="font-size:11px;color:var(--text3)">排序</span>
@@ -1886,6 +1895,7 @@ calLoadMemos();
 // === Memory Page ===
 var memAllData = [];
 var memCurrentFilter = 'all';
+var memFilteredData = [];
 
 async function memLoad() {
     try {
@@ -1893,7 +1903,7 @@ async function memLoad() {
         var res = await fetch(BACKEND + '/api/memory?sort=' + sortVal + '&limit=100');
         var data = await res.json();
         memAllData = (data && data.data) ? data.data : (data || []);
-        memRender();
+        memApplyFilters();
         memLoadStats();
         memLoadDreamLog();
     } catch(e) {
@@ -1928,9 +1938,24 @@ function memFilter(type, btn) {
     memRender();
 }
 
+function memApplyFilters() {
+    var type = document.getElementById('mem-type-filter') ? document.getElementById('mem-type-filter').value : 'all';
+    var mood = document.getElementById('mem-mood-filter') ? document.getElementById('mem-mood-filter').value : 'all';
+    var days = document.getElementById('mem-time-filter') ? document.getElementById('mem-time-filter').value : 'all';
+    var cutoff = days === 'all' ? 0 : Date.now() - Number(days) * 86400000;
+    memFilteredData = memAllData.filter(function(m) {
+        var kindOk = memCurrentFilter === 'all' || (m.kind || 'core') === memCurrentFilter;
+        var typeOk = type === 'all' || (m.type || 'core') === type;
+        var moodOk = mood === 'all' || m.mood === mood || (m.emotions || []).some(function(e){ return e.emotion === mood; });
+        var timeOk = !cutoff || new Date(m.createdAt || m.timestamp).getTime() >= cutoff;
+        return kindOk && typeOk && moodOk && timeOk;
+    });
+    memRender();
+}
+
 function memRender() {
     var list = document.getElementById('mem-page-list');
-    var filtered = memCurrentFilter === 'all' ? memAllData : memAllData.filter(function(m){return (m.kind || 'core') === memCurrentFilter;});
+    var filtered = memFilteredData;
     document.getElementById('mem-count').textContent = filtered.length + ' 条';
     if (!filtered.length) {
         list.innerHTML = '<div class="mem-empty">暂无记忆</div>';
