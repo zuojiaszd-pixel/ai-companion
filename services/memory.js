@@ -85,6 +85,14 @@ function parseCompoundMood(mood) {
     return mood.split('+').map(m => m.trim()).filter(m => m.length > 0);
 }
 
+// 将旧类型映射到当前的三类体系；保留 legacyType 便于旧数据和接口兼容。
+function normalizeMemoryType(type) {
+    const legacyTypes = new Set(['fact', 'preference', 'experience', 'summary']);
+    if (legacyTypes.has(type)) return { type: 'core', legacyType: type };
+    if (['core', 'tech', 'state'].includes(type)) return { type, legacyType: null };
+    return { type: 'core', legacyType: null };
+}
+
 // ============ 多Query生成 ============
 
 function generateMultiQueries(query) {
@@ -167,10 +175,12 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
         // Phase 2：options 携带档案卡片字段（kind/title/lumiThought）
         options = options || {};
         const kind = options.kind || 'core';
+        const normalizedType = normalizeMemoryType(type || 'core');
+        const canonicalType = normalizedType.type;
         const title = options.title || null;
         const lumiThought = options.lumiThought || null;
         // 情绪是必要条件：core 类型必须带情绪
-        if (type === 'core' && !mood) {
+        if (canonicalType === 'core' && !mood) {
             mood = 'neutral';
             moodIntensity = 0.5;
             console.log(`[Memory] 核心记忆默认情绪: neutral`);
@@ -288,7 +298,8 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             content,
             embedding: embedding || [],
             // 新类型体系：默认 core（关于我们的回忆），tech 需主动指定
-            type: type || 'core',
+            type: canonicalType,
+            legacyType: normalizedType.legacyType,
             priority: priority || 'normal',
             tags: mergedTags,
             mood: mood ? moodParts[0] || mood : null,
@@ -316,7 +327,7 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             await Memory.findByIdAndUpdate(supersededId, { supersededBy: newMemory._id });
         }
         
-        console.log(`[Memory] 已存储: ${content.slice(0, 50)}... [${type || 'core'}/${priority}] 情绪: ${mood || '无'} 标签: [${mergedRelatedTags.join(', ')}]`);
+        console.log(`[Memory] 已存储: ${content.slice(0, 50)}... [${canonicalType}/${priority}] [旧类型:${normalizedType.legacyType || '无'}] 情绪: ${mood || '无'} 标签: [${mergedRelatedTags.join(', ')}]`);
         return newMemory;
     } catch (e) {
         console.error('[Memory] 存储失败:', e.message);
@@ -775,29 +786,62 @@ async function migrateLegacyMemoryTypes(sessionId, options = {}) {
     const dryRun = options.dryRun !== false;
     const limit = Math.min(Math.max(Number(options.limit) || 500, 1), 5000);
     const legacyTypes = ['fact', 'preference', 'experience', 'summary'];
-    const candidates = await Memory.find({ sessionId, type: { $in: legacyTypes } })
+    const query = { sessionId, type: { $in: legacyTypes } };
+    const candidates = await Memory.find(query)
         .select('_id type legacyType content')
         .sort({ createdAt: 1 })
         .limit(limit)
         .lean();
+
     const counts = {};
     const operations = candidates.map(memory => {
         counts[memory.type] = (counts[memory.type] || 0) + 1;
-        return { updateOne: { filter: { _id: memory._id, type: memory.type }, update: { $set: {
-            type: 'core', legacyType: memory.legacyType || memory.type, updatedAt: new Date()
-        } } } };
+        return {
+            updateOne: {
+                filter: { _id: memory._id, type: memory.type },
+                update: {
+                    $set: {
+                        type: 'core',
+                        // 不覆盖已有来源标记；旧字段缺失时才补上。
+                        legacyType: memory.legacyType || memory.type,
+                        updatedAt: new Date()
+                    }
+                }
+            }
+        };
     });
-    if (!dryRun && operations.length > 0) await Memory.bulkWrite(operations, { ordered: false });
-    return { sessionId, dryRun, scanned: candidates.length, migrated: dryRun ? 0 : operations.length,
-        remainingEstimate: candidates.length === limit ? 'more' : 0, counts,
-        types: { from: legacyTypes, to: 'core' } };
+
+    if (!dryRun && operations.length > 0) {
+        await Memory.bulkWrite(operations, { ordered: false });
+    }
+
+    return {
+        sessionId,
+        dryRun,
+        scanned: candidates.length,
+        migrated: dryRun ? 0 : operations.length,
+        remainingEstimate: candidates.length === limit ? 'more' : 0,
+        counts,
+        types: { from: legacyTypes, to: 'core' }
+    };
+}
+
+// 列表层统一返回当前类型体系，旧类型只通过 legacyType 保留来源。
+// 这样迁移接口执行前，前端筛选和展示也不会再混出 fact/preference 等旧分类。
+const LEGACY_MEMORY_TYPES = ['fact', 'preference', 'experience', 'summary'];
+function canonicalTypeForRecord(memory) {
+    if (LEGACY_MEMORY_TYPES.includes(memory.type)) return 'core';
+    return memory.type || 'core';
 }
 
 async function listMemories(sessionId, options) {
     options = options || {};
     const query = { sessionId: sessionId || 'default' };
     if (options.type) {
-        query.type = options.type;
+        // core 包含尚未执行显式迁移的旧核心记忆。
+        query.type = options.type === 'core'
+            ? { $in: ['core', ...LEGACY_MEMORY_TYPES] }
+            : options.type;
     } else {
         // 默认排除 state 类型：状态快照由 autoExtractMemories 每次对话生成，会淹没真实记忆
         query.type = { $ne: 'state' };
@@ -814,7 +858,15 @@ async function listMemories(sessionId, options) {
     
     const page = options.page || 1;
     const limit = options.limit || 20;
-    return await q.skip((page - 1) * limit).limit(limit).exec();
+    const memories = await q.skip((page - 1) * limit).limit(limit).exec();
+    return memories.map(memory => {
+        const item = memory.toObject ? memory.toObject() : { ...memory };
+        if (LEGACY_MEMORY_TYPES.includes(item.type)) {
+            item.legacyType = item.legacyType || item.type;
+            item.type = canonicalTypeForRecord(item);
+        }
+        return item;
+    });
 }
 
 async function getMemoryStats(sessionId) {
@@ -823,6 +875,12 @@ async function getMemoryStats(sessionId) {
     const active = await Memory.countDocuments({ sessionId, archived: false });
     const archivedCount = await Memory.countDocuments({ sessionId, archived: true });
     const byType = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$type', count: { $sum: 1 } } }]);
+    // 统计也按当前类型体系归并，避免迁移前后数字被拆成两套。
+    const canonicalByType = byType.reduce((acc, item) => {
+        const type = LEGACY_MEMORY_TYPES.includes(item._id) ? 'core' : (item._id || 'core');
+        acc[type] = (acc[type] || 0) + item.count;
+        return acc;
+    }, {});
     const byPriority = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$priority', count: { $sum: 1 } } }]);
     const byKind = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$kind', count: { $sum: 1 } } }]);
     const locked = await Memory.countDocuments({ sessionId, locked: true });
@@ -830,7 +888,7 @@ async function getMemoryStats(sessionId) {
     
     return {
         total, active, archived: archivedCount, locked, contradicted,
-        byType: byType.reduce((acc, item) => { acc[item._id] = item.count; return acc; }, {}),
+        byType: canonicalByType,
         byKind: byKind.reduce((acc, item) => { acc[item._id || 'core'] = item.count; return acc; }, {}),
         byPriority: byPriority.reduce((acc, item) => { acc[item._id] = item.count; return acc; }, {})
     };
