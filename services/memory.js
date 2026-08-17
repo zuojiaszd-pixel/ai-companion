@@ -569,6 +569,20 @@ function estimateTokens(text) {
     return cjkChars + (text.length - cjkChars) * 0.5;
 }
 
+// 把结构化字段以紧凑形式带进上下文，避免只注入 content 而丢掉情绪和时间线。
+function formatMemoryContext(memory) {
+    let line = `[${memory.kind || 'core'}/${memory.priority || 'normal'}] ${memory.content || ''}`;
+    if (memory.title) line += `（${memory.title}）`;
+    if (memory.lumiThought) line += ` Lumi想法：${memory.lumiThought}`;
+    const emotions = (memory.emotions || []).slice(-3).map(e =>
+        `${e.emotion}${e.intensity != null ? `(${e.intensity}/10)` : ''}`
+    ).join('、');
+    if (emotions) line += ` 情绪：${emotions}`;
+    const timeline = (memory.timeline || []).slice(-3).map(t => `${t.date} ${t.event}`).join('；');
+    if (timeline) line += ` 时间线：${timeline}`;
+    return line;
+}
+
 async function getRelevantMemories(sessionId, query, maxTokens) {
     maxTokens = maxTokens || 1500;
     const results = await recallMemories(sessionId, query, 20, { excludeResident: true });
@@ -586,7 +600,7 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
             }).select('-embedding').sort({ updatedAt: -1 }).limit(10).maxTimeMS(3000).lean(),
             3000
         ).catch(() => []);
-        residentText = resident.map(r => `[常驻/${r.priority}] ${r.content}`).join('\n');
+        residentText = resident.map(r => formatMemoryContext(r)).join('\n');
     } catch (e) {
         console.warn('[Memory] 常驻记忆加载失败:', e.message);
     }
@@ -622,7 +636,7 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
     if (selected.length) text += '【相关记忆】\n';
     let tokenEstimate = estimateTokens(text);
     for (const r of selected) {
-        const line = `[${r.kind || 'core'}/${r.priority}] ${r.content}\n`;
+        const line = formatMemoryContext(r) + '\n';
         tokenEstimate += estimateTokens(line);
         if (tokenEstimate > maxTokens) break;
         text += line;
@@ -904,7 +918,7 @@ async function getChatMemories(sessionId, query, topK) {
             const id = m._id.toString();
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, kind: m.kind || 'core', title: m.title || null, lumiThought: m.lumiThought || null, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 999, createdAt: m.createdAt });
+                merged.push({ _id: m._id, content: m.content, kind: m.kind || 'core', title: m.title || null, lumiThought: m.lumiThought || null, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, emotions: m.emotions || [], timeline: m.timeline || [], version: m.version || 1, relatedTags: m.relatedTags || [], score: 999, createdAt: m.createdAt });
             }
         }
         
@@ -912,7 +926,7 @@ async function getChatMemories(sessionId, query, topK) {
             const id = m._id.toString();
             if (!seenIds.has(id)) {
                 seenIds.add(id);
-                merged.push({ _id: m._id, content: m.content, kind: m.kind || 'core', title: m.title || null, lumiThought: m.lumiThought || null, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, score: 888, createdAt: m.createdAt });
+                merged.push({ _id: m._id, content: m.content, kind: m.kind || 'core', title: m.title || null, lumiThought: m.lumiThought || null, type: m.type, priority: m.priority, tags: m.tags, mood: m.mood || null, moodIntensity: m.moodIntensity || null, lumiMood: m.lumiMood || null, emotions: m.emotions || [], timeline: m.timeline || [], version: m.version || 1, relatedTags: m.relatedTags || [], score: 888, createdAt: m.createdAt });
             }
         }
         
