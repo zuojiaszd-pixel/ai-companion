@@ -181,7 +181,10 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
         
         // 自动提取主题标签
         const autoTags = extractTagsFromContent(content);
-        const mergedRelatedTags = [...new Set([...autoTags, ...(tags || [])])];
+        // 自动标签和手动标签统一写入 tags：检索、列表和关联联想看到的是同一套标签。
+        // relatedTags 继续保留，兼容已有数据和关联检索逻辑。
+        const mergedTags = [...new Set([...(tags || []), ...autoTags])];
+        const mergedRelatedTags = mergedTags.slice();
         
         const existing = await Memory.find({ 
             sessionId, 
@@ -237,9 +240,9 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
                     m.priority = priority;
                 }
                 
-                if (tags && tags.length > 0) {
+                if (mergedTags.length > 0) {
                     const existingTags = new Set(m.tags || []);
-                    tags.forEach(t => existingTags.add(t));
+                    mergedTags.forEach(t => existingTags.add(t));
                     m.tags = Array.from(existingTags);
                 }
                 
@@ -287,7 +290,7 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             // 新类型体系：默认 core（关于我们的回忆），tech 需主动指定
             type: type || 'core',
             priority: priority || 'normal',
-            tags: tags || [],
+            tags: mergedTags,
             mood: mood ? moodParts[0] || mood : null,
             moodIntensity: mood ? (typeof moodIntensity === "number" ? moodIntensity : 0.5) : null,
             lumiMood: lumiMood || null,
@@ -441,6 +444,11 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
                 mood: entry.item.memory.mood || null,
                 moodIntensity: entry.item.memory.moodIntensity || null,
                 lumiMood: entry.item.memory.lumiMood || null,
+                // 让上层真正拿到结构化情绪与时间线，不再只暴露旧的单值字段
+                emotions: entry.item.memory.emotions || [],
+                timeline: entry.item.memory.timeline || [],
+                version: entry.item.memory.version || 1,
+                relatedTags: entry.item.memory.relatedTags || [],
                 score: entry.finalScore,
                 createdAt: entry.item.memory.createdAt
             };
@@ -488,6 +496,10 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
                     mood: m.mood || null,
                     moodIntensity: m.moodIntensity || null,
                     lumiMood: m.lumiMood || null,
+                    emotions: m.emotions || [],
+                    timeline: m.timeline || [],
+                    version: m.version || 1,
+                    relatedTags: m.relatedTags || [],
                     score: tagScore * 0.5,
                     createdAt: m.createdAt
                 };
@@ -529,6 +541,10 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
                         mood: unarchived.mood || null,
                         moodIntensity: unarchived.moodIntensity || null,
                         lumiMood: unarchived.lumiMood || null,
+                        emotions: unarchived.emotions || [],
+                        timeline: unarchived.timeline || [],
+                        version: unarchived.version || 1,
+                        relatedTags: unarchived.relatedTags || [],
                         score: hit.score * 0.3,
                         createdAt: unarchived.createdAt
                     });
