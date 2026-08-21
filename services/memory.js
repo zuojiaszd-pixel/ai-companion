@@ -813,9 +813,39 @@ async function listBackups(sessionId) {
 
 // ============ 管理操作 ============
 
-async function lockMemory(id) { return await Memory.findByIdAndUpdate(id, { locked: true }, { new: true }); }
-async function unlockMemory(id) { return await Memory.findByIdAndUpdate(id, { locked: false }, { new: true }); }
-async function deleteMemory(id) { return await Memory.findByIdAndDelete(id); }
+// 页面可能拿到旧数据里的自定义字符串 ID。不能把它直接交给 findById，
+// 否则 Mongoose 会先做 ObjectId cast，导致历史接口返回 404/400。
+// 注意：不能声明为 async 再返回 Query。
+// Mongoose Query 是 thenable，async 函数会自动 await 它并解析成文档，
+// 导致 getMemoryHistory 里再调用 .lean() 时拿到的是文档，直接报错。
+// 这里保持同步返回 Query，让调用方自己决定 await 还是 .lean()。
+function findMemoryByPublicId(id, projection) {
+    if (id === undefined || id === null || String(id).trim() === '') return null;
+    const publicId = String(id).trim();
+    const query = Memory.findOne({
+        $or: [
+            ...(require('mongoose').isValidObjectId(publicId) ? [{ _id: publicId }] : []),
+            { legacyId: publicId },
+            { memoryId: publicId },
+            { id: publicId }
+        ]
+    });
+    if (projection) query.select(projection);
+    return query;
+}
+
+async function lockMemory(id) {
+    const memory = await findMemoryByPublicId(id);
+    return memory ? Memory.findByIdAndUpdate(memory._id, { locked: true }, { new: true }) : null;
+}
+async function unlockMemory(id) {
+    const memory = await findMemoryByPublicId(id);
+    return memory ? Memory.findByIdAndUpdate(memory._id, { locked: false }, { new: true }) : null;
+}
+async function deleteMemory(id) {
+    const memory = await findMemoryByPublicId(id);
+    return memory ? Memory.findByIdAndDelete(memory._id) : null;
+}
 
 function buildSupersededUpdate(memoryIds, replacementId) {
     const ids = Array.from(new Set((memoryIds || []).filter(Boolean).map(String)));
@@ -845,8 +875,7 @@ function buildContentHistoryUpdate(memory, updates = {}, now = new Date()) {
 }
 
 async function getMemoryHistory(id) {
-    const memory = await Memory.findById(id)
-        .select('_id content version timeline createdAt updatedAt supersededBy contradicted')
+    const memory = await findMemoryByPublicId(id, '_id content version timeline createdAt updatedAt supersededBy contradicted')
         .lean();
     if (!memory) return null;
 
@@ -878,7 +907,7 @@ async function restoreMemoryVersion(id, targetVersion) {
         throw error;
     }
 
-    const memory = await Memory.findById(id);
+    const memory = await findMemoryByPublicId(id);
     if (!memory) return null;
 
     const timeline = Array.isArray(memory.timeline) ? memory.timeline : [];
@@ -915,7 +944,7 @@ async function restoreMemoryVersion(id, targetVersion) {
 
     // 用版本条件更新，避免两个恢复请求互相覆盖。
     const restored = await Memory.findOneAndUpdate(
-        { _id: id, version: currentVersion },
+        { _id: memory._id, version: currentVersion },
         { $set: setFields },
         { new: true, runValidators: true }
     );
@@ -928,7 +957,7 @@ async function restoreMemoryVersion(id, targetVersion) {
 }
 
 async function updateMemory(id, updates = {}) {
-    const memory = await Memory.findById(id);
+    const memory = await findMemoryByPublicId(id);
     if (!memory) return null;
 
     let normalized = { ...updates };
@@ -954,7 +983,7 @@ async function updateMemory(id, updates = {}) {
     }
 
     normalized.updatedAt = new Date();
-    return await Memory.findByIdAndUpdate(id, normalized, { new: true, runValidators: true });
+    return await Memory.findByIdAndUpdate(memory._id, normalized, { new: true, runValidators: true });
 }
 
 // ============ 旧类型迁移（显式、可预览，不自动执行） ============
