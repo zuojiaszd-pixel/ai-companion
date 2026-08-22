@@ -223,4 +223,12 @@ MemorySchema.statics.applyPriorityDefaults = function(priority) {
 MemorySchema.set('toJSON', { virtuals: true });
 MemorySchema.set('toObject', { virtuals: true });
 
+// ========== 查询索引（2026-08-22 添加） ==========
+// 记忆页 list 默认按 lastAccessed 排序、stats 按 sessionId 过滤，
+// 之前全表扫 177 张卡导致打开记忆页要等好几分钟。
+// 现在三种排序都能走索引，stats 的 $match 也能直接命中 sessionId。
+MemorySchema.index({ sessionId: 1, lastAccessed: -1 });
+MemorySchema.index({ sessionId: 1, createdAt: -1 });
+MemorySchema.index({ sessionId: 1, heat: -1 });
+
 module.exports = mongoose.model('Memory', MemorySchema);

@@ -70,7 +70,7 @@ function buildActiveMemoryFilter(sessionId, opts = {}) {
 }
 
 function getPriorityBoost(priority) {
-    return { critical: 0.3, high: 0.15, normal: 0, low: -0.1 }[priority] ?? 0;
+    return { critical: 0.05, high: 0.02, normal: 0, low: -0.02 }[priority] ?? 0;
 }
 
 function cosineSim(a, b) {
@@ -186,7 +186,7 @@ async function keywordSearchArchived(sessionId, query, limit) {
         sessionId,
         archived: true,
         supersededBy: null
-    }).select('-embedding').limit(100).lean();
+    }).select('-embedding').limit(500).lean();
     
     const scored = archived.map(m => {
         const contentTokens = tokenize(m.content + ' ' + (m.tags || []).join(' '));
@@ -400,7 +400,7 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
             Memory.find(filter)
                 .select('-embedding')
                 .sort({ createdAt: -1 })
-                .limit(100)
+                .limit(500)
                 .maxTimeMS(3000)
                 .lean(),
             3000
@@ -426,18 +426,23 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
 
             // 关键词 RRF 不依赖 embedding，保证 embedding 失败时仍能召回
             const keywordRanked = candidates.map(m => {
-                const contentTokens = tokenize(m.content + ' ' + (m.tags || []).join(' '));
-                const matchCount = queryTokens.filter(t => contentTokens.includes(t)).length;
-                const keywordScore = queryTokens.length > 0 ? matchCount / queryTokens.length : 0;
-                return { memory: m, keywordScore };
+                const contentTokens = new Set(tokenize(m.content));
+                const tagTokens = new Set(tokenize((m.tags || []).join(' ')));
+                const contentMatch = queryTokens.filter(t => contentTokens.has(t)).length;
+                const tagMatch = queryTokens.filter(t => tagTokens.has(t)).length;
+                // 标签命中权重是正文的3倍：搜"引导"时，标签真带"引导"的卡排最前
+                const keywordScore = queryTokens.length > 0 ? (contentMatch + tagMatch * 3) / queryTokens.length : 0;
+                return { memory: m, keywordScore, contentMatch, tagMatch };
             });
             keywordRanked.sort((a, b) => b.keywordScore - a.keywordScore);
 
             keywordRanked.forEach((item, rank) => {
                 const id = item.memory._id.toString();
-                const score = rrfScores.get(id) || { item, score: 0 };
-                score.score += 1 / (rrfK + rank + 1);
-                rrfScores.set(id, score);
+                const entry = rrfScores.get(id) || { item, score: 0, keywordHit: false, tagHit: false, vectorHit: false };
+                entry.score += 1 / (rrfK + rank + 1);
+                if (item.keywordScore > 0) entry.keywordHit = true;
+                if (item.tagMatch > 0) entry.tagHit = true;
+                rrfScores.set(id, entry);
             });
 
             if (!queryEmbedding) continue;
@@ -453,9 +458,10 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
 
             vectorRanked.forEach((item, rank) => {
                 const id = item.memory._id.toString();
-                const score = rrfScores.get(id) || { item, score: 0 };
-                score.score += 1 / (rrfK + rank + 1);
-                rrfScores.set(id, score);
+                const entry = rrfScores.get(id) || { item, score: 0, keywordHit: false, tagHit: false, vectorHit: false };
+                entry.score += 1 / (rrfK + rank + 1);
+                if ((item.vectorScore || 0) > 0.1) entry.vectorHit = true;
+                rrfScores.set(id, entry);
             });
         }
         
@@ -470,10 +476,14 @@ async function recallMemories(sessionId, query, topK, opts = {}) {
             const heat = m.locked
                 ? (m.baseHeat || 1.0)
                 : (m.baseHeat || 1.0) * Math.pow(0.5, daysSinceAccess / (m.halfLife || 30));
-            const priorityBoost = getPriorityBoost(m.priority);
+            // 优先级加成只在真正匹配到时生效，避免不相关的高优先级卡霸榜
+            const matched = entry.keywordHit || entry.tagHit || entry.vectorHit;
+            const priorityBoost = matched ? getPriorityBoost(m.priority) : 0;
+            // 标签命中额外加分：用户搜的正是标签词，这张卡就该排最前
+            const tagBoost = entry.tagHit ? 0.1 : 0;
             const ageDays = (now - m.createdAt) / (1000 * 60 * 60 * 24);
             const recentBonus = ageDays <= RECENT_WINDOW_DAYS ? RECENT_BONUS * (1 - ageDays / RECENT_WINDOW_DAYS) : 0;
-            entry.finalScore = entry.score + heat * 0.05 + priorityBoost + recentBonus;
+            entry.finalScore = entry.score + heat * 0.05 + priorityBoost + tagBoost + recentBonus;
             return entry;
         });
         
@@ -1059,7 +1069,7 @@ async function listMemories(sessionId, options) {
     if (options.archived === 'true') query.archived = true;
     else if (options.archived === 'false') query.archived = false;
     
-    let q = Memory.find(query);
+    let q = Memory.find(query).select('-embedding'); // 列表不需要1536维向量，省传输省解析
     if (options.sort === 'heat') q = q.sort({ heat: -1 });
     else if (options.sort === 'recent') q = q.sort({ lastAccessed: -1 });
     else q = q.sort({ createdAt: -1 });
@@ -1079,26 +1089,36 @@ async function listMemories(sessionId, options) {
 
 async function getMemoryStats(sessionId) {
     sessionId = sessionId || 'default';
-    const total = await Memory.countDocuments({ sessionId });
-    const active = await Memory.countDocuments({ sessionId, archived: false });
-    const archivedCount = await Memory.countDocuments({ sessionId, archived: true });
-    const byType = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$type', count: { $sum: 1 } } }]);
+    // 单次 $facet 聚合：一轮扫库同时算出全部统计，替代原来的 8 连查（3 count + 3 aggregate + 2 count）。
+    const [result] = await Memory.aggregate([
+        { $match: { sessionId } },
+        { $facet: {
+            total:       [{ $count: 'n' }],
+            active:      [{ $match: { archived: false } }, { $count: 'n' }],
+            archived:    [{ $match: { archived: true } }, { $count: 'n' }],
+            locked:      [{ $match: { locked: true } }, { $count: 'n' }],
+            contradicted:[{ $match: { contradicted: true } }, { $count: 'n' }],
+            byType:      [{ $group: { _id: '$type', count: { $sum: 1 } } }],
+            byPriority:  [{ $group: { _id: '$priority', count: { $sum: 1 } } }],
+            byKind:      [{ $group: { _id: '$kind', count: { $sum: 1 } } }]
+        } }
+    ]);
+    const n = arr => (arr && arr[0] && arr[0].n) || 0;
     // 统计也按当前类型体系归并，避免迁移前后数字被拆成两套。
-    const canonicalByType = byType.reduce((acc, item) => {
+    const byType = (result.byType || []).reduce((acc, item) => {
         const type = LEGACY_MEMORY_TYPES.includes(item._id) ? 'core' : (item._id || 'core');
         acc[type] = (acc[type] || 0) + item.count;
         return acc;
     }, {});
-    const byPriority = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$priority', count: { $sum: 1 } } }]);
-    const byKind = await Memory.aggregate([{ $match: { sessionId } }, { $group: { _id: '$kind', count: { $sum: 1 } } }]);
-    const locked = await Memory.countDocuments({ sessionId, locked: true });
-    const contradicted = await Memory.countDocuments({ sessionId, contradicted: true });
-    
     return {
-        total, active, archived: archivedCount, locked, contradicted,
-        byType: canonicalByType,
-        byKind: byKind.reduce((acc, item) => { acc[item._id || 'core'] = item.count; return acc; }, {}),
-        byPriority: byPriority.reduce((acc, item) => { acc[item._id] = item.count; return acc; }, {})
+        total: n(result.total),
+        active: n(result.active),
+        archived: n(result.archived),
+        locked: n(result.locked),
+        contradicted: n(result.contradicted),
+        byType,
+        byKind: (result.byKind || []).reduce((acc, item) => { acc[item._id || 'core'] = item.count; return acc; }, {}),
+        byPriority: (result.byPriority || []).reduce((acc, item) => { acc[item._id] = item.count; return acc; }, {})
     };
 }
 
