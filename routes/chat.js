@@ -358,7 +358,7 @@ router.post('/chat', async (req, res) => {
                 sendEvent('status', { text: label });
             }
         };
-        const chatModel = hasImage ? 'openai/gpt-5.6-luna' : model;
+        const chatModel = hasImage ? 'deepseek-v4-flash-vision-exp' : model;
         setStatus('思考中…');
         const result = await withTimeout(
             chat(messages, chatModel, opts, true, hasImage),
@@ -394,11 +394,20 @@ router.post('/chat', async (req, res) => {
         // }
 
         // 12. 返回：先发最终结果，再结束 SSE
+        // 12.1 表情包推荐（根据回复情绪匹配）
+        let recommendedSticker = null;
+        try {
+            const { recommendSticker } = require('./sticker_recommend');
+            recommendedSticker = await recommendSticker(result.content);
+        } catch (e) {
+            console.error('[表情包推荐] 失败:', e.message);
+        }
         sendEvent('done', {
             reply: result.content,
             thinking: result.reasoning || '',
             usage: result.usage || null,
-            toolCalls: result.toolCalls || []
+            toolCalls: result.toolCalls || [],
+            sticker: recommendedSticker || null
         });
         res.end();
 

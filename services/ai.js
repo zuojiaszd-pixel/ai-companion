@@ -20,8 +20,16 @@ const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用DeepSeek V4 Flash
 const DEFAULT_MODEL = "openai/gpt-5.6-luna"
-// 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "openai/gpt-5.6-luna"
+// 图片模型 - DeepSeek V4 Flash Vision（识图）
+const IMAGE_MODEL = "deepseek-v4-flash-vision-exp"
+
+// 支持视觉的模型列表：发图时优先用当前模型，只有当前模型不支持视觉才切到 IMAGE_MODEL
+const VISION_MODELS = ["deepseek-v4-flash-vision-exp"]
+
+function isVisionModel(mdl) {
+    if (!mdl) return false;
+    return VISION_MODELS.some(v => mdl.indexOf(v) >= 0);
+}
 
 function loadSettings() {
     try {
@@ -288,12 +296,19 @@ async function callOpenRouter(messages, tools, model, opts) {
     // 检测是否包含图片内容
     const hasImage = hasMultimodalContent(messages);
     
-    // 有图片时强制使用IMAGE_MODEL，不回退
+    // 有图片时：当前模型支持视觉就直接用当前模型（用什么模型就用什么模型看图）
+    // 当前模型不支持视觉才切到专用视觉模型 IMAGE_MODEL；均不回退
     // 无图片时使用传入的model或DEFAULT_MODEL，可回退
     var models;
     if (hasImage) {
-        models = [IMAGE_MODEL];
-        console.log('[Image Mode] Using image model:', IMAGE_MODEL);
+        const currentModel = model || DEFAULT_MODEL;
+        if (isVisionModel(currentModel)) {
+            models = [currentModel];
+            console.log('[Image Mode] Current model supports vision, using:', currentModel);
+        } else {
+            models = [IMAGE_MODEL];
+            console.log('[Image Mode] Current model has no vision, switching to:', IMAGE_MODEL);
+        }
     } else {
         models = [model || DEFAULT_MODEL, "deepseek-v4-pro"];
     }
@@ -470,7 +485,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
     messages = trimContext(messages, opts || {});
     messages = injectSummary(messages);
     const MAX_TOOL_ROUNDS = 10;
-    const MAX_EMPTY_RETRIES = hasImage ? 0 : 1;
+    const MAX_EMPTY_RETRIES = 1; // 图片模式也给一次重试：vision模型可能把token烧在思考上
     const MAX_REPEAT_RETRIES = hasImage ? 0 : 1;
 
     const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
@@ -482,6 +497,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
         if (!choice) throw new Error('API 返回为空');
 
         const msg = choice.message;
+        const finishReason = choice.finish_reason;
 
         if (useTools && !hasImage && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
@@ -524,10 +540,11 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
         let content = msg.content || '';
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
-        if (isEmptyResponse(content) && reasoning.trim()) {
-            content = reasoning;
-            reasoning = '';
-        } else if (!reasoning.trim()) {
+        // 修复：content 为空时不再把思考链直接当回复发出。
+        // 深度思考模型（如 vision-exp）可能把 token 全烧在 reasoning_content 上，
+        // 原逻辑会把整段思考过程发给用户（且图片模式会绕过 hasImage 占位兜底）。
+        // 现在让空 content 自然走到下面的 hasImage 占位 / 空内容重试流程。
+        if (!reasoning.trim()) {
             const cleaned = extractThinking(content);
             if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
                 content = cleaned.reasoning;
@@ -558,8 +575,9 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 retryMessages.push({ role: 'user', content: RETRY_PROMPTS[r] });
                 
                 let retryData;
+                const retryOpts = { ...(opts || {}), maxTokens: Math.max((opts && opts.maxTokens) || 4000, 8000) };
                 try {
-                    retryData = await callOpenRouter(retryMessages, null, model, opts);
+                    retryData = await callOpenRouter(retryMessages, null, model, retryOpts);
                 } catch(e) {
                     console.log(`[Retry ${r + 1}] API error:`, e.message);
                     continue;
@@ -570,13 +588,11 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 if (!retryChoice) continue;
                 
                 const retryMsg = retryChoice.message;
+                const retryFinish = retryChoice.finish_reason;
                 let retryContent = retryMsg.content || '';
                 let retryReasoning = retryMsg.reasoning || retryMsg.reasoning_content || '';
                 
-                if (isEmptyResponse(retryContent) && retryReasoning.trim()) {
-                    retryContent = retryReasoning;
-                    retryReasoning = '';
-                } else if (!retryReasoning.trim()) {
+                if (!retryReasoning.trim()) {
                     const cleaned = extractThinking(retryContent);
                     if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
                         retryContent = cleaned.reasoning;
@@ -607,8 +623,9 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 retryMessages.push({ role: 'user', content: REPEAT_RETRY_PROMPTS[r] });
                 
                 let retryData;
+                const retryOpts = { ...(opts || {}), maxTokens: Math.max((opts && opts.maxTokens) || 4000, 8000) };
                 try {
-                    retryData = await callOpenRouter(retryMessages, activeTools, model, opts);
+                    retryData = await callOpenRouter(retryMessages, activeTools, model, retryOpts);
                 } catch(e) {
                     console.log(`[Repeat Retry ${r + 1}] API error:`, e.message);
                     break;
@@ -619,13 +636,11 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 if (!retryChoice) break;
                 
                 const retryMsg = retryChoice.message;
+                const retryFinish = retryChoice.finish_reason;
                 let retryContent = retryMsg.content || '';
                 let retryReasoning = retryMsg.reasoning || retryMsg.reasoning_content || '';
                 
-                if (isEmptyResponse(retryContent) && retryReasoning.trim()) {
-                    retryContent = retryReasoning;
-                    retryReasoning = '';
-                } else if (!retryReasoning.trim()) {
+                if (!retryReasoning.trim()) {
                     const cleaned = extractThinking(retryContent);
                     if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
                         retryContent = cleaned.reasoning;
