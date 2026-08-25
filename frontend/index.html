@@ -75,8 +75,6 @@
 .msg-bubble pre code.hljs{padding:0;background:none}
 .msg-bubble pre{background:#0d1117 !important}
 
-#img-btn:hover{color:var(--accent);transform:scale(1.1)}
-#img-btn:active{transform:scale(.95)}
 
 /* Bottom Navigation Bar */
 #bottom-nav{display:flex;justify-content:space-around;align-items:center;padding:6px 0 8px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;z-index:10}
@@ -425,6 +423,35 @@
 .mcp-form-actions button.ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
 .mcp-empty{text-align:center;color:var(--text3);font-size:13px;padding:40px 20px}
 
+
+/* ===== 表情包面板 ===== */
+#plus-btn{width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease}
+#plus-btn:hover{color:var(--accent);background:var(--surface2)}
+#plus-menu{position:absolute;bottom:56px;left:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 30px rgba(0,0,0,.25);padding:6px;display:none;z-index:60;min-width:130px}
+#plus-menu.open{display:block;animation:fadeIn .15s ease-out}
+#plus-menu .plus-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text);transition:background .15s}
+#plus-menu .plus-item:hover{background:var(--surface2)}
+#sticker-panel{position:absolute;bottom:64px;left:60px;right:16px;max-width:340px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:60;display:none;flex-direction:column;max-height:320px;overflow:hidden}
+#sticker-panel.open{display:flex;animation:fadeIn .15s ease-out}
+.stk-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+.stk-header .stk-close{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:2px 6px}
+.stk-upload{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.stk-upload-row{display:flex;gap:6px;align-items:center}
+.stk-upload-row input[type=text]{flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:12px;outline:none}
+.stk-upload-row input[type=text]:focus{border-color:var(--accent)}
+.stk-upload-row select{padding:5px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:12px;outline:none}
+.stk-upload-row .stk-file-btn{padding:5px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;white-space:nowrap}
+.stk-upload-row .stk-file-btn:hover{color:var(--accent);border-color:var(--accent)}
+.stk-upload-row .stk-up-btn{padding:5px 12px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:12px;cursor:pointer}
+.stk-upload-row .stk-up-btn:disabled{opacity:.4;cursor:not-allowed}
+.stk-grid{flex:1;overflow-y:auto;padding:10px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stk-cell{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid var(--border);background:var(--surface2)}
+.stk-cell:hover{border-color:var(--accent);transform:scale(1.05);transition:all .15s}
+.stk-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.stk-cell .stk-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center;cursor:pointer;display:none}
+.stk-cell:hover .stk-del{display:block}
+.stk-empty{grid-column:1/-1;text-align:center;color:var(--text3);font-size:12px;padding:24px 0}
+.stk-msg-img{max-width:180px;max-height:180px;border-radius:8px;display:block;margin-bottom:4px;object-fit:cover;cursor:pointer}
 </style></head><body><div id="login-overlay" class="show">
 <div class="login-card">
 <div class="login-icon">🔐</div>
@@ -435,7 +462,7 @@
 <div class="login-error" id="login-error">密码错误</div>
 </div>
 </div>
-<header><div class="logo"><div class="icon">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleSessions()" id="sessions-btn" title="对话列表"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="openai/gpt-5.6-luna" selected>GPT-5.6 Luna (推荐)</option><option value="deepseek-v4-flash">DeepSeek V4 Flash</option><option value="deepseek-v4-flash-vision-exp">DeepSeek V4 Flash Vision (识图)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="openai/gpt-5.6-luna-pro">GPT-5.6 Luna Pro</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="anthropic/claude-sonnet-4-20250514">Claude Sonnet 4 (平衡)</option></select></div><div class="menu-section"><div class="menu-section-title">工具</div><div class="menu-item" onclick="leftMenuGo('mcp')"><span>🔌 MCP 管理</span></div></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="img-btn" onclick="document.getElementById('file-image').click()" style="width:36px;height:36px;border:none;border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s ease"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-4-4-7 7"/></svg></button><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button></div><div id="token-bar" aria-live="polite">本次对话 Token：—</div></div></div><div id="page-mcp" class="page">
+<header><div class="logo"><div class="icon">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleSessions()" id="sessions-btn" title="对话列表"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="openai/gpt-5.6-luna" selected>GPT-5.6 Luna (推荐)</option><option value="deepseek-v4-flash">DeepSeek V4 Flash</option><option value="deepseek-v4-flash-vision-exp">DeepSeek V4 Flash Vision (识图)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="openai/gpt-5.6-luna-pro">GPT-5.6 Luna Pro</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="stealth/ox-alpha">Stealth Ox-Alpha (免费)</option></select></div><div class="menu-section"><div class="menu-section-title">工具</div><div class="menu-item" onclick="leftMenuGo('mcp')"><span>🔌 MCP 管理</span></div></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="plus-btn" onclick="togglePlusMenu()" title="更多"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><div id="plus-menu"><div class="plus-item" onclick="document.getElementById('file-image').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> 图片</div><div class="plus-item" onclick="openStickerPanel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> 表情包</div></div><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button><div id="sticker-panel"><div class="stk-header"><span>😊 表情包</span><button class="stk-close" onclick="closeStickerPanel()">&times;</button></div><div class="stk-upload"><div class="stk-upload-row"><input type="text" id="stk-name" placeholder="名字…" maxlength="20"><select id="stk-emotion"><option value="开心">开心</option><option value="想你了">想你了</option><option value="生气">生气</option><option value="撒娇">撒娇</option><option value="晚安">晚安</option><option value="委屈">委屈</option><option value="其他">其他</option></select></div><div class="stk-upload-row"><input type="text" id="stk-note" placeholder="描述…（写给我看的，推荐更准）" maxlength="40"></div><div class="stk-upload-row"><span class="stk-mode-btn active" id="stk-mode-file" onclick="setStickerMode('file')">上传图片</span><span class="stk-mode-btn" id="stk-mode-url" onclick="setStickerMode('url')">URL链接</span></div><div class="stk-upload-row" id="stk-file-row"><span class="stk-file-btn" onclick="document.getElementById('stk-file').click()">选择图片</span><input type="file" id="stk-file" accept="image/*" style="display:none" onchange="handleStickerSelect(this)"></div><div class="stk-upload-row" id="stk-url-row" style="display:none"><input type="text" id="stk-url" placeholder="图片链接 https://…" maxlength="500"></div><div class="stk-upload-row"><button class="stk-up-btn" id="stk-up-btn" onclick="uploadSticker()">上传</button></div></div><div class="stk-grid" id="stk-grid"></div></div></div><div id="token-bar" aria-live="polite">本次对话 Token：—</div></div></div><div id="page-mcp" class="page">
 <div class="mcp-header">
 <div><div class="mcp-title">🔌 MCP 服务器</div><span class="mcp-sub">接入外部工具，让我能玩更多小游戏</span></div>
 <button class="mcp-add-btn" onclick="mcpShowForm()">＋ 新增服务器</button>
@@ -841,6 +868,162 @@ function clearImageSelect() {
     document.getElementById('file-image').value = '';
 }
 
+var pendingStickerFile = null;
+var pendingStickerUrl = '';
+var stickerMode = 'file';
+
+function togglePlusMenu() {
+    var m = document.getElementById('plus-menu');
+    if (m) m.classList.toggle('open');
+}
+
+function openStickerPanel() {
+    var pm = document.getElementById('plus-menu');
+    if (pm) pm.classList.remove('open');
+    var sp = document.getElementById('sticker-panel');
+    if (sp) sp.classList.add('open');
+    loadStickers();
+}
+
+function closeStickerPanel() {
+    var sp = document.getElementById('sticker-panel');
+    if (sp) sp.classList.remove('open');
+}
+
+async function loadStickers() {
+    var grid = document.getElementById('stk-grid');
+    if (!grid) return;
+    grid.innerHTML = '<div class="stk-empty">加载中…</div>';
+    try {
+        var res = await fetch(BACKEND + '/api/stickers');
+        if (!res.ok) throw new Error('bad status');
+        var stickers = await res.json();
+        if (!stickers || !stickers.length) { grid.innerHTML = '<div class="stk-empty">还没有表情包，传一个吧~</div>'; return; }
+        grid.innerHTML = '';
+        stickers.forEach(function(s) {
+            var cell = document.createElement('div');
+            cell.className = 'stk-cell';
+            cell.title = (s.name || '') + (s.note ? ' - ' + s.note : '');
+            cell.innerHTML = '<img src="' + s.data + '" alt="' + escapeHtml(s.name || '') + '"><button class="stk-del" onclick="event.stopPropagation();deleteSticker(\'' + s._id + '\')">&times;</button>';
+            cell.onclick = function() { sendSticker(s._id, s.data, s.name || ''); };
+            grid.appendChild(cell);
+        });
+    } catch (e) {
+        grid.innerHTML = '<div class="stk-empty">加载失败，稍后再试</div>';
+    }
+}
+
+function setStickerMode(mode) {
+    stickerMode = mode;
+    var fb = document.getElementById('stk-mode-file');
+    var ub = document.getElementById('stk-mode-url');
+    var fr = document.getElementById('stk-file-row');
+    var ur = document.getElementById('stk-url-row');
+    var btn = document.getElementById('stk-up-btn');
+    if (mode === 'url') {
+        if (fb) fb.classList.remove('active');
+        if (ub) ub.classList.add('active');
+        if (fr) fr.style.display = 'none';
+        if (ur) ur.style.display = 'flex';
+        if (btn) { btn.disabled = false; btn.textContent = '上传'; }
+    } else {
+        if (ub) ub.classList.remove('active');
+        if (fb) fb.classList.add('active');
+        if (ur) ur.style.display = 'none';
+        if (fr) fr.style.display = 'flex';
+        if (btn) { btn.disabled = !pendingStickerFile; btn.textContent = pendingStickerFile ? '可以上传' : '上传'; }
+    }
+}
+
+function handleStickerSelect(input) {
+    var file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('表情包图片不能超过2MB哦'); input.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        pendingStickerFile = e.target.result;
+        var btn = document.getElementById('stk-up-btn');
+        if (btn) { btn.disabled = false; btn.textContent = '可以上传'; }
+    };
+    reader.readAsDataURL(file);
+}
+
+async function uploadSticker() {
+    var name = document.getElementById('stk-name').value.trim();
+    var note = document.getElementById('stk-note').value.trim();
+    if (!name) { alert('给表情起个名字吧'); return; }
+    var emotion = document.getElementById('stk-emotion').value;
+    var data;
+    if (stickerMode === 'url') {
+        data = document.getElementById('stk-url').value.trim();
+        if (!data) { alert('填个图片链接吧'); return; }
+        if (!/^https?:\/\//i.test(data)) { alert('链接要以 http(s):// 开头哦'); return; }
+    } else {
+        if (!pendingStickerFile) { alert('先选一张图片'); return; }
+        data = pendingStickerFile;
+    }
+    var btn = document.getElementById('stk-up-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '上传中…'; }
+    try {
+        var res = await fetch(BACKEND + '/api/stickers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, note: note, emotion: emotion, data: data })
+        });
+        if (!res.ok) throw new Error('bad status');
+        document.getElementById('stk-name').value = '';
+        document.getElementById('stk-note').value = '';
+        document.getElementById('stk-file').value = '';
+        document.getElementById('stk-url').value = '';
+        pendingStickerFile = null;
+        if (btn) { btn.disabled = true; btn.textContent = '上传'; }
+        loadStickers();
+    } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = '上传'; }
+        alert('上传失败，稍后再试');
+    }
+}
+
+async function deleteSticker(id) {
+    if (!confirm('删除这个表情包？')) return;
+    try {
+        await fetch(BACKEND + '/api/stickers/' + id, { method: 'DELETE' });
+        loadStickers();
+    } catch (e) {}
+}
+
+function sendSticker(id, data, name) {
+    closeStickerPanel();
+    // 挂起表情，不立即发送：可以和文字一起发
+    pendingImage = data;
+    var pw = document.getElementById('img-preview-wrap');
+    var pi = document.getElementById('img-preview');
+    if (pw && pi) { pi.src = data; pw.style.display = 'flex'; }
+    var input = document.getElementById('input');
+    if (input) input.focus();
+}
+
+function addMsgSticker(role, sticker) {
+    if (!sticker || !sticker.data) return;
+    var chat = document.getElementById('chat');
+    var row = document.createElement('div');
+    row.className = 'msg-row ' + role;
+    var avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
+    if (avatar.textContent.indexOf('data:') === 0 || avatar.textContent.indexOf('http') === 0) { avatar.className += ' img'; avatar.style.backgroundImage = 'url(' + avatar.textContent + ')'; avatar.textContent = ''; }
+    var bubble = document.createElement('div');
+    if (role === 'user') bubble.style.marginLeft = 'auto';
+    bubble.className = 'msg-bubble';
+    var time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    bubble.innerHTML = '<img class="stk-msg-img" src="' + sticker.data + '" alt="' + escapeHtml(sticker.name || '') + '" onclick="window.open(this.src)"><span class="time">' + time + '</span>';
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+    removeWelcome();
+}
+
 function addLiveToolCall(name, args, id) {
     var chat = document.getElementById('chat');
     var row = document.createElement('div');
@@ -889,6 +1072,7 @@ function applyChatEvent(type, payload, finalData) {
         finalData.thinking = payload.thinking || '';
         finalData.usage = payload.usage || null;
         finalData.toolCalls = payload.toolCalls || [];
+        finalData.sticker = payload.sticker || null;
     } else if (type === 'error') {
         throw new Error(payload.error || '服务器错误');
     }
@@ -956,6 +1140,7 @@ async function send() {
         removeTyping();
         if (data.thinking) addThink(data.thinking, true);
         if (data.reply) addMsg('assistant', data.reply);
+        if (data.sticker) addMsgSticker('assistant', data.sticker);
         if (data.usage) updateTokenBar(data.usage);
     } catch (err) {
         removeTyping();

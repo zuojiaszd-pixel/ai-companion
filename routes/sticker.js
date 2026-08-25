@@ -16,10 +16,10 @@ router.get('/stickers', async (req, res) => {
 // 上传表情包
 router.post('/stickers', async (req, res) => {
   try {
-    const { name, note = '', emotion = '其他', data } = req.body;
+    const { name, note = '', emotion = '其他', data, type = 'upload' } = req.body;
     if (!name) return res.status(400).json({ error: '名字不能为空' });
     if (!data) return res.status(400).json({ error: '图片数据不能为空' });
-    const sticker = await Sticker.create({ name, note, emotion, data });
+    const sticker = await Sticker.create({ name, note, emotion, type, data });
     res.json(sticker);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

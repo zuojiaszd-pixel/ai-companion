@@ -398,7 +398,9 @@ router.post('/chat', async (req, res) => {
         let recommendedSticker = null;
         try {
             const { recommendSticker } = require('./sticker_recommend');
-            recommendedSticker = await recommendSticker(result.content);
+            const rec = await recommendSticker(result.content);
+            recommendedSticker = rec.sticker;
+            result.content = rec.content;
         } catch (e) {
             console.error('[表情包推荐] 失败:', e.message);
         }
