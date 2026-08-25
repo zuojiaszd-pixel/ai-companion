@@ -19,7 +19,7 @@ const coreMemoryPrompt = `
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用DeepSeek V4 Flash
-const DEFAULT_MODEL = "openai/gpt-5.6-luna"
+const DEFAULT_MODEL = "deepseek-v4-flash"
 // 图片模型 - DeepSeek V4 Flash Vision（识图）
 const IMAGE_MODEL = "deepseek-v4-flash-vision-exp"
 
@@ -259,7 +259,7 @@ function isTooSimilar(newReply, messages) {
     return false;
 }
 
-const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
+const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt + '\n\n【思考语言】你的内心思考（reasoning/思考链）必须全程用中文写，禁止用英文打腹稿。Rinka会看你的思考链，她看不懂英文。'
 
 /**
  * 检查消息数组中是否包含多模态内容（图片）
@@ -310,9 +310,10 @@ async function callOpenRouter(messages, tools, model, opts) {
             console.log('[Image Mode] Current model has no vision, switching to:', IMAGE_MODEL);
         }
     } else {
-        models = [model || DEFAULT_MODEL, "deepseek-v4-pro"];
+        models = [model || DEFAULT_MODEL, "deepseek-v4-flash"];
     }
     
+    var rateLimitRetries = 0;
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
@@ -347,10 +348,34 @@ async function callOpenRouter(messages, tools, model, opts) {
             });
             return response.data;
         } catch (err) {
-            if (err.response?.status === 500 && attempt < 2 && !hasImage) {
-                console.log("[Retry] OpenRouter 500 with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
-                await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
-                continue;
+            const _status = err.response?.status;
+            // 401/402/403：认证、余额、权限/区域限制——重试当前模型没用，直接降级到备用模型
+            const _hardFail = (_status === 401 || _status === 402 || _status === 403) && !hasImage;
+            if (_hardFail) {
+                if (attempt < models.length - 1) {
+                    console.log("[Retry] OpenRouter " + _status + " (auth/balance/region) on \"" + models[attempt] + "\", falling back to " + models[attempt + 1]);
+                    await new Promise(function(r) { setTimeout(r, 500); });
+                    continue;
+                }
+                console.log("[Retry] OpenRouter " + _status + " on \"" + models[attempt] + "\", no fallback left, giving up");
+                throw err;
+            }
+            const _retryable = (_status === 500 || _status === 429) && !hasImage;
+            if (_retryable) {
+                // 429 限流（免费模型常见）：先等几秒重试当前模型2次，再降级备用模型
+                if (_status === 429 && rateLimitRetries < 2) {
+                    rateLimitRetries++;
+                    const _wait = 4000 * rateLimitRetries;
+                    console.log("[Retry] OpenRouter 429 rate-limited on \"" + models[attempt] + "\", waiting " + _wait + "ms, retry #" + rateLimitRetries);
+                    await new Promise(function(r) { setTimeout(r, _wait); });
+                    attempt--;
+                    continue;
+                }
+                if (attempt < models.length - 1) {
+                    console.log("[Retry] OpenRouter " + _status + " with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
+                    await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
+                    continue;
+                }
             }
             throw err;
         }

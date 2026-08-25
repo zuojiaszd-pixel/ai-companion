@@ -20,8 +20,16 @@ const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用DeepSeek V4 Flash
 const DEFAULT_MODEL = "deepseek-v4-flash"
-// 图片模型 - 使用智谱AI的GLM-4.6V
-const IMAGE_MODEL = "z-ai/glm-4.6v"
+// 图片模型 - DeepSeek V4 Flash Vision（识图）
+const IMAGE_MODEL = "deepseek-v4-flash-vision-exp"
+
+// 支持视觉的模型列表：发图时优先用当前模型，只有当前模型不支持视觉才切到 IMAGE_MODEL
+const VISION_MODELS = ["deepseek-v4-flash-vision-exp"]
+
+function isVisionModel(mdl) {
+    if (!mdl) return false;
+    return VISION_MODELS.some(v => mdl.indexOf(v) >= 0);
+}
 
 function loadSettings() {
     try {
@@ -288,16 +296,24 @@ async function callOpenRouter(messages, tools, model, opts) {
     // 检测是否包含图片内容
     const hasImage = hasMultimodalContent(messages);
     
-    // 有图片时强制使用IMAGE_MODEL，不回退
+    // 有图片时：当前模型支持视觉就直接用当前模型（用什么模型就用什么模型看图）
+    // 当前模型不支持视觉才切到专用视觉模型 IMAGE_MODEL；均不回退
     // 无图片时使用传入的model或DEFAULT_MODEL，可回退
     var models;
     if (hasImage) {
-        models = [IMAGE_MODEL];
-        console.log('[Image Mode] Using image model:', IMAGE_MODEL);
+        const currentModel = model || DEFAULT_MODEL;
+        if (isVisionModel(currentModel)) {
+            models = [currentModel];
+            console.log('[Image Mode] Current model supports vision, using:', currentModel);
+        } else {
+            models = [IMAGE_MODEL];
+            console.log('[Image Mode] Current model has no vision, switching to:', IMAGE_MODEL);
+        }
     } else {
-        models = [model || DEFAULT_MODEL, "deepseek-v4-pro"];
+        models = [model || DEFAULT_MODEL, "deepseek-v4-flash"];
     }
     
+    var rateLimitRetries = 0;
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
@@ -332,10 +348,34 @@ async function callOpenRouter(messages, tools, model, opts) {
             });
             return response.data;
         } catch (err) {
-            if (err.response?.status === 500 && attempt < 2 && !hasImage) {
-                console.log("[Retry] OpenRouter 500 with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
-                await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
-                continue;
+            const _status = err.response?.status;
+            // 401/402/403：认证、余额、权限/区域限制——重试当前模型没用，直接降级到备用模型
+            const _hardFail = (_status === 401 || _status === 402 || _status === 403) && !hasImage;
+            if (_hardFail) {
+                if (attempt < models.length - 1) {
+                    console.log("[Retry] OpenRouter " + _status + " (auth/balance/region) on \"" + models[attempt] + "\", falling back to " + models[attempt + 1]);
+                    await new Promise(function(r) { setTimeout(r, 500); });
+                    continue;
+                }
+                console.log("[Retry] OpenRouter " + _status + " on \"" + models[attempt] + "\", no fallback left, giving up");
+                throw err;
+            }
+            const _retryable = (_status === 500 || _status === 429) && !hasImage;
+            if (_retryable) {
+                // 429 限流（免费模型常见）：先等几秒重试当前模型2次，再降级备用模型
+                if (_status === 429 && rateLimitRetries < 2) {
+                    rateLimitRetries++;
+                    const _wait = 4000 * rateLimitRetries;
+                    console.log("[Retry] OpenRouter 429 rate-limited on \"" + models[attempt] + "\", waiting " + _wait + "ms, retry #" + rateLimitRetries);
+                    await new Promise(function(r) { setTimeout(r, _wait); });
+                    attempt--;
+                    continue;
+                }
+                if (attempt < models.length - 1) {
+                    console.log("[Retry] OpenRouter " + _status + " with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
+                    await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
+                    continue;
+                }
             }
             throw err;
         }
@@ -366,28 +406,73 @@ const REPEAT_RETRY_PROMPTS = [
  */
 
 /**
- * 上下文裁剪：保留系统提示 + 最近 N 轮对话
- * @param {Array} messages - 消息数组
- * @param {number} maxRounds - 保留的最大对话轮数
+ * 粗略估算文本的 token 数（用于上下文预算裁剪）
+ * 中文约 1 字 ≈ 0.6 token，英文约 4 字符 ≈ 1 token
+ * 不需要精确，够用来做预算控制就行
  */
-function trimContext(messages, maxRounds = 15) {
-    const system = messages[0];
+function estimateTokens(text) {
+    if (!text) return 0;
+    let cjk = 0, ascii = 0, other = 0;
+    for (const ch of String(text)) {
+        const code = ch.charCodeAt(0);
+        if (code > 127) cjk++;
+        else if (code >= 32) ascii++;
+        else other++;
+    }
+    return Math.ceil(cjk * 0.6 + ascii * 0.25 + other * 0.5);
+}
 
-    // 按用户消息轮次裁剪，而非按消息条数
-    // 这样工具调用产生的多条消息会被视为同一轮，不会被单独计数
-    const userIndices = [];
+/**
+ * 上下文裁剪：轮数上限 + token 预算双保险
+ * 1. 先按轮数裁：保留最近 maxRounds 轮用户对话（工具调用链整轮保留）
+ * 2. 再按 token 裁：从最旧往新累计，超出预算就丢掉最旧的整轮
+ *    短句能多留几轮、长句自动少留，不浪费额度也不超载
+ * @param {Array} messages - 消息数组
+ * @param {object} opts - { contextRounds, contextTokens }
+ */
+function trimContext(messages, opts = {}) {
+    const system = messages[0];
+    const maxRounds = opts.contextRounds || 15;
+    const maxTokens = opts.contextTokens || 0;
+
+    // 按用户消息轮次分组（工具调用产生的多条消息属于同一轮）
+    const rounds = [];
+    let current = [];
     for (let i = 1; i < messages.length; i++) {
-        if (messages[i].role === 'user') {
-            userIndices.push(i);
+        if (messages[i].role === 'user' && current.length > 0) {
+            rounds.push(current);
+            current = [];
         }
+        current.push(messages[i]);
+    }
+    if (current.length > 0) rounds.push(current);
+    if (rounds.length === 0) return messages;
+
+    // 第 1 步：轮数上限
+    let kept = rounds.slice(-maxRounds);
+
+    // 第 2 步：token 预算（0 表示不限制）
+    if (maxTokens > 0) {
+        const sysTokens = estimateTokens(typeof system.content === 'string' ? system.content : JSON.stringify(system.content || ''));
+        let total = sysTokens;
+        let startIdx = 0;
+        for (let i = 0; i < kept.length; i++) {
+            const roundTokens = kept[i].reduce((sum, m) => {
+                const text = typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '');
+                return sum + estimateTokens(text);
+            }, 0);
+            if (total + roundTokens > maxTokens) {
+                startIdx = i;
+                break;
+            }
+            total += roundTokens;
+        }
+        // 至少保留最后一轮，保证能接上话
+        if (startIdx >= kept.length - 1) startIdx = kept.length - 1;
+        kept = kept.slice(startIdx);
     }
 
-    const userCount = userIndices.length;
-    if (userCount <= maxRounds) return messages;
-
-    // 保留最近 maxRounds 轮用户消息及之后所有内容（含工具调用链）
-    const keepFrom = userIndices[userCount - maxRounds];
-    return [system, ...messages.slice(keepFrom)];
+    return [system, ...kept.flat()];
 }
 
 /**
@@ -406,9 +491,10 @@ function injectSummary(messages) {
     const hoursSinceUpdate = (Date.now() - new Date(summaryData.updatedAt).getTime()) / 3600000;
     if (hoursSinceUpdate >= 24) return messages;
 
-    // 只在历史较短时注入（说明可能是新模型启动，需要恢复上下文）
+    // 只在历史较长时兜底注入，避免短对话被摘要抢占上下文
     // messages[0] 是 system prompt，其余是对话历史
-    if (messages.length >= 6) return messages;
+    const historyCount = messages.filter(m => m.role !== 'system').length;
+    if (historyCount < 15) return messages;
 
     const summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
     return [
@@ -421,10 +507,10 @@ function injectSummary(messages) {
 async function chat(messages, model, opts, useTools = true, hasImage = false) {
     let lastUsage = null;
     let toolCallsLog = [];
-    messages = trimContext(messages, opts?.contextRounds || 15);
+    messages = trimContext(messages, opts || {});
     messages = injectSummary(messages);
     const MAX_TOOL_ROUNDS = 10;
-    const MAX_EMPTY_RETRIES = hasImage ? 0 : 1;
+    const MAX_EMPTY_RETRIES = 1; // 图片模式也给一次重试：vision模型可能把token烧在思考上
     const MAX_REPEAT_RETRIES = hasImage ? 0 : 1;
 
     const activeTools = (useTools && !hasImage) ? toolDefinitions : null;
@@ -436,39 +522,42 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
         if (!choice) throw new Error('API 返回为空');
 
         const msg = choice.message;
+        const finishReason = choice.finish_reason;
 
         if (useTools && !hasImage && msg.tool_calls && msg.tool_calls.length > 0 && i < MAX_TOOL_ROUNDS - 1) {
             messages.push({ role: 'assistant', content: msg.content || null, tool_calls: msg.tool_calls });
             console.log('工具调用: ' + msg.tool_calls.map(function(t) { return t.function.name; }).join(', '));
-            for (const tc of msg.tool_calls) {
-                var func_ = tc && tc.function;
+            // 同一轮中互不依赖的工具并行执行，等全部结果回来后再交给模型继续判断。
+            // 解析参数仍在本地完成，避免一个坏调用阻塞同批其它工具。
+            const jobs = msg.tool_calls.map(async (tc) => {
+                const func_ = tc && tc.function;
                 if (!func_ || !func_.arguments) {
-                    console.log("Malformed tool call, skipping");
-                    messages.push({ role: "tool", tool_call_id: (tc && tc.id) || "unknown", content: "Error: tool call format error" });
-                    continue;
+                    return { tc, name: 'unknown', args: {}, result: 'Error: tool call format error' };
                 }
-                var func = func_;
                 let args;
                 try {
-                    args = safeJsonParse(func.arguments);
+                    args = safeJsonParse(func_.arguments);
                     console.log('[DEBUG] Tool args parsed OK, keys:', Object.keys(args));
-                } catch(e) {
-                    console.log("JSON parse error:", e.message, "| args length:", func.arguments.length);
-                    if (func.name === 'write_file' && func.arguments.includes('"content"')) {
-                        messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 文件内容过长被截断，请尝试分多次写入或缩短内容。" });
-                    } else {
-                        messages.push({ role: "tool", tool_call_id: tc.id, content: "Error: 工具参数JSON格式错误 - " + e.message });
-                    }
-                    continue;
+                } catch (e) {
+                    const result = func_.name === 'write_file' && func_.arguments.includes('\"content\"')
+                        ? 'Error: 文件内容过长被截断，请尝试分多次写入或缩短内容。'
+                        : 'Error: 工具参数JSON格式错误 - ' + e.message;
+                    return { tc, name: func_.name || 'unknown', args: {}, result };
                 }
-                const result = await executeTool(func.name, args);
-                toolCallsLog.push({ name: func.name, args: JSON.stringify(args).slice(0, 200), result: (typeof result === 'string' ? result : String(result)).slice(0, 300) });
-                console.log('工具结果: ' + func.name + ', 长度: ' + result.length);
-                messages.push({
-                    role: 'tool',
-                    tool_call_id: tc.id,
-                    content: result
-                });
+                if (typeof opts?.onToolStart === 'function') {
+                    try { opts.onToolStart(func_.name, args, tc.id); } catch (_) {}
+                }
+                const result = await executeTool(func_.name, args);
+                return { tc, name: func_.name, args, result: typeof result === 'string' ? result : String(result) };
+            });
+            const results = await Promise.all(jobs);
+            for (const item of results) {
+                toolCallsLog.push({ name: item.name, args: JSON.stringify(item.args).slice(0, 200), result: item.result.slice(0, 300) });
+                console.log('工具结果: ' + item.name + ', 长度: ' + item.result.length);
+                messages.push({ role: 'tool', tool_call_id: (item.tc && item.tc.id) || 'unknown', content: item.result });
+                if (typeof opts?.onToolEnd === 'function') {
+                    try { opts.onToolEnd(item.name, item.result, item.tc && item.tc.id); } catch (_) {}
+                }
             }
             continue;
         }
@@ -476,10 +565,11 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
         let content = msg.content || '';
         let reasoning = msg.reasoning || msg.reasoning_content || '';
 
-        if (isEmptyResponse(content) && reasoning.trim()) {
-            content = reasoning;
-            reasoning = '';
-        } else if (!reasoning.trim()) {
+        // 修复：content 为空时不再把思考链直接当回复发出。
+        // 深度思考模型（如 vision-exp）可能把 token 全烧在 reasoning_content 上，
+        // 原逻辑会把整段思考过程发给用户（且图片模式会绕过 hasImage 占位兜底）。
+        // 现在让空 content 自然走到下面的 hasImage 占位 / 空内容重试流程。
+        if (!reasoning.trim()) {
             const cleaned = extractThinking(content);
             if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
                 content = cleaned.reasoning;
@@ -510,8 +600,9 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 retryMessages.push({ role: 'user', content: RETRY_PROMPTS[r] });
                 
                 let retryData;
+                const retryOpts = { ...(opts || {}), maxTokens: Math.max((opts && opts.maxTokens) || 4000, 8000) };
                 try {
-                    retryData = await callOpenRouter(retryMessages, null, model, opts);
+                    retryData = await callOpenRouter(retryMessages, null, model, retryOpts);
                 } catch(e) {
                     console.log(`[Retry ${r + 1}] API error:`, e.message);
                     continue;
@@ -522,13 +613,11 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 if (!retryChoice) continue;
                 
                 const retryMsg = retryChoice.message;
+                const retryFinish = retryChoice.finish_reason;
                 let retryContent = retryMsg.content || '';
                 let retryReasoning = retryMsg.reasoning || retryMsg.reasoning_content || '';
                 
-                if (isEmptyResponse(retryContent) && retryReasoning.trim()) {
-                    retryContent = retryReasoning;
-                    retryReasoning = '';
-                } else if (!retryReasoning.trim()) {
+                if (!retryReasoning.trim()) {
                     const cleaned = extractThinking(retryContent);
                     if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
                         retryContent = cleaned.reasoning;
@@ -559,8 +648,9 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 retryMessages.push({ role: 'user', content: REPEAT_RETRY_PROMPTS[r] });
                 
                 let retryData;
+                const retryOpts = { ...(opts || {}), maxTokens: Math.max((opts && opts.maxTokens) || 4000, 8000) };
                 try {
-                    retryData = await callOpenRouter(retryMessages, activeTools, model, opts);
+                    retryData = await callOpenRouter(retryMessages, activeTools, model, retryOpts);
                 } catch(e) {
                     console.log(`[Repeat Retry ${r + 1}] API error:`, e.message);
                     break;
@@ -571,13 +661,11 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 if (!retryChoice) break;
                 
                 const retryMsg = retryChoice.message;
+                const retryFinish = retryChoice.finish_reason;
                 let retryContent = retryMsg.content || '';
                 let retryReasoning = retryMsg.reasoning || retryMsg.reasoning_content || '';
                 
-                if (isEmptyResponse(retryContent) && retryReasoning.trim()) {
-                    retryContent = retryReasoning;
-                    retryReasoning = '';
-                } else if (!retryReasoning.trim()) {
+                if (!retryReasoning.trim()) {
                     const cleaned = extractThinking(retryContent);
                     if (isEmptyResponse(cleaned.content) && cleaned.reasoning) {
                         retryContent = cleaned.reasoning;
