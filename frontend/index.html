@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"><link rel="apple-touch-icon" href="/icon.svg"><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#f5a0b8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><title>Lumi</title><!-- v1784961243 --><link rel="stylesheet" href="/lumi-ui.css?v=notail0825d"></head><body><div id="login-overlay" class="show">
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"><link rel="apple-touch-icon" href="/icon.svg"><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#f5a0b8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><title>Lumi</title><!-- v1784961700 --><link rel="stylesheet" href="/lumi-ui.css?v=notail0825d"></head><body><div id="login-overlay" class="show">
 <div class="login-card">
 <div class="login-icon">🔐</div>
 <h2>Lumi</h2>
@@ -559,12 +559,15 @@ function addMsgSticker(role, sticker) {
     avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
     if (avatar.textContent.indexOf('data:') === 0 || avatar.textContent.indexOf('http') === 0) { avatar.className += ' img'; avatar.style.backgroundImage = 'url(' + avatar.textContent + ')'; avatar.textContent = ''; }
     var bubble = document.createElement('div');
-    if (role === 'user') bubble.style.marginLeft = 'auto';
+    
     bubble.className = 'msg-bubble';
     var time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    bubble.innerHTML = '<img class="stk-msg-img" src="' + sticker.data + '" alt="' + escapeHtml(sticker.name || '') + '" onclick="window.open(this.src)"><span class="time">' + time + '</span>';
-    row.appendChild(avatar);
-    row.appendChild(bubble);
+    bubble.innerHTML = '<img class="stk-msg-img" src="' + sticker.data + '" alt="' + escapeHtml(sticker.name || '') + '" onclick="window.open(this.src)">';
+    var timeEl = document.createElement('span');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = time;
+    if (role === 'user') { row.appendChild(avatar); row.appendChild(bubble); row.appendChild(timeEl); }
+    else { row.appendChild(avatar); row.appendChild(bubble); row.appendChild(timeEl); }
     chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
     removeWelcome();
@@ -771,12 +774,15 @@ function addMsg(role, content) {
     avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
     if(avatar.textContent.indexOf('data:')===0||avatar.textContent.indexOf('http')===0){avatar.className+=' img';avatar.style.backgroundImage='url('+avatar.textContent+')';avatar.textContent='';}
     var bubble = document.createElement('div');
-    if (role === 'user') bubble.style.marginLeft = 'auto';
+    
     bubble.className = 'msg-bubble';
     var time = new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
-    bubble.innerHTML = formatMsg(content) + '<span class="time">' + time + '</span>';
-    if (role === 'user') { row.appendChild(avatar); row.appendChild(bubble); }
-    else { playNotifySound(); row.appendChild(avatar); row.appendChild(bubble); }
+    bubble.innerHTML = formatMsg(content);
+    var timeEl = document.createElement('span');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = time;
+    if (role === 'user') { row.appendChild(avatar); row.appendChild(bubble); row.appendChild(timeEl); }
+    else { playNotifySound(); row.appendChild(avatar); row.appendChild(bubble); row.appendChild(timeEl); }
     chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
     removeWelcome();
@@ -830,16 +836,18 @@ function addMsgWithImage(role, content, imageData) {
     avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
     if(avatar.textContent.indexOf('data:')===0||avatar.textContent.indexOf('http')===0){avatar.className+=' img';avatar.style.backgroundImage='url('+avatar.textContent+')';avatar.textContent='';}
     var bubble = document.createElement('div');
-    if (role === 'user') bubble.style.marginLeft = 'auto';
+    
     bubble.className = 'msg-bubble';
     var time = new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
     var html = '';
     if (imageData) html += '<img src="' + imageData + '" style="max-width:200px;border-radius:8px;margin-bottom:4px;display:block">';
     if (content) html += formatMsg(content);
-    html += '<span class="time">' + time + '</span>';
     bubble.innerHTML = html;
-    if (role === 'user') { row.appendChild(avatar); row.appendChild(bubble); }
-    else { playNotifySound(); row.appendChild(avatar); row.appendChild(bubble); }
+    var timeEl = document.createElement('span');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = time;
+    if (role === 'user') { row.appendChild(avatar); row.appendChild(bubble); row.appendChild(timeEl); }
+    else { playNotifySound(); row.appendChild(avatar); row.appendChild(bubble); row.appendChild(timeEl); }
     chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
     removeWelcome();

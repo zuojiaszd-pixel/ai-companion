@@ -559,7 +559,7 @@ function addMsgSticker(role, sticker) {
     avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
     if (avatar.textContent.indexOf('data:') === 0 || avatar.textContent.indexOf('http') === 0) { avatar.className += ' img'; avatar.style.backgroundImage = 'url(' + avatar.textContent + ')'; avatar.textContent = ''; }
     var bubble = document.createElement('div');
-    if (role === 'user') bubble.style.marginLeft = 'auto';
+    if (role === 'user') { bubble.style.marginLeft = 'auto'; timeEl.classList.add('time-left'); } else { timeEl.classList.add('time-right'); }
     bubble.className = 'msg-bubble';
     var time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     bubble.innerHTML = '<img class="stk-msg-img" src="' + sticker.data + '" alt="' + escapeHtml(sticker.name || '') + '" onclick="window.open(this.src)">';
@@ -774,7 +774,7 @@ function addMsg(role, content) {
     avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
     if(avatar.textContent.indexOf('data:')===0||avatar.textContent.indexOf('http')===0){avatar.className+=' img';avatar.style.backgroundImage='url('+avatar.textContent+')';avatar.textContent='';}
     var bubble = document.createElement('div');
-    if (role === 'user') bubble.style.marginLeft = 'auto';
+    if (role === 'user') { bubble.style.marginLeft = 'auto'; timeEl.classList.add('time-left'); } else { timeEl.classList.add('time-right'); }
     bubble.className = 'msg-bubble';
     var time = new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
     bubble.innerHTML = formatMsg(content);
@@ -836,7 +836,7 @@ function addMsgWithImage(role, content, imageData) {
     avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
     if(avatar.textContent.indexOf('data:')===0||avatar.textContent.indexOf('http')===0){avatar.className+=' img';avatar.style.backgroundImage='url('+avatar.textContent+')';avatar.textContent='';}
     var bubble = document.createElement('div');
-    if (role === 'user') bubble.style.marginLeft = 'auto';
+    if (role === 'user') { bubble.style.marginLeft = 'auto'; timeEl.classList.add('time-left'); } else { timeEl.classList.add('time-right'); }
     bubble.className = 'msg-bubble';
     var time = new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
     var html = '';
