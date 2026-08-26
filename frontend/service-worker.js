@@ -2,7 +2,7 @@
 // v2 是自我清理模式（unregister），无法承载 Web Push。
 // v3 保留"全走网络、不缓存任何内容"的策略（防止旧页面缓存问题），
 // 去掉 unregister，新增 push 事件监听，用于接收服务器推送通知。
-const CACHE_NAME = "lumi-pwa-v5";
+const CACHE_NAME = "lumi-pwa-v6";
 
 self.addEventListener("install", function(e) {
   self.skipWaiting();
