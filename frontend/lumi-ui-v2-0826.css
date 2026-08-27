@@ -467,3 +467,11 @@
 .msg-row.user .msg-time{margin-left:6px}
 .msg-row.assistant .msg-time{margin-right:6px}
 
+
+/* === Lumi兜底规则 v1：未打开的面板/浮层一律强制隐藏（防缓存旧页面错乱）=== */
+#settings-panel:not(.open),
+.dropdown-menu:not(.open),
+#sticker-panel:not(.open),
+#plus-menu:not(.open),
+#overlay:not(.open),
+.sessions-sidebar:not(.open){display:none!important}
