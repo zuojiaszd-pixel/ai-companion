@@ -1,0 +1,27 @@
+[端口] LISTEN 0      2048       127.0.0.1:9880       0.0.0.0:*    users:(("python3",pid=40340,fd=6))
+[进程] ubuntu     40340  0.2 47.5 3240360 1781568 ?     Sl   Aug30   1:26 python3 api.py -a 127.0.0.1 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
+[集合] ['lumijournals', 'atomic_facts', 'chats', 'memoryitems', 'memories', 'calendars', 'stickers', 'finances', 'tasks', 'avatars', 'messages', 'footprints']
+[lumijournals字段] ['_id', 'sessionId', 'type', 'content', 'mood', 'moodIntensity', 'toRinka', 'relatedMemoryId', 'createdAt', '__v']
+  样本: {'content': '（Rinka情绪：担忧）'}
+  样本: {'content': '568: <option value="思念">思念</option>。571:'}
+[chats字段] ['_id', 'role', 'content', 'sessionId', 'timestamp', '__v']
+  样本: {'role': 'user', 'content': 'cron是不是没成功呀', 'timestamp': '2026-08-31 03:05:32.152000'}
+  样本: {'role': 'user', 'content': '早安', 'timestamp': '2026-08-31 03:03:57.704000'}
+[memories字段] ['_id', 'sessionId', 'content', 'embedding', 'type', 'priority', 'tags', 'mood', 'moodIntensity', 'lumiMood', 'heat', 'baseHeat', 'halfLife', 'lastAccessed', 'accessCount', 'supersededBy', 'contradicted', 'locked', 'archived', 'archivedAt', 'embeddingArchived', 'relatedTags', 'relatedIds', 'createdAt', 'updatedAt', '__v', 'emotions', 'expired', 'kind', 'timeline', 'version']
+  样本: {'content': '记忆净化检查: 当前共 267 条记忆'}
+  样本: {'content': '记忆净化检查: 当前共 266 条记忆'}
+[calendars字段] ['_id', 'date', 'title', 'color', 'sessionId', 'createdAt', '__v']
+  样本: {}
+  样本: {}
+[stickers字段] ['_id', 'name', 'note', 'emotion', 'data', 'createdAt', '__v']
+  样本: {}
+  样本: {}
+[finances字段] ['_id', 'type', 'amount', 'description', 'category', 'date', 'createdAt', '__v']
+  样本: {}
+  样本: {}
+[tasks字段] ['_id', 'title', 'completed', 'priority', 'createdBy', 'dueDate', 'sessionId', 'completedAt', 'createdAt', '__v']
+  样本: {}
+  样本: {}
+[avatars字段] ['_id', 'key', '__v', 'timestamp', 'value']
+  样本: {'timestamp': '2026-07-24 13:47:17.928000'}
+  样本: {'timestamp': '2026-07-24 13:47:12.523000'}

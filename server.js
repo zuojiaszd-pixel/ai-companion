@@ -23,6 +23,12 @@ app.use(express.static(path.join(__dirname, 'frontend'), {
     }
 }));
 
+// 语音文件静态目录（语音条功能）：frontend/voices/ 下的wav文件可直接访问
+app.use('/voices', express.static(path.join(__dirname, 'frontend', 'voices'), {
+    maxAge: '7d',
+    setHeaders: (res, filePath) => /audio/i.test(res.getHeader('Content-Type') || '') && res.setHeader('Cache-Control', 'public, max-age=604800')
+}));
+
 // === Daemon API（先于鉴权，仅限本机访问） ===
 app.use('/api/daemon', require('./routes/daemon'));
 
@@ -114,6 +120,8 @@ app.use('/api', require('./routes/dream'));
 app.use('/api/mcp', require('./routes/mcp'));
 app.use('/api', require('./routes/push'));
 app.use('/api', require('./routes/sticker'));
+app.use('/api/pet', require('./routes/pet'));
+app.use('/api', require('./routes/files'));
 
 // Telegram Webhook 路由（不需要鉴权，走 Telegram 签名验证）
 app.post('/telegram/webhook', telegram.handleWebhook);

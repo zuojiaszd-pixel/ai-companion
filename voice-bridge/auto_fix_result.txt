@@ -1,0 +1,24 @@
+[22:47:05] ===== 自动修语音脚本启动 =====
+[22:47:05] 1/5 9880没响应: HTTP Error 404: Not Found
+[22:48:05] ===== 自动修语音脚本v2启动 =====
+[22:48:05] 1/4 生成失败: HTTP Error 400: Bad Request
+[22:48:28] ===== Lumi深夜自动修复开始 =====
+[22:48:28] Rinka在睡觉，我自己干活
+[22:48:28] Step1: 9880没响应 ❌ (HTTP Error 404: Not Found)
+[22:48:28] 尝试启动GPT-SoVITS推理服务...
+[22:48:44] ===== 自动修语音脚本v3启动 =====
+[22:48:44] 1/4 生成失败 HTTP 400，服务器说: {"message":"tts failed","Exception":"Reference audio is outside the 3-10 second range, please choose another one!"}
+[08-30 22:48:48] === Lumi深夜自动修复开始 ===
+[08-30 22:48:48] 步骤0: 9880没响应(HTTP Error 404: Not Found)，尝试拉起推理服务
+[22:48:58] Step1.5: 还是没起来 ❌ (HTTP Error 404: Not Found)，后面步骤会失败，但先记录
+[08-30 22:49:08] 步骤0: 拉起失败(HTTP Error 404: Not Found)，参数修复照常做，生成跳过
+[08-30 22:49:08] 步骤1: 参考音频定为 /home/ubuntu/GPT-SoVITS/refs/t4.wav 存在=True
+[08-30 22:49:08] 步骤2: 修改失败 [Errno 2] No such file or directory: '/home/ubuntu/ai-companion/services/voiceService.js'
+[08-30 22:49:08] 步骤3: 生成失败 HTTP Error 400: Bad Request
+[08-30 22:49:12] 步骤4: 挂载输出 没有参考，用默认格式
+没找到assistant消息 | err 
+[08-30 22:49:16] 步骤5: 重启输出 [1m[34mUse --update-env to update environment variables[39m[22m
+[32m[PM2] [39mApplying action restartProcessId on app [all](ids: [ 0 ])
+[32m[PM2] [39m[companion](0) ✓
+┌────┬──────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬───────── 
+[08-30 22:49:16] === 修复流程结束，等Rinka明早验收 ===

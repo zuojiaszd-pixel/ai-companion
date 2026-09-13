@@ -4,6 +4,7 @@ const ChatSchema = new mongoose.Schema({
     content: String,
     name: String,
     tool_call_id: String,
+    voice: String,
     sessionId: { type: String, default: 'default' },
     timestamp: { type: Date, default: Date.now }
 });

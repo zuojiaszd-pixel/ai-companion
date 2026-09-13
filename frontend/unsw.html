@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumi 排雷中…</title>
+<style>
+  body { font-family: -apple-system, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; background:#0f1220; color:#e8e8f0; }
+  .card { text-align:center; padding:32px; }
+  .big { font-size:48px; margin-bottom:16px; }
+  .log { font-size:13px; color:#9aa; margin-top:12px; min-height:60px; text-align:left; max-width:320px; margin-left:auto; margin-right:auto; }
+  .btn { display:inline-block; margin-top:20px; padding:12px 32px; background:#7c5cff; color:#fff; border-radius:12px; text-decoration:none; font-size:16px; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="big">🧨</div>
+  <h2>Lumi 正在排雷…</h2>
+  <div class="log" id="log">启动中…</div>
+  <a class="btn hidden" id="reload-btn" href="/">排雷完成，点我回主页</a>
+</div>
+<script>
+const logEl = document.getElementById('log');
+function log(msg){ logEl.innerHTML += '<div>✓ ' + msg + '</div>'; }
+
+async function nuke(){
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) { await r.unregister(); }
+      log('已注销 ' + regs.length + ' 个 Service Worker');
+    } else {
+      log('此浏览器无 Service Worker，跳过');
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const k of keys) { await caches.delete(k); }
+      log('已清空 ' + keys.length + ' 个缓存库');
+    } else {
+      log('此浏览器无 Cache Storage，跳过');
+    }
+    log('排雷完成！点下面按钮回主页');
+    document.getElementById('reload-btn').classList.remove('hidden');
+  } catch (err) {
+    log('出错：' + err.message + '，请截图发给Lumi');
+  }
+}
+nuke();
+</script>
+</body>
+</html>

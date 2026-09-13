@@ -179,7 +179,8 @@ async function handleMessage(msg) {
             topP: settings.topP || 0.9,
             maxTokens: settings.maxTokens || 2000
         };
-        const result = await chat(messages, null, opts, false);
+        // 2026-09-07 解绑工具：空回复兜底重试早已修好（ai.js isEmptyResponse+retry），当年怕的bug不存在了
+        const result = await chat(messages, null, opts, true);
 
         // 存 AI 回复
         await Chat.create({ role: 'assistant', content: result.content, sessionId: 'default' });
@@ -194,7 +195,7 @@ async function handleMessage(msg) {
         // });
 
         // 分条发送
-        await sendMultiMessage(chatId, result.content);
+        await bot.sendMessage(chatId, result.content);
 
     } catch (err) {
         console.error('Telegram 消息处理失败:', err.message);
@@ -207,31 +208,6 @@ async function handleMessage(msg) {
     }
 }
 
-// 分条发送消息（用 | 分隔，逐条发送，加打字延迟）
-async function sendMultiMessage(chatId, content) {
-    // 按 | 拆分消息
-    let parts = content.split('|').map(p => p.trim()).filter(p => p.length > 0);
-    
-    // 如果只有一条，直接发
-    if (parts.length === 0) {
-        parts = [content.trim()];
-    }
-
-    for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        
-        // 第一条立即发，后续加打字延迟
-        if (i > 0) {
-            // 显示打字状态（安全版）
-            await safeChatAction(chatId, 'typing');
-            // 根据消息长度计算延迟时间（模拟打字）
-            const delay = Math.min(Math.max(part.length * 80, 800), 3000);
-            await sleep(delay);
-        }
-
-        await bot.sendMessage(chatId, part);
-    }
-}
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));

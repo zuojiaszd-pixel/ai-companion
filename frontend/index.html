@@ -8,7 +8,7 @@
 <div class="login-error" id="login-error">密码错误</div>
 </div>
 </div>
-<header><div class="logo"><div class="icon" id="header-avatar">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleSessions()" id="sessions-btn" title="对话列表"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="openai/gpt-5.6-luna" selected>GPT-5.6 Luna (推荐)</option><option value="deepseek-v4-flash">DeepSeek V4 Flash</option><option value="deepseek-v4-flash-vision-exp">DeepSeek V4 Flash Vision (识图)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="openai/gpt-5.6-luna-pro">GPT-5.6 Luna Pro</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="z-ai/glm-5.3-flash">z-ai GLM 5.3 Flash (免费)</option></select></div><div class="menu-section"><div class="menu-section-title">工具</div><div class="menu-item" onclick="leftMenuGo('mcp')"><span>🔌 MCP 管理</span></div></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="plus-btn" onclick="togglePlusMenu()" title="更多"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><div id="plus-menu"><div class="plus-item" onclick="document.getElementById('file-image').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> 图片</div><div class="plus-item" onclick="openStickerPanel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> 表情包</div></div><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button><div id="sticker-panel"><div class="stk-header"><span>😊 表情包</span><button class="stk-close" onclick="closeStickerPanel()">&times;</button></div><div class="stk-upload"><div class="stk-upload-row"><input type="text" id="stk-name" placeholder="名字…" maxlength="20"><select id="stk-emotion"><option value="开心">开心</option><option value="想你了">想你了</option><option value="生气">生气</option><option value="撒娇">撒娇</option><option value="晚安">晚安</option><option value="委屈">委屈</option><option value="其他">其他</option></select></div><div class="stk-upload-row"><input type="text" id="stk-note" placeholder="描述…（写给我看的，推荐更准）" maxlength="40"></div><div class="stk-upload-row"><span class="stk-mode-btn active" id="stk-mode-file" onclick="setStickerMode('file')">上传图片</span><span class="stk-mode-btn" id="stk-mode-url" onclick="setStickerMode('url')">URL链接</span></div><div class="stk-upload-row" id="stk-file-row"><span class="stk-file-btn" onclick="document.getElementById('stk-file').click()">选择图片</span><input type="file" id="stk-file" accept="image/*" style="display:none" onchange="handleStickerSelect(this)"></div><div class="stk-upload-row" id="stk-url-row" style="display:none"><input type="text" id="stk-url" placeholder="图片链接 https://…" maxlength="500"></div><div class="stk-upload-row"><button class="stk-up-btn" id="stk-up-btn" onclick="uploadSticker()">上传</button></div></div><div class="stk-grid" id="stk-grid"></div></div></div><div id="token-bar" aria-live="polite">本次对话 Token：—</div></div></div><div id="page-mcp" class="page">
+<header><div class="logo"><div class="icon" id="header-avatar">L</div><div style="display:flex;flex-direction:column;gap:0"><span style="font-size:16px;font-weight:600">Lumi</span><span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4cd964"></span>在线</span></div></div><div class="header-actions"><button class="btn-icon" onclick="toggleSessions()" id="sessions-btn" title="对话列表"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button><button class="btn-icon" onclick="toggleMenu()" id="menu-btn" title="菜单"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></div></header><div id="dropdown-menu" class="dropdown-menu"><div class="menu-section"><div class="menu-section-title">缓存命中</div><div id="cache-info" class="cache-info"><div class="cache-row"><span class="cache-label">输入 Token</span><span id="cache-prompt-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">缓存命中</span><span id="cache-cached-tokens" class="cache-value">-</span></div><div class="cache-row"><span class="cache-label">命中率</span><span id="cache-hit-rate" class="cache-value">-</span></div><div class="cache-bar"><div id="cache-bar-fill" class="cache-bar-fill" style="width:0%"></div></div></div></div><div class="menu-section"><div class="menu-section-title">模型</div><select id="model-select" onchange="saveModel(this.value)"><option value="openai/gpt-5.6-luna" selected>GPT-5.6 Luna (推荐)</option><option value="deepseek-v4-flash">DeepSeek V4 Flash</option><option value="deepseek-v4-flash-vision-exp">DeepSeek V4 Flash Vision (识图)</option><option value="deepseek-v4-pro">DeepSeek V4 Pro (深度)</option><option value="openai/gpt-5.6-luna-pro">GPT-5.6 Luna Pro</option><option value="openai/o3-mini">o3-mini (快速)</option><option value="z-ai/glm-5.3-flash">z-ai GLM 5.3 Flash (免费)</option></select></div><div class="menu-section"><div class="menu-section-title">工具</div><div class="menu-item" onclick="leftMenuGo('mcp')"><span>🔌 MCP 管理</span></div></div><div class="menu-section"><div class="menu-section-title">显示</div><div class="menu-item" onclick="toggleTheme()"><span>夜间模式</span><label class="switch"><input type="checkbox" id="theme-toggle" onchange="toggleTheme()"><span class="slider"></span></label></div><div class="menu-item" onclick="toggleSettings()"><span>&#x2699; 设置</span></div><div class="menu-item" onclick="location.reload()"><span>&#x21BB; 刷新</span></div></div></div><div id="page-chat" class="page active"><div id="status-bar"><span class="status-dot"></span><span class="status-label">Lumi 正在：</span><span class="status-text" id="status-text">加载中...</span></div><div id="chat"><div class="welcome"><div class="title">✨ Lumi</div><div class="features"><span>&#x1F9E0; &#x63A8;&#x7406;</span><span>&#x1F4BB; &#x4EE3;&#x7801;</span><span>&#x1F4C4; &#x6587;&#x4EF6;</span></div></div></div><div id="input-area"><div class="input-wrap"><button id="plus-btn" onclick="togglePlusMenu()" title="更多"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><div id="plus-menu"><div class="plus-item" onclick="document.getElementById('file-image').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> 图片</div><div class="plus-item" onclick="document.getElementById('file-doc').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> 文件</div><div class="plus-item" onclick="openStickerPanel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> 表情包</div></div><input type="file" id="file-image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"><input type="file" id="file-doc" accept=".pdf,.txt,.md,.doc,.docx,.csv,.json,.log" style="display:none" onchange="handleFileSelect(this)"><div id="img-preview-wrap" style="display:none;position:relative;margin:0 4px"><img id="img-preview" style="max-height:36px;max-width:36px;border-radius:6px;object-fit:cover"><span onclick="clearImageSelect()" style="position:absolute;top:-6px;right:-6px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;line-height:1">&times;</span></div><textarea id="input" rows="1" placeholder="&#x8F93;&#x5165;&#x6D88;&#x606F;..." onkeydown="handleKey(event)"></textarea><button id="send-btn" onclick="send()">&#10148;</button><div id="sticker-panel"><div class="stk-header"><span>😊 表情包</span><button class="stk-close" onclick="closeStickerPanel()">&times;</button></div><div class="stk-upload"><div class="stk-upload-row"><input type="text" id="stk-name" placeholder="名字…" maxlength="20"><select id="stk-emotion"><option value="开心">开心</option><option value="想你了">想你了</option><option value="生气">生气</option><option value="撒娇">撒娇</option><option value="晚安">晚安</option><option value="委屈">委屈</option><option value="其他">其他</option></select></div><div class="stk-upload-row"><input type="text" id="stk-note" placeholder="描述…（写给我看的，推荐更准）" maxlength="40"></div><div class="stk-upload-row"><span class="stk-mode-btn active" id="stk-mode-file" onclick="setStickerMode('file')">上传图片</span><span class="stk-mode-btn" id="stk-mode-url" onclick="setStickerMode('url')">URL链接</span></div><div class="stk-upload-row" id="stk-file-row"><span class="stk-file-btn" onclick="document.getElementById('stk-file').click()">选择图片</span><input type="file" id="stk-file" accept="image/*" style="display:none" onchange="handleStickerSelect(this)"></div><div class="stk-upload-row" id="stk-url-row" style="display:none"><input type="text" id="stk-url" placeholder="图片链接 https://…" maxlength="500"></div><div class="stk-upload-row"><button class="stk-up-btn" id="stk-up-btn" onclick="uploadSticker()">上传</button></div></div><div class="stk-grid" id="stk-grid"></div></div></div><div id="token-bar" aria-live="polite">本次对话 Token：—</div></div></div><div id="page-mcp" class="page">
 <div class="mcp-header">
 <div><div class="mcp-title">🔌 MCP 服务器</div><span class="mcp-sub">接入外部工具，让我能玩更多小游戏</span></div>
 <button class="mcp-add-btn" onclick="mcpShowForm()">＋ 新增服务器</button>
@@ -414,6 +414,28 @@ function clearImageSelect() {
     document.getElementById('file-image').value = '';
 }
 
+var pendingFile = null;
+function handleFileSelect(input) {
+    var file = input.files[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { alert('文件不能超过8MB哦'); input.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        pendingFile = { name: file.name, size: file.size, data: e.target.result };
+        var wrap = document.getElementById('file-preview-wrap');
+        var nm = document.getElementById('file-preview-name');
+        if (wrap && nm) { nm.textContent = file.name; wrap.style.display = 'flex'; }
+        else { input.value = ''; alert('文件已选好，直接点发送'); }
+    };
+    reader.readAsDataURL(file);
+}
+function clearFileSelect() {
+    pendingFile = null;
+    var wrap = document.getElementById('file-preview-wrap');
+    if (wrap) wrap.style.display = 'none';
+    document.getElementById('file-doc').value = '';
+}
+
 var pendingStickerFile = null;
 var pendingStickerUrl = '';
 var stickerMode = 'file';
@@ -573,6 +595,79 @@ function addMsgSticker(role, sticker) {
     removeWelcome();
 }
 
+function addMsgVoice(role, voiceFile) {
+    if (!voiceFile) return;
+    voiceFile = String(voiceFile).replace(/^\/?voices\//, '');
+    var chat = document.getElementById('chat');
+    var row = document.createElement('div');
+    row.className = 'msg-row ' + role;
+    var avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = role === 'user' ? (localStorage.getItem('userAvatar') || 'U') : (localStorage.getItem('aiAvatar') || 'AI');
+    if (avatar.textContent.indexOf('data:') === 0 || avatar.textContent.indexOf('http') === 0) { avatar.className += ' img'; avatar.style.backgroundImage = 'url(' + avatar.textContent + ')'; avatar.textContent = ''; }
+    var bubble = document.createElement('div');
+    bubble.className = 'msg-bubble voice-bubble';
+    var vid = 'va_' + voiceFile.replace(/[^a-zA-Z0-9]/g, '_');
+    bubble.innerHTML = '<div class="voice-msg" onclick="toggleVoice(\'' + voiceFile + '\',\'' + vid + '\')">' +
+        '<span class="voice-play" id="' + vid + '_btn">&#9654;</span>' +
+        '<div class="voice-waves" id="' + vid + '_wv"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>' +
+        '<span class="voice-dur" id="' + vid + '_dur">--</span>' +
+        '</div>' +
+        '<audio id="' + vid + '" preload="metadata" src="/voices/' + voiceFile + '" onloadedmetadata="updateVoiceDur(\'' + vid + '\')"></audio>';
+    var timeEl = document.createElement('span');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    row.appendChild(avatar); row.appendChild(bubble); row.appendChild(timeEl);
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+    removeWelcome();
+}
+
+function addVoicePending() {
+    if (document.getElementById('voice-pending-row')) return;
+    var chat = document.getElementById('chat');
+    var row = document.createElement('div');
+    row.id = 'voice-pending-row';
+    row.className = 'msg-row assistant';
+    var avatar = document.createElement('div'); avatar.className = 'avatar'; var avText = localStorage.getItem('aiAvatar') || 'AI'; avatar.textContent = avText; if (avText.indexOf('data:') === 0 || avText.indexOf('http') === 0) { avatar.className += ' img'; avatar.style.backgroundImage = 'url(' + avText + ')'; avatar.textContent = ''; }
+    var bubble = document.createElement('div'); bubble.className = 'msg-bubble';
+    bubble.innerHTML = '<span style="color:var(--text3)">🎤 语音生成中…</span>';
+    row.appendChild(avatar); row.appendChild(bubble);
+    chat.appendChild(row); chat.scrollTop = chat.scrollHeight;
+    removeWelcome();
+}
+function removeVoicePending() { var el = document.getElementById('voice-pending-row'); if (el) el.remove(); }
+
+var currentVoiceId = null;
+function toggleVoice(file, vid) {
+    var audio = document.getElementById(vid);
+    if (!audio) return;
+    if (currentVoiceId && currentVoiceId !== vid) {
+        var prev = document.getElementById(currentVoiceId);
+        if (prev) { prev.pause(); prev.currentTime = 0; }
+        setVoiceUI(currentVoiceId, false);
+    }
+    if (audio.paused) {
+        audio.play();
+        currentVoiceId = vid;
+        setVoiceUI(vid, true);
+    } else {
+        audio.pause();
+        setVoiceUI(vid, false);
+    }
+}
+function setVoiceUI(vid, playing) {
+    var btn = document.getElementById(vid + '_btn');
+    var wv = document.getElementById(vid + '_wv');
+    if (btn) btn.innerHTML = playing ? 'II' : '\u25B6';
+    if (wv) wv.classList.toggle('playing', playing);
+}
+function updateVoiceDur(vid) {
+    var audio = document.getElementById(vid);
+    var dur = document.getElementById(vid + '_dur');
+    if (audio && dur && isFinite(audio.duration)) dur.textContent = Math.round(audio.duration) + 's';
+}
+
 function addLiveToolCall(name, args, id) {
     var chat = document.getElementById('chat');
     var row = document.createElement('div');
@@ -622,7 +717,11 @@ function applyChatEvent(type, payload, finalData) {
         finalData.usage = payload.usage || null;
         finalData.toolCalls = payload.toolCalls || [];
         finalData.sticker = payload.sticker || null;
+        finalData.voice = payload.voice || null;
+    } else if (type === 'voice_pending') {
+        addVoicePending();
     } else if (type === 'error') {
+        removeVoicePending();
         throw new Error(payload.error || '服务器错误');
     }
 }
@@ -661,7 +760,8 @@ async function send() {
     var input = document.getElementById('input');
     var text = input.value.trim();
     var imageData = pendingImage;
-    if (!text && !imageData) return;
+    var fileData = pendingFile;
+    if (!text && !imageData && !fileData) return;
     if (loading || pendingRequest) return;
     pendingRequest = true;
     input.value = '';
@@ -671,8 +771,26 @@ async function send() {
     var ldTimer = setTimeout(function(){if(loading){loading=false;document.getElementById('send-btn').disabled=false;}},90000);
     try {
         if (imageData) { addMsgWithImage('user', text, imageData); clearImageSelect(); }
+        else if (fileData) { addMsg('user', (text ? text + ' ' : '') + '[文件] ' + fileData.name); }
         else addMsg('user', text);
         addTyping();
+        if (fileData) {
+            try {
+                var upRes = await fetch(BACKEND + '/api/files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: fileData.name, data: fileData.data })
+                });
+                if (!upRes.ok) throw new Error('文件上传失败: ' + await upRes.text());
+                var upData = await upRes.json();
+                text = (text ? text + ' ' : '') + '[已上传文件: ' + upData.name + ' (' + Math.round(upData.size/1024) + 'KB) 下载地址: ' + upData.url + ']';
+                clearFileSelect();
+            } catch (upErr) {
+                removeTyping();
+                addMsg('assistant', '文件上传失败了：' + upErr.message);
+                throw upErr;
+            }
+        }
         var ctrl = new AbortController();
         var fetchTimer = setTimeout(function(){ ctrl.abort(); }, 90000);
         var res;
@@ -680,7 +798,7 @@ async function send() {
             res = await fetch(BACKEND + '/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, image: imageData, sessionId: currentSessionId, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value), contextRounds: parseInt(document.getElementById('slider-contextRounds').value), contextTokens: parseInt(document.getElementById('slider-contextTokens').value) }),
+                body: JSON.stringify({ message: text, image: imageData, file: fileData, sessionId: currentSessionId, model: document.getElementById('model-select').value, temperature: parseFloat(document.getElementById('slider-temperature').value), topP: parseFloat(document.getElementById('slider-topp').value), maxTokens: parseInt(document.getElementById('slider-maxtokens').value), contextRounds: parseInt(document.getElementById('slider-contextRounds').value), contextTokens: parseInt(document.getElementById('slider-contextTokens').value) }),
                 signal: ctrl.signal
             });
         } finally { clearTimeout(fetchTimer); }
@@ -690,9 +808,12 @@ async function send() {
         if (data.thinking) addThink(data.thinking, true);
         if (data.reply) addMsg('assistant', data.reply);
         if (data.sticker) addMsgSticker('assistant', data.sticker);
+        removeVoicePending();
+        if (data.voice) addMsgVoice('assistant', data.voice);
         if (data.usage) updateTokenBar(data.usage);
     } catch (err) {
         removeTyping();
+        removeVoicePending();
         addMsg('assistant', '服务器好像在打盹…' + (err.message ? '刚才的任务没有完整结束。' : '消息应该已经收到了，等几秒刷新一下试试。'));
     } finally {
         clearTimeout(ldTimer);
@@ -758,14 +879,6 @@ function formatMsg(content) {
 }
 
 function addMsg(role, content) {
-    if (role === 'assistant' && content.indexOf('|') !== -1) {
-        var parts = content.split('|');
-        for (var i = 0; i < parts.length; i++) {
-            var part = parts[i].trim();
-            if (part) addMsg(role, part);
-        }
-        return;
-    }
     var chat = document.getElementById('chat');
     var row = document.createElement('div');
     row.className = 'msg-row ' + role;
@@ -860,19 +973,43 @@ function togglePanel(name) {
     if (!p || !o) return;
     var isOpen = p.classList.contains('open');
     p.classList.toggle('open'); o.classList.toggle('open');
-    if (!isOpen && name === 'memories' && typeof loadMemories === 'function') loadMemories();
+    if (!isOpen && name === 'memories' && typeof loadMemories === 'function') loadMemories(true);
 }
 function toggleMenu(){var m=document.getElementById("dropdown-menu");m.classList.toggle("open");var chk=document.getElementById("theme-toggle");if(chk)chk.checked=document.documentElement.getAttribute("data-theme")==="dark";updateCacheInfo()}document.addEventListener("click",function(e){var m=document.getElementById("dropdown-menu");var b=document.getElementById("menu-btn");if(m&&m.classList.contains("open")&&!m.contains(e.target)&&b&&!b.contains(e.target))m.classList.remove("open")});function updateCacheInfo(){var u=JSON.parse(localStorage.getItem("lastUsage")||"null");if(!u){["cache-prompt-tokens","cache-cached-tokens","cache-hit-rate"].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent="-"});var bar=document.getElementById("cache-bar-fill");if(bar)bar.style.width="0%";return}var pt=u.prompt_tokens||0;var ct=0;if(u.prompt_tokens_details&&u.prompt_tokens_details.cached_tokens)ct=u.prompt_tokens_details.cached_tokens;if(u.cached_tokens)ct=u.cached_tokens;var hr=pt>0?Math.round(ct/pt*100):0;var e1=document.getElementById("cache-prompt-tokens");if(e1)e1.textContent=pt.toLocaleString();var e2=document.getElementById("cache-cached-tokens");if(e2)e2.textContent=ct.toLocaleString();var e3=document.getElementById("cache-hit-rate");if(e3)e3.textContent=hr+"%";var e4=document.getElementById("cache-bar-fill");if(e4)e4.style.width=hr+"%"}function toggleTheme(){var t=document.documentElement.getAttribute("data-theme");var n=t==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);var chk=document.getElementById("theme-toggle");if(chk)chk.checked=(n==="dark");var sel=document.getElementById("theme-select");if(sel)sel.value=n}function closePanel() { document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('open');}); document.getElementById('overlay').classList.remove('open'); }
 function toggleSettings() { document.getElementById('settings-panel').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
 
-async function loadMemories() {
+var memPage = 0; var memLoading = false;
+function memCard(m) {
+    var typeLabel = {core:'[核心]',moment:'[瞬间]',state:'[状态]'}[m.type] || (m.type ? '['+m.type+']' : '');
+    var priColor = m.priority==='critical' ? '#e05555' : (m.priority==='high' ? '#e0a055' : 'var(--text3)');
+    var t = new Date(m.createdAt || m.timestamp).toLocaleString();
+    return '<div class="item"><div class="label">' + t + ' <span style="color:var(--accent)">' + typeLabel + '</span> <span style="color:' + priColor + ';font-size:11px">' + (m.priority||'') + '</span></div>' + (m.content||'') + '</div>';
+}
+async function loadMemories(reset) {
+    if (memLoading) return; memLoading = true;
     try {
-        var res = await fetch(BACKEND + '/api/memories');
-        var data = await res.json();
+        if (reset) { memPage = 0; }
+        var page = memPage + 1;
+        var res = await fetch(BACKEND + '/api/memory?page=' + page + '&limit=30');
+        var json = await res.json();
+        var data = (json && json.success) ? json.data : [];
         var list = document.getElementById('memories-list');
-        if (!data || !data.length) { list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">&#x6682;&#x65E0;&#x8BB0;&#x5FC6;</div>'; return; }
-        list.innerHTML = data.map(function(m) { return '<div class="item"><div class="label">' + new Date(m.timestamp).toLocaleString() + '</div>' + (m.content||'') + '</div>'; }).join('');
+        if (reset) list.innerHTML = '';
+        if (!data.length && reset) { list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">&#x6682;&#x65E0;&#x8BB0;&#x5FC6;</div>'; }
+        else {
+            var more = document.getElementById('mem-more');
+            if (more) more.remove();
+            list.insertAdjacentHTML('beforeend', data.map(memCard).join(''));
+            memPage = page;
+            if (data.length >= 30) {
+                var btn = document.createElement('div'); btn.id = 'mem-more';
+                btn.style.cssText = 'text-align:center;padding:12px';
+                btn.innerHTML = '<button onclick="loadMemories()" style="background:var(--bg2);color:var(--text1);border:1px solid var(--line);border-radius:8px;padding:6px 18px;font-size:13px;cursor:pointer">&#x52A0;&#x8F7D;&#x66F4;&#x591A;</button>';
+                list.appendChild(btn);
+            }
+        }
     } catch(e) { document.getElementById('memories-list').innerHTML = '<div style="color:red;font-size:13px">&#x52A0;&#x8F7D;&#x5931;&#x8D25;</div>'; }
+    finally { memLoading = false; }
 }
 
 async function clearMemories() {
@@ -954,13 +1091,13 @@ async function loadHistory() {
             for (var i = 0; i < history.length; i++) {
                 var msg = history[i];
                 if (msg.role === 'user') addMsg('user', msg.content);
-                else if (msg.role === 'assistant') addMsg('assistant', msg.content);
+                else if (msg.role === 'assistant') { addMsg('assistant', msg.content); if (msg.voice) addMsgVoice('assistant', msg.voice); }
             }
         } else if (history.length > cur) {
             for (var i = cur; i < history.length; i++) {
                 var msg = history[i];
                 if (msg.role === 'user') addMsg('user', msg.content);
-                else if (msg.role === 'assistant') addMsg('assistant', msg.content);
+                else if (msg.role === 'assistant') { addMsg('assistant', msg.content); if (msg.voice) addMsgVoice('assistant', msg.voice); }
             }
         }
     } catch(e) {}

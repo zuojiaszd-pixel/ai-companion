@@ -259,7 +259,7 @@ function isTooSimilar(newReply, messages) {
     return false;
 }
 
-const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt;
+const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt + '\n\n【思考语言】你的内心思考（reasoning/思考链）必须全程用中文写，禁止用英文打腹稿。Rinka会看你的思考链，她看不懂英文。'
 
 /**
  * 检查消息数组中是否包含多模态内容（图片）

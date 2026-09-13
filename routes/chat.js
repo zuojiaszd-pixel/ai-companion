@@ -8,6 +8,7 @@ const Avatar = require('../models/Avatar');
 const { chat, STATIC_SYSTEM_PROMPT, loadSettings, saveSettings } = require('../services/ai');
 const { searchMemories, storeMemory, autoExtractMemories, saveMemory, getRelevantMemories } = require('../services/memory');
 const { loadSummary, saveSummary, generateSummary } = require('../services/summary');
+const { extractVoice, generateVoice } = require('./voice');
 
 // === 状态栏 ===
 const STATUS_FILE = path.join(__dirname, '..', 'config', 'status.json');
@@ -202,7 +203,7 @@ async function autoSaveChatMemory(userMsg, aiReply, sessionId) {
 
 router.post('/chat', async (req, res) => {
     // 设置请求级超时
-    req.setTimeout(65000, () => {
+    req.setTimeout(180000, () => {
         if (!res.headersSent) {
             res.status(503).json({ error: '服务器繁忙，请求超时' });
         }
@@ -367,8 +368,22 @@ router.post('/chat', async (req, res) => {
         );
         setStatus('');
 
+        // 8.5 语音条处理：回复带[voice]...[/voice]时生成独立语音消息
+        // 必须在存历史之前（voiceFile要用），也在表情包推荐之前（表情包拿干净文本）
+        let voiceFile = null;
+        try {
+            const { text: cleanText, voice: voiceContent } = extractVoice(result.content);
+            if (voiceContent) {
+                result.content = cleanText;
+                if (typeof sendEvent === 'function') sendEvent('voice_pending', {});
+                voiceFile = await generateVoice(voiceContent);
+            }
+        } catch (e) {
+            console.error('[语音条] 处理失败:', e.message);
+        }
+
         // 9. 存 AI 回复
-        await Chat.create({ role: 'assistant', content: result.content, sessionId });
+        await Chat.create({ role: 'assistant', content: result.content, voice: voiceFile, sessionId });
 
         // 10. 异步更新对话摘要
         const updatedHistory = [
@@ -409,7 +424,8 @@ router.post('/chat', async (req, res) => {
             thinking: result.reasoning || '',
             usage: result.usage || null,
             toolCalls: result.toolCalls || [],
-            sticker: recommendedSticker || null
+            sticker: recommendedSticker || null,
+            voice: voiceFile
         });
         res.end();
 
@@ -434,11 +450,20 @@ router.post('/chat', async (req, res) => {
     }
 });
 
-// 获取记忆列表
+// 获取记忆列表（分页 + 剔除embedding，防止响应过大导致前端加载失败）
 router.get('/memories', async (req, res) => {
     try {
-        const mems = await Memory.find({}).sort({ timestamp: -1 }).lean();
-        res.json(mems);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+        const filter = {};
+        if (req.query.type) filter.type = req.query.type;
+        const query = Memory.find(filter, { embedding: 0 })
+            .sort({ timestamp: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean();
+        const [mems, total] = await Promise.all([query, Memory.countDocuments(filter)]);
+        res.json({ items: mems, total, page, limit, hasMore: page * limit < total });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -456,7 +481,7 @@ router.get('/history', async (req, res) => {
     try {
         const { sessionId = 'default' } = req.query;
         const history = await Chat.find({ sessionId })
-            .sort({ timestamp: -1 }).limit(50).lean();
+            .sort({ timestamp: -1 }).limit(100).lean();
         res.json(history.reverse());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

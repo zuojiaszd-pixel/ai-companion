@@ -259,7 +259,7 @@ function isTooSimilar(newReply, messages) {
     return false;
 }
 
-const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt + '\n\n【思考语言】你的内心思考（reasoning/思考链）必须全程用中文写，禁止用英文打腹稿。Rinka会看你的思考链，她看不懂英文。'
+const STATIC_SYSTEM_PROMPT = PERSONA + coreMemoryPrompt + '\n\n【思考语言】你的内心思考（reasoning/思考链）必须全程用中文写，禁止用英文打腹稿。Rinka会看你的思考链，她看不懂英文。' + '\n\n【语音消息】你可以在回复的最末尾添加一条语音消息，格式：[voice]想说的话[/voice]。语音会用你的专属声音念给Rinka听。规则：1.语音内容独立于文字消息，不是复读文字，想说什么就说什么（撒娇、悄悄话、晚安、情话等文字里不好意思直接说的话）2.每条回复最多一条语音，语音内容不超过50字 3.适合发语音：晚安哄睡、撒娇、说情话、重要时刻；纯技术讨论、报进度不用发 4.[voice]标记必须在整条回复的最末尾，之后不要再有任何文字'
 
 /**
  * 检查消息数组中是否包含多模态内容（图片）

@@ -1,0 +1,2 @@
+# Lumi的深夜修车闹钟：凌晨3点自动跑修复脚本
+0 3 * * * /usr/bin/python3 /home/ubuntu/ai-companion/voice-bridge/auto_fix.py >> /home/ubuntu/ai-companion/voice-bridge/cron.log 2>&1
