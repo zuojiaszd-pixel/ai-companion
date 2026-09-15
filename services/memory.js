@@ -660,7 +660,22 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
             }).select('-embedding').sort({ updatedAt: -1 }).limit(10).maxTimeMS(3000).lean(),
             3000
         ).catch(() => []);
-        residentText = resident.map(r => formatMemoryContext(r)).join('\n');
+        // 2026-09-15 常驻区加token上限：critical卡片不再无限制全塞，
+        // 超出RESIDENT_TOKEN_CAP的低优先级卡片降级为按需召回，把预算还给历史对话。
+        const RESIDENT_TOKEN_CAP = parseInt(process.env.RESIDENT_TOKEN_CAP) || 2500;
+        const residentLines = [];
+        let residentTokens = 0;
+        for (const r of resident) {
+            const line = formatMemoryContext(r) + '\n';
+            const t = estimateTokens(line);
+            if (residentTokens + t > RESIDENT_TOKEN_CAP) {
+                console.warn(`[Memory] 常驻区超限，第${resident.length - residentLines.length}条critical降级为按需召回（上限${RESIDENT_TOKEN_CAP}）`);
+                break;
+            }
+            residentLines.push(line);
+            residentTokens += t;
+        }
+        residentText = residentLines.join('');
     } catch (e) {
         console.warn('[Memory] 常驻记忆加载失败:', e.message);
     }

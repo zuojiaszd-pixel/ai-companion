@@ -118,6 +118,7 @@ app.use('/api/memory', require('./routes/memory'));
 app.use('/api/finance', require('./routes/finance'));
 app.use('/api', require('./routes/dream'));
 app.use('/api/mcp', require('./routes/mcp'));
+app.use('/api/models', require('./routes/models'));
 app.use('/api', require('./routes/push'));
 app.use('/api', require('./routes/sticker'));
 app.use('/api/pet', require('./routes/pet'));
