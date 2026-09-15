@@ -403,6 +403,13 @@
 .mcp-badge{margin-left:auto;font-size:11px;color:var(--accent);background:var(--surface2);padding:2px 8px;border-radius:10px}
 .mcp-card-desc{font-size:12px;color:var(--text2);margin-bottom:4px}
 .mcp-card-url{font-size:11px;color:var(--text3);font-family:monospace;word-break:break-all;margin-bottom:10px}
+.mcp-card-name{font-weight:600;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.mcp-card-on{border-color:var(--accent2)}
+.mcp-card-meta{display:flex;flex-direction:column;gap:6px;margin:4px 0 12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.mcp-card-meta .meta-row{display:flex;align-items:baseline;gap:8px;font-size:12px;line-height:1.5}
+.mcp-card-meta .meta-k{color:var(--text3);flex-shrink:0;min-width:54px}
+.mcp-card-meta .meta-v{color:var(--text2);font-family:monospace;word-break:break-all}
+.mcp-card-meta .meta-v.note{font-family:inherit;color:var(--text3)}
 .mcp-card-actions{display:flex;gap:6px;flex-wrap:wrap}
 .mcp-card-actions button{padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:11px;cursor:pointer}
 .mcp-card-actions button:hover{border-color:var(--accent);color:var(--accent)}
