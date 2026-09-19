@@ -2,7 +2,7 @@
   "temperature": 0.8,
   "topP": 0.9,
   "maxTokens": 6400,
-  "contextRounds": 65,
-  "contextTokens": 14000,
+  "contextRounds": 100,
+  "contextTokens": 15000,
   "systemPrompt": ""
 }

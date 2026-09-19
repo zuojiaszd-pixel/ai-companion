@@ -423,6 +423,7 @@ router.post('/chat', async (req, res) => {
             reply: result.content,
             thinking: result.reasoning || '',
             usage: result.usage || null,
+            model: result.model || null,
             toolCalls: result.toolCalls || [],
             sticker: recommendedSticker || null,
             voice: voiceFile

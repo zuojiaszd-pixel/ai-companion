@@ -3,7 +3,7 @@ const { PERSONA } = require('./../config/persona');
 const { toolDefinitions, executeTool } = require('./tools');
 const fs = require('fs');
 const path = require('path');
-const { loadSummary } = require('./summary');
+const { loadSummary, buildAnchorBlock } = require('./summary');
 
 // 加载核心记忆
 const coreMemory = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/core_memory.json'), 'utf8'));
@@ -19,7 +19,8 @@ const coreMemoryPrompt = `
 const SETTINGS_FILE = path.join(__dirname, '..', 'config', 'settings.json');
 
 // 默认模型 - 使用DeepSeek V4 Flash
-const DEFAULT_MODEL = "deepseek-v4-flash"
+const DEFAULT_MODEL = "deepseek-flash"
+let lastUsedModel = null;   // 最近一次真实调用的模型（OpenRouter 回传的实际路由结果优先）
 // 图片模型 - DeepSeek V4 Flash Vision（识图）
 const IMAGE_MODEL = "deepseek-v4-flash-vision-exp"
 
@@ -310,7 +311,7 @@ async function callOpenRouter(messages, tools, model, opts) {
             console.log('[Image Mode] Current model has no vision, switching to:', IMAGE_MODEL);
         }
     } else {
-        models = [model || DEFAULT_MODEL, "deepseek-v4-flash"];
+        models = [model || DEFAULT_MODEL, "deepseek-flash"];
     }
     
     var rateLimitRetries = 0;
@@ -319,7 +320,7 @@ async function callOpenRouter(messages, tools, model, opts) {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
             var _mdl = models[attempt];
             var _url, _key;
-            if (_mdl.indexOf('deepseek') >= 0) {
+            if (_mdl.indexOf('deepseek') >= 0 && _mdl.indexOf('/') === -1) {
                 _url = 'https://api.deepseek.com/v1/chat/completions';
                 _key = process.env.DEEPSEEK_API_KEY;
             } else if (_mdl.indexOf('glm') >= 0 && _mdl.indexOf('z-ai/') !== 0 && process.env.ZHIPUAI_API_KEY) {
@@ -346,6 +347,7 @@ async function callOpenRouter(messages, tools, model, opts) {
                 },
                 timeout: timeout
             });
+            lastUsedModel = (response.data && response.data.model) || _mdl;
             return response.data;
         } catch (err) {
             const _status = err.response?.status;
@@ -496,7 +498,9 @@ function injectSummary(messages) {
     const historyCount = messages.filter(m => m.role !== 'system').length;
     if (historyCount < 15) return messages;
 
-    const summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
+    // 锚点块：关键事实/规矩/未办完的事，必读（20260916 Rinka要求的把守清单）
+    const anchorBlock = buildAnchorBlock();
+    const summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}${anchorBlock ? '\n\n' + anchorBlock : ''}`;
     return [
         messages[0],
         { role: 'system', content: summaryPrompt },
@@ -587,7 +591,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 content = '（图片我看不太清楚，能描述一下吗？）';
                 reasoning = '';
             }
-            return { content: content, reasoning: reasoning, usage: lastUsage, toolCalls: toolCallsLog };
+            return { content: content, reasoning: reasoning, usage: lastUsage, model: lastUsedModel, toolCalls: toolCallsLog };
         }
 
         if (isEmptyResponse(content)) {
@@ -632,7 +636,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 
                 if (!isEmptyResponse(retryContent)) {
                     console.log(`[Retry ${r + 1}] Success! Got non-empty response.`);
-                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, toolCalls: toolCallsLog };
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, model: lastUsedModel, toolCalls: toolCallsLog };
                 }
             }
             
@@ -678,14 +682,14 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 
                 if (!isEmptyResponse(retryContent) && !isTooSimilar(retryContent, messages)) {
                     console.log(`[Repeat Retry ${r + 1}] Success! Got distinct response.`);
-                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, toolCalls: toolCallsLog };
+                    return { content: retryContent, reasoning: retryReasoning, usage: lastUsage, model: lastUsedModel, toolCalls: toolCallsLog };
                 }
                 console.log(`[Repeat Retry ${r + 1}] Still similar, trying again...`);
             }
             console.log('[WARN] Repeat retries exhausted, using last response.');
         }
 
-        return { content: content, reasoning: reasoning, usage: lastUsage, toolCalls: toolCallsLog };
+        return { content: content, reasoning: reasoning, usage: lastUsage, model: lastUsedModel, toolCalls: toolCallsLog };
     }
     throw new Error('工具调用次数过多，已终止');
 }

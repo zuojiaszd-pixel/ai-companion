@@ -122,7 +122,7 @@ async function runDreamTask() {
     let summary = `[Dream整理] 完成 | 耗时${elapsed}s | 总${log.total}条 | 归档${log.archived}条 | 衰减${log.decayed}条 | 锁定${log.locked}条`;
 
     // 第二步：后台自动提取记忆（已有功能）
-    const extractResult = await runAutoExtract();
+    const extractResult = { extracted: 0, messages: 0 }; // 20260916 自动提取停用（Rinka决定只留手动卡），原调用是每小时空转查库
     if (extractResult.extracted > 0) {
       summary += ` | 提取${extractResult.messages}条消息`;
     }

@@ -104,29 +104,26 @@ function tokenize(text) {
 
 // 从内容中提取主题标签（关键词）
 function extractTagsFromContent(content) {
-    const tokens = tokenize(content);
-    const stopwords = new Set([
-        '的', '了', '是', '在', '我', '你', '他', '她', '它', '们', 
-        '这', '那', '和', '与', '或', '也', '都', '就', '不', '没', 
-        '有', '要', '会', '能', '可以', '这个', '那个', '什么', '怎么',
-        '一个', '我们', '他们', '她们', '因为', '所以', '但是', '如果',
-        'the', 'a', 'an', 'is', 'are', 'was', 'were', 'i', 'you', 'he',
-        'she', 'it', 'we', 'they', 'and', 'or', 'but', 'to', 'of', 'in',
-        'on', 'at', 'for', 'with', 'that', 'this', 'be', 'have', 'do'
-    ]);
-    
+    // 20260916 二次修复：黑名单先于分词生效。此前 tokenize 按滑动窗口切二字组合，
+    // 黑名单整词('快大')对不上实际切出的碎片('她快''四了')，等于没拦（Rinka验证抓出）。
+    // 现改为先把黑名单词从原文挖掉，让窗口切不出跨词碎片，再统计词频。
+    let text = String(content || '').toLowerCase();
+    if (!text.trim()) return [];
+    const BAN_PHRASES = ['的话','她说','他说','快大','大四','大三','大二','大一','的时候','这个','那个','什么','怎么','我们','他们','她们','因为','所以','但是','如果','还是','就是','觉得','感觉','知道','已经','现在','自己','一样','一下','然后','其实','真的','不是','没有','今年','明年','今天','昨天','明天','最近','以后','以前','一直','可能','应该','需要','开始','结束','准备','决定','功能','自动'];
+    for (const p of BAN_PHRASES) text = text.split(p).join('|');
+    const BAN_CHARS = '的了是在我你他她它们这那和与或也都就不没要有会能就说还等把被对从向';
+    for (const c of new Set(BAN_CHARS)) text = text.split(c).join('|');
+    const tokens = tokenize(text);
     const wordCount = {};
     for (const t of tokens) {
-        if (!stopwords.has(t) && t.length > 1) {
+        if (t.length > 1 && /[\u4e00-\u9fff]{2}|[a-z0-9_]+/.test(t)) {
             wordCount[t] = (wordCount[t] || 0) + 1;
         }
     }
-    
     const sorted = Object.entries(wordCount).sort((a, b) => b[1] - a[1]);
     return sorted.slice(0, 5).map(([word]) => word);
 }
 
-// 解析复合情绪标签："兴奋+成就感" → [{emotion:"兴奋"},{emotion:"成就感"}]
 function parseCompoundMood(mood) {
     if (!mood) return [];
     return mood.split('+').map(m => m.trim()).filter(m => m.length > 0);

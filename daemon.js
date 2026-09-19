@@ -154,13 +154,8 @@ async function cleanupMemory() {
     const totalBefore = stats.total || 0;
     log('cleanup', `记忆净化: 当前共 ${totalBefore} 条记忆`);
 
-    // 简单净化：记录一次清理动作，后续可扩展
-    await apiCall('/api/daemon/memory/save', 'POST', {
-      content: `记忆净化检查: 当前共 ${totalBefore} 条记忆`,
-      type: 'state',
-      priority: 'low',
-      tags: ['净化', '统计'],
-    });
+    // 已禁用写库（2026-09-16，Rinka决定）：此检查每6小时写一条垃圾卡，累计142条污染库
+    // 净化结果只记日志，不再写入记忆库
 
     if (totalBefore > 200) {
       await pushMessage('🧹 记忆净化提醒',

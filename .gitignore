@@ -39,3 +39,8 @@ inspect_*.py
 patch_*.py
 verify_*.js
 *.bak-*
+
+# Lumi 临时调试脚本
+chk_*.js
+tmp_*.js
+t_sort_*.js
