@@ -214,6 +214,9 @@ router.post('/chat', async (req, res) => {
         const { message, sessionId = 'default', model, temperature, topP, maxTokens, contextRounds, contextTokens: bodyContextTokens, image } = req.body;
         if (!message && !image) return res.status(400).json({ error: '消息不能为空' });
 
+        // === [INSTRUMENT] 请求追踪 ID：仅用于日志关联，不参与任何判断 ===
+        const requestId = 'req-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+
         // SSE：让前端实时看到工具调用过程，而不是等整轮完成后一次性返回
         res.status(200).set({
             'Content-Type': 'text/event-stream; charset=utf-8',
@@ -265,6 +268,7 @@ router.post('/chat', async (req, res) => {
         } catch (e) {
             console.error('[Memory] 自动注入失败（跳过）:', e.message);
         }
+        console.log('[INJECT] req=' + requestId + ' memories=' + (relevantMemoriesPrompt ? relevantMemoriesPrompt.length : 0) + 'chars');
 
         // 6.5 加载对话摘要
         const summaryData = loadSummary();
@@ -275,6 +279,7 @@ router.post('/chat', async (req, res) => {
                 summaryPrompt = `\n\n【之前聊到的内容】\n${summaryData.summary}`;
             }
         }
+        console.log('[INJECT] req=' + requestId + ' summary=' + (summaryPrompt ? summaryPrompt.length : 0) + 'chars');
 
         // 7. token 预算制：从新到旧回溯历史，保证最新对话一定保留
         //    预算 = contextTokens - 系统提示 - 相关记忆 - 摘要，剩下的全给历史
@@ -342,8 +347,29 @@ router.post('/chat', async (req, res) => {
 
         // 8. 调用 AI（带超时保护）
                 const keptUserRounds = keptHistory.filter(h => h.role === 'user').length;
+        // === [MSG] 最终发给模型的 messages 快照（只记 role/长度，不记正文） ===
+        {
+            const parts = messages.map((m, i) => {
+                const len = typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content || '').length;
+                return '#' + i + ':' + m.role + '(' + len + ')';
+            });
+            console.log('[MSG] req=' + requestId + ' count=' + messages.length + ' ' + parts.join(' '));
+            for (let i = 0; i < messages.length; i++) {
+                if (messages[i].role === 'system') continue;
+                if (messages[i].role === 'assistant') {
+                    console.log('[MSG:ORPHAN] req=' + requestId + ' first-non-system=assistant index=' + i + ' — 历史切分停在 assistant 上');
+                } else {
+                    console.log('[MSG:HEAD] req=' + requestId + ' first-non-system=' + messages[i].role + ' index=' + i);
+                }
+                break;
+            }
+            const last = messages[messages.length - 1];
+            console.log('[MSG:TAIL] req=' + requestId + ' last-role=' + (last ? last.role : 'none') + ' keptHistory=' + keptHistory.length);
+        }
+
         // 告诉 ai.js 实际保留了多少轮，避免 trimContext 再把装进去的历史砍掉
         const opts = {
+            requestId,
             temperature, topP, maxTokens,
             contextRounds: Math.max(keptUserRounds + 1, 3),
             onToolStart: (name, args, id) => {

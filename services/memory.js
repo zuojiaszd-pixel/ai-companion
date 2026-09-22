@@ -233,11 +233,9 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
         const embedding = await getEmbedding(content);
         const defaults = Memory.applyPriorityDefaults(priority);
         
-        // 自动提取主题标签
-        const autoTags = extractTagsFromContent(content);
-        // 自动标签和手动标签统一写入 tags：检索、列表和关联联想看到的是同一套标签。
-        // relatedTags 继续保留，兼容已有数据和关联检索逻辑。
-        const mergedTags = [...new Set([...(tags || []), ...autoTags])];
+        // 2026-09-22 按 Ciel 认可方案第一步：断开自动标签写入。
+        // tags 只保留手写内容；extractTagsFromContent 保留函数与导出，供测试使用。
+        const mergedTags = [...new Set([...(tags || [])])];
         const mergedRelatedTags = mergedTags.slice();
         
         const existing = await Memory.find({ 

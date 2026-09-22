@@ -44,3 +44,6 @@ verify_*.js
 chk_*.js
 tmp_*.js
 t_sort_*.js
+
+# Lumi 一次性查询脚本
+_q_*.js

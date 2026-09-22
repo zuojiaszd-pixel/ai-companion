@@ -159,6 +159,23 @@ monitor.start((message) => {
 // 启动 Lumi 自主活动守护进程
 daemon.start();
 
+// === [BOOT] 启动基线快照（instrumentation，只读） ===
+(function bootSnapshot() {
+    const { execSync } = require('child_process');
+    const crypto = require('crypto');
+    const fs = require('fs');
+    let head = 'unknown', dirty = 'unknown', aiHash = 'unknown', chatHash = 'unknown';
+    try { head = execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim(); } catch (e) {}
+    try {
+        const st = execSync('git status --porcelain', { cwd: __dirname }).toString().trim();
+        dirty = st.length > 0 ? 'dirty:' + st.split('\n').length : 'clean';
+    } catch (e) {}
+    const h = (f) => { try { return crypto.createHash('md5').update(fs.readFileSync(path.join(__dirname, f))).digest('hex').slice(0, 8); } catch (e) { return 'err'; } };
+    aiHash = h('services/ai.js');
+    chatHash = h('routes/chat.js');
+    console.log(`[BOOT] head=${head} worktree=${dirty} ai.js=${aiHash} routes/chat.js=${chatHash} pid=${process.pid} node=${process.version} started=${new Date().toISOString()}`);
+})();
+
 // 启动服务器
 const server = app.listen(PORT, () => {
     console.log(`🚀 服务已启动，端口 ${PORT}`);

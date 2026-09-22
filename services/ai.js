@@ -318,6 +318,7 @@ async function callOpenRouter(messages, tools, model, opts) {
     for (var attempt = 0; attempt < models.length && attempt < 3; attempt++) {
         try {
             console.log("[Route] model=" + models[attempt] + " hasGLM=" + (models[attempt] && models[attempt].indexOf("glm") >= 0) + " hasZhipuKey=" + !!process.env.ZHIPUAI_API_KEY);
+            console.log("[Route] req=" + ((opts && opts.requestId) || '-') + " attempt=" + attempt + "/" + models.length + " model=" + models[attempt]);
             var _mdl = models[attempt];
             var _url, _key;
             if (_mdl.indexOf('deepseek') >= 0 && _mdl.indexOf('/') === -1) {
@@ -355,11 +356,11 @@ async function callOpenRouter(messages, tools, model, opts) {
             const _hardFail = (_status === 401 || _status === 402 || _status === 403) && !hasImage;
             if (_hardFail) {
                 if (attempt < models.length - 1) {
-                    console.log("[Retry] OpenRouter " + _status + " (auth/balance/region) on \"" + models[attempt] + "\", falling back to " + models[attempt + 1]);
+                    console.log("[Retry] req=" + ((opts && opts.requestId) || '-') + " OpenRouter " + _status + " (auth/balance/region) on \"" + models[attempt] + "\", falling back to " + models[attempt + 1]);
                     await new Promise(function(r) { setTimeout(r, 500); });
                     continue;
                 }
-                console.log("[Retry] OpenRouter " + _status + " on \"" + models[attempt] + "\", no fallback left, giving up");
+                console.log("[Retry] req=" + ((opts && opts.requestId) || '-') + " OpenRouter " + _status + " on \"" + models[attempt] + "\", no fallback left, giving up");
                 throw err;
             }
             const _retryable = (_status === 500 || _status === 429) && !hasImage;
@@ -368,13 +369,13 @@ async function callOpenRouter(messages, tools, model, opts) {
                 if (_status === 429 && rateLimitRetries < 2) {
                     rateLimitRetries++;
                     const _wait = 4000 * rateLimitRetries;
-                    console.log("[Retry] OpenRouter 429 rate-limited on \"" + models[attempt] + "\", waiting " + _wait + "ms, retry #" + rateLimitRetries);
+                    console.log("[Retry] req=" + ((opts && opts.requestId) || '-') + " OpenRouter 429 rate-limited on \"" + models[attempt] + "\", waiting " + _wait + "ms, retry #" + rateLimitRetries);
                     await new Promise(function(r) { setTimeout(r, _wait); });
                     attempt--;
                     continue;
                 }
                 if (attempt < models.length - 1) {
-                    console.log("[Retry] OpenRouter " + _status + " with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
+                    console.log("[Retry] req=" + ((opts && opts.requestId) || '-') + " OpenRouter " + _status + " with \"" + models[attempt] + "\", trying " + models[attempt + 1]);
                     await new Promise(function(r) { setTimeout(r, 1000 * (attempt + 1)); });
                     continue;
                 }
@@ -595,10 +596,10 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
         }
 
         if (isEmptyResponse(content)) {
-            console.log('[WARN] Empty response detected, starting retry loop...');
+            console.log('[WARN] req=' + ((opts && opts.requestId) || '-') + ' Empty response detected, starting retry loop...');
             
             for (let r = 0; r < MAX_EMPTY_RETRIES; r++) {
-                console.log(`[Retry ${r + 1}/${MAX_EMPTY_RETRIES}] Attempting to get non-empty response...`);
+                console.log(`[Retry req=${(opts && opts.requestId) || '-'} ${r + 1}/${MAX_EMPTY_RETRIES}] Attempting to get non-empty response...`);
                 
                 const retryMessages = [...messages];
                 retryMessages.push({ role: 'user', content: RETRY_PROMPTS[r] });
@@ -640,7 +641,7 @@ async function chat(messages, model, opts, useTools = true, hasImage = false) {
                 }
             }
             
-            console.log('[WARN] All retries exhausted, returning fallback message.');
+            console.log('[WARN] req=' + ((opts && opts.requestId) || '-') + ' All retries exhausted, returning fallback message.');
             content = '（我好像走神了，能再说一遍吗？）';
             reasoning = '';
         }
