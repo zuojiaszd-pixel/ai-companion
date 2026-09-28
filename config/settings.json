@@ -3,6 +3,6 @@
   "topP": 0.9,
   "maxTokens": 6400,
   "contextRounds": 100,
-  "contextTokens": 15000,
+  "contextTokens": 13000,
   "systemPrompt": ""
 }
