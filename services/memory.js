@@ -20,14 +20,14 @@ function withHardTimeout(promise, ms) {
 async function getEmbedding(text) {
     try {
         const res = await axios.post('https://openrouter.ai/api/v1/embeddings', {
-            model: 'text-embedding-3-small',
+            model: 'baai/bge-m3',
             input: text
         }, {
             headers: {
                 'Authorization': 'Bearer ' + process.env.OPENROUTER_API_KEY,
                 'Content-Type': 'application/json'
             },
-            timeout: 3000
+            timeout: 15000
         });
         return res.data.data[0].embedding;
     } catch (e) {
@@ -230,7 +230,13 @@ async function saveMemory(sessionId, content, type, priority, tags, mood, moodIn
             console.log(`[Memory] 核心记忆默认情绪: neutral`);
         }
         
-        const embedding = await getEmbedding(content);
+        let embedding = await getEmbedding(content);
+        if (!embedding) {
+            console.warn('[Memory] 首次 embedding 为空，重试一次');
+            await new Promise(r => setTimeout(r, 800));
+            embedding = await getEmbedding(content);
+        }
+        if (!embedding) console.error('[Memory] 警告：本条卡将以无向量状态保存，检索只能靠关键词 ——', String(content).slice(0, 40));
         const defaults = Memory.applyPriorityDefaults(priority);
         
         // 2026-09-22 按 Ciel 认可方案第一步：断开自动标签写入。
@@ -657,7 +663,7 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
         ).catch(() => []);
         // 2026-09-15 常驻区加token上限：critical卡片不再无限制全塞，
         // 超出RESIDENT_TOKEN_CAP的低优先级卡片降级为按需召回，把预算还给历史对话。
-        const RESIDENT_TOKEN_CAP = parseInt(process.env.RESIDENT_TOKEN_CAP) || 2500;
+        const RESIDENT_TOKEN_CAP = parseInt(process.env.RESIDENT_TOKEN_CAP) || 1200;
         const residentLines = [];
         let residentTokens = 0;
         for (const r of resident) {
@@ -701,16 +707,23 @@ async function getRelevantMemories(sessionId, query, maxTokens) {
         }
     }
     
+    // 2026-09-28 修复：相关区预算独立起算。
+    // 此前 tokenEstimate 从已拼好的 text（含常驻区）起算，常驻区一超 maxTokens，
+    // 循环第一次就 break，相关记忆一条都进不来（实测常驻 2448 > 预算 1200，相关区恒为空）。
+    // 现在常驻区由 RESIDENT_TOKEN_CAP 单独约束，maxTokens 只约束相关区，两块预算互不侵占。
     let text = '';
     if (residentText) text += '【常驻记忆】\n' + residentText + '\n';
-    if (selected.length) text += '【相关记忆】\n';
-    let tokenEstimate = estimateTokens(text);
+    let relatedText = '';
+    let relatedTokens = 0;
     for (const r of selected) {
         const line = formatMemoryContext(r) + '\n';
-        tokenEstimate += estimateTokens(line);
-        if (tokenEstimate > maxTokens) break;
-        text += line;
+        const t = estimateTokens(line);
+        if (relatedTokens + t > maxTokens) break;
+        relatedText += line;
+        relatedTokens += t;
     }
+    // 只在真的有相关记忆时才输出标题，避免留下空的「【相关记忆】」占位
+    if (relatedText) text += '【相关记忆】\n' + relatedText;
     return text.trim();
 }
 
